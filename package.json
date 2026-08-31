@@ -30,7 +30,8 @@
     "rebuild": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
-    "better-sqlite3": "^11.10.0"
+    "better-sqlite3": "^11.10.0",
+    "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
     "@electron/rebuild": "^3.7.2",
@@ -44,6 +45,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "drizzle-kit": "^0.31.10",
     "electron": "^30.0.1",
     "electron-builder": "24.13.3",
     "electron-vite": "^2.3.0",

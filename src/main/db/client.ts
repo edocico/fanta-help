@@ -1,67 +1,70 @@
 import Database from 'better-sqlite3'
 import { app } from 'electron'
+import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
+import { eq } from 'drizzle-orm'
+import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
+import * as schema from './schema'
+import { appInstance } from './schema'
+import { runMigrations } from './migrate'
 
-/**
- * Packaging spike only. T3 replaces this with the Drizzle schema, drizzle-kit
- * migrations and the absolute migrations path, and drops `spike_boot`.
- */
+export type Db = BetterSQLite3Database<typeof schema>
 
-let handle: Database.Database | null = null
-
-export function openDb(): Database.Database {
-  if (handle) return handle
-
-  const db = new Database(databasePath())
-
-  try {
-    // Pragmas are per-connection, not stored in the file: they must be set on
-    // every open. Without `foreign_keys = ON` half the constraints do not exist.
-    db.pragma('journal_mode = WAL')
-    db.pragma('foreign_keys = ON')
-    db.pragma('synchronous = NORMAL')
-
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS spike_boot (
-        id        INTEGER PRIMARY KEY AUTOINCREMENT,
-        booted_at TEXT NOT NULL
-      )
-    `)
-  } catch (e) {
-    // Do not leave an open handle behind on a half-initialised connection:
-    // the next open would find the file locked and blame the wrong thing.
-    db.close()
-    throw e
-  }
-
-  handle = db
-  return db
-}
+let connection: Database.Database | null = null
+let database: Db | null = null
 
 export function databasePath(): string {
   return join(app.getPath('userData'), 'fanta-help.db')
 }
 
-export function closeDb(): void {
-  handle?.close()
-  handle = null
-}
+/** Opens the connection, applies the pragmas, runs the migrations. Idempotent. */
+export function openDb(): Db {
+  if (database) return database
 
-export function foreignKeysEnabled(db: Database.Database): boolean {
-  return db.pragma('foreign_keys', { simple: true }) === 1
-}
+  const conn = new Database(databasePath())
 
-/** Writes one row and reads the table back. The whole point of the spike. */
-export function recordBoot(db: Database.Database): { bootCount: number; bootedAt: string } {
-  const write = db.transaction(() => {
-    // strftime, not datetime(): the column is documented as an ISO-8601 UTC
-    // instant, and datetime('now') yields a space-separated, unmarked one.
-    db.prepare(`INSERT INTO spike_boot (booted_at) VALUES (strftime('%Y-%m-%dT%H:%M:%SZ','now'))`).run()
+  try {
+    // Pragmas are per-connection and not stored in the file: they must be set on
+    // every open. Without `foreign_keys = ON` half the constraints of document 1
+    // do not exist, and nothing announces it.
+    conn.pragma('journal_mode = WAL')
+    conn.pragma('foreign_keys = ON')
+    conn.pragma('synchronous = NORMAL')
+
+    const db = drizzle(conn, { schema })
+    runMigrations(db)
+
+    connection = conn
+    database = db
     return db
-      .prepare(`SELECT COUNT(*) AS n, MAX(booted_at) AS last FROM spike_boot`)
-      .get() as { n: number; last: string }
-  })
+  } catch (e) {
+    // Never leave a half-initialised handle behind: the next open would find the
+    // file locked and blame the wrong thing.
+    conn.close()
+    throw e
+  }
+}
 
-  const row = write()
-  return { bootCount: row.n, bootedAt: row.last }
+export function closeDb(): void {
+  connection?.close()
+  connection = null
+  database = null
+}
+
+export function foreignKeysEnabled(): boolean {
+  return connection?.pragma('foreign_keys', { simple: true }) === 1
+}
+
+/**
+ * The single `app_instance` row identifies this installation. Its uuid is what
+ * `auction_log.actor_uuid` and `league_snapshot.produced_by` record, so it has to
+ * exist before anything is written, and it must never change afterwards.
+ */
+export function ensureInstance(db: Db): { uuid: string; label: string | null } {
+  const existing = db.select().from(appInstance).where(eq(appInstance.id, 1)).get()
+  if (existing) return { uuid: existing.uuid, label: existing.label }
+
+  const row = { id: 1, uuid: randomUUID(), label: null, createdAt: Date.now() }
+  db.insert(appInstance).values(row).run()
+  return { uuid: row.uuid, label: row.label }
 }

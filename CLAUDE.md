@@ -50,6 +50,7 @@ Sono già costate tempo. Non riscoprirle.
 | Trappola | Cosa fare |
 |---|---|
 | `PRAGMA foreign_keys` | SQLite lo tiene spento. Impostarlo **a ogni apertura**, altrimenti metà dei vincoli non esiste |
+| Migrazioni già applicate | Il migratore confronta solo il timestamp dell'**ultima** riga di `__drizzle_migrations`, e l'hash lo scrive senza mai rileggerlo. Modificare un `.sql` già applicato è un no-op silenzioso: funziona su un database nuovo e non su nessuno esistente. Ogni statement in più va in un file numerato nuovo |
 | Migrazioni Drizzle in produzione | Percorso relativo → finisce in `app.asar` e fallisce su `meta/_journal.json`. Usare percorso assoluto e spedire `drizzle/` in `extraResources` |
 | better-sqlite3 | Modulo nativo. `asarUnpack` deve includere anche `bindings` e `file-uri-to-path`, o l'app parte in dev e crolla in produzione |
 | Verificare il modulo nativo | `require('better-sqlite3')` riesce **anche con l'ABI sbagliata**: `bindings` carica il `.node` solo al primo `new Database()`. Per provarlo, istanzia — e usa l'ABI di Electron: `ELECTRON_RUN_AS_NODE=1 node_modules/electron/dist/electron -e "new (require('better-sqlite3'))(':memory:')"` |

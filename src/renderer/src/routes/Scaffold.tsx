@@ -117,8 +117,8 @@ export default function Scaffold() {
       <footer className="border-t border-line px-6 py-3 text-sm text-chalk-dim">
         {state?.ok === true && (
           <span>
-            versione {state.data.version} · avvii{' '}
-            <span className="figures">{state.data.bootCount}</span>
+            versione {state.data.version} · istanza{' '}
+            <span className="figures">{state.data.uuid.slice(0, 8)}</span>
           </span>
         )}
         {/* The message comes from shared/errors.ts, never written here: an error

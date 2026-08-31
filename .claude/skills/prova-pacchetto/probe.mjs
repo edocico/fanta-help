@@ -63,7 +63,15 @@ console.log(env.result?.result?.value ?? JSON.stringify(env))
 // if the two coincide, the user-data split is gone.
 const db = await evaluate(
   `window.api.invoke('app.instance').then((r) =>
-     JSON.stringify({ ok: r?.ok === true, db: r?.data?.databasePath ?? null }))`,
+     JSON.stringify({
+       ok: r?.ok === true,
+       db: r?.data?.databasePath ?? null,
+       // PRAGMA foreign_keys is per-connection and not stored in the file, so
+       // querying the .db from outside cannot tell you whether the app set it.
+       // Only the app can answer, and a false here means half the constraints
+       // of document 1 are not being enforced.
+       foreignKeys: r?.data?.foreignKeys ?? null,
+     }))`,
   3,
   true,
 )

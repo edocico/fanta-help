@@ -4,19 +4,24 @@
  * is what turns rule 3 into a compile error rather than a promise.
  */
 
-/** Payload of the `app.instance` channel. */
+/**
+ * Payload of the `app.instance` channel: who this installation is, plus the two
+ * facts the Impostazioni view will need about where it keeps its data.
+ */
 export type AppInstance = {
+  /** Identity of this installation. `auction_log.actor_uuid` and
+   *  `league_snapshot.produced_by` record this value, so it never changes. */
+  uuid: string
+  /** Human name for the instance, set from the settings. Null until then. */
+  label: string | null
   /** Application version, from package.json. */
   version: string
-  /** Absolute path of the SQLite file, shown so the spike proves where it wrote. */
+  /** Absolute path of the SQLite file. */
   databasePath: string
-  /** How many times the app has opened this database. Proves the row survives a restart. */
-  bootCount: number
-  /** ISO timestamp of the current boot, read back from SQLite. */
-  bootedAt: string
   /**
-   * Value of `PRAGMA foreign_keys` as SQLite reports it after opening.
-   * On screen so the trap that costs half the constraints is visible, not assumed.
+   * Value of `PRAGMA foreign_keys` as SQLite reports it after opening. Exposed so
+   * the trap that silently costs half the constraints stays observable from
+   * outside the main process, instead of being assumed.
    */
   foreignKeys: boolean
 }

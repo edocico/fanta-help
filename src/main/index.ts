@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'node:path'
-import { closeDb, databasePath, foreignKeysEnabled, openDb, recordBoot } from './db/client'
-import { ok, toResult, type Result } from '@shared/errors'
+import { closeDb, databasePath, ensureInstance, foreignKeysEnabled, openDb } from './db/client'
+import { fail, ok, type Result } from '@shared/errors'
 import type { AppInstance } from '@shared/types'
 
 // main and preload are built as CommonJS, so __dirname exists. See the note in
@@ -47,20 +47,24 @@ function createWindow(): void {
 }
 
 ipcMain.handle('app.instance', (): Result<AppInstance> => {
-  if (!instance) return toResult(new Error('database non aperto'))
+  // The only way `instance` stays null is openDb() throwing, i.e. the migrations
+  // failing — the exact breakage T3 exists to make legible. The generic UNKNOWN
+  // would say neither what happened nor what to do.
+  if (!instance) return fail('DB_UNAVAILABLE')
   return ok(instance)
 })
 
 void app.whenReady().then(() => {
   try {
+    // openDb runs the migrations. If they fail here, they fail loudly.
     const db = openDb()
-    const { bootCount, bootedAt } = recordBoot(db)
+    const { uuid, label } = ensureInstance(db)
     instance = {
+      uuid,
+      label,
       version: app.getVersion(),
       databasePath: databasePath(),
-      bootCount,
-      bootedAt,
-      foreignKeys: foreignKeysEnabled(db),
+      foreignKeys: foreignKeysEnabled(),
     }
   } catch (e) {
     // Leave `instance` null: the channel reports it and the window still opens,
