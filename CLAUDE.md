@@ -58,7 +58,10 @@ Sono già costate tempo. Non riscoprirle.
 | electron-vite | `externalizeDepsPlugin()` in `main` e `preload`, o la build fallisce in modo illeggibile |
 | `"type": "module"` in `package.json` | Non rimetterlo. Fa emettere a electron-vite un main ESM, e `import { BrowserWindow } from 'electron'` esplode all'istanziazione: `electron` è CJS con getter pigri. Muore con **codice 0 e stderr vuoto** dal pacchetto |
 | Percorso dei dati utente | `app.getPath('userData')` deriva da `app.getName()`, che legge `package.json`. `productName` nell'`electron-builder.yml` a runtime non esiste: senza `productName` anche in `package.json`, sviluppo e app installata scrivono nello stesso database |
-| `ELECTRON_RUN_AS_NODE` | VS Code lo esporta a `1` nei suoi terminali. Electron esegue il main come Node normale: `require('electron').app` è `undefined` e l'app muore con `Cannot read properties of undefined (reading 'isPackaged')`. Lanciarla con `env -u ELECTRON_RUN_AS_NODE` |
+| `ELECTRON_RUN_AS_NODE` | VS Code lo esporta a `1` nei suoi terminali, su entrambe le macchine. Electron esegue il main come Node normale: `require('electron').app` è `undefined` e l'app muore con `Cannot read properties of undefined (reading 'isPackaged')`. Lanciarla con `env -u ELECTRON_RUN_AS_NODE` |
+| `@theme inline` di Tailwind | Elimina le variabili che nessuna utility usa. Una mappatura sbagliata **non compare** nel CSS costruito e sembra assente: si sveglia al primo componente che la tocca |
+| Raggi in Tailwind v4 | Vivono sotto `--radius-*`. Un `--radius` nudo non alimenta nessuna utility e viene scartato, e ogni `rounded-md` torna al default di 6px |
+| CLI di shadcn | Senza `paths` nel `tsconfig.json` di radice non fallisce: crea una cartella chiamata letteralmente `@` |
 | React Router su `file://` | `HashRouter`, mai `BrowserRouter` |
 | `F11` | È già lo schermo intero di sistema. Il modo proiezione usa `Ctrl/Cmd+P` |
 
@@ -87,6 +90,18 @@ Poco e mirato. Non serve copertura, servono questi:
 Niente test sull'interfaccia in v1.
 
 **Il guardrail.** I test girano su Node, quindi non possono toccare il database. Se un test ha bisogno di importare `better-sqlite3`, `electron` o qualcosa da `src/main/db/`, non è il test a essere sbagliato: è la logica che sta nel posto sbagliato e va spostata in `src/shared/domain.ts` come funzione pura. Le invarianti che contano sono aritmetica su crediti e slot: non hanno bisogno di SQLite.
+
+---
+
+## Due macchine
+
+Il progetto si sviluppa su **Fedora x64** e su **macOS arm64**, sempre dalla stessa persona e mai in parallelo. Quello che ne segue:
+
+- **Niente piattaforma cablata negli strumenti.** L'architettura si ricava da `uname -m`, il binario di Electron da `node_modules/electron/dist/path.txt`. Un percorso scritto a mano funziona su una macchina e sull'altra muore con un `No such file or directory` che sembra un'installazione rotta.
+- **Il database non viaggia.** `userData` sta in posti diversi su dischi diversi: una lega preparata di qua non si trova di là. Per spostare una sessione serve l'export/import JSON di T18, non una copia di file.
+- **`.claude.local.md` esiste su una macchina sola**, perché è ignorato da git. Se una cosa vale su entrambe va qui, non lì.
+- **I limiti sono asimmetrici.** Su Fedora l'AppImage vuole `libfuse2` e il `.deb` vuole `libxcrypt-compat`; su macOS l'app non è firmata e al primo avvio va aperta col tasto destro. Chi documenta un limite dice su quale delle due vale.
+- Il `package-lock.json` porta tutte le varianti di piattaforma, quindi cambiare macchina non lo fa oscillare. Se cambia, è per una ragione vera.
 
 ---
 

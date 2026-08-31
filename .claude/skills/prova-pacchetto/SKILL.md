@@ -46,7 +46,10 @@ Non vanno riscoperte, e nessuna delle tre si annuncia quando scatta.
 | AppImage senza FUSE2 | Fedora non spedisce libfuse2, l'AppImage non parte | la lancia con `--appimage-extract-and-run` |
 | Nome del binario Electron | È `electron` su Linux ma `Electron.app/Contents/MacOS/Electron` su macOS: cablarne uno rompe lo script sull'altro sistema, con un `No such file or directory` che sembra un'installazione mancante | lo legge da `node_modules/electron/dist/path.txt`, che il pacchetto scrive apposta |
 
-## Limiti noti su questa macchina
+## Limiti noti
+
+Il progetto si sviluppa su due macchine, Fedora x64 e macOS arm64: ogni limite
+qui sotto dice su quale delle due vale.
 
 - **Sempre e solo l'architettura dell'host.** L'`electron-builder.yml` fissa
   `[x64, arm64]`, ma una build **cross-arch** ricompila `better-sqlite3` per

@@ -17,8 +17,12 @@ out
 release
 *.tsbuildinfo
 
-# note locali per Claude Code, non condivise
+# note e impostazioni locali per Claude Code, non condivise.
+# settings.local.json va elencato qui e non solo nel gitignore globale della
+# macchina: quella configurazione non esiste sull'altra, dove il file
+# comparirebbe come non tracciato e prima o poi finirebbe committato.
 .claude.local.md
+.claude/settings.local.json
 
 # Editor directories and files
 .vscode/*
