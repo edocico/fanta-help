@@ -69,7 +69,9 @@ export const player = sqliteTable(
     sourceId: integer('source_id').notNull(), // the listone's own 'Id' column
     identityKey: text('identity_key').notNull(), // 'fc-<source_id>'
     name: text('name').notNull(),
-    nameNormalized: text('name_normalized').notNull(), // lowercase, no diacritics
+    // Written with normalizeName() from shared/domain.ts — the four steps of
+    // document 4. Anything that searches this column must use the same function.
+    nameNormalized: text('name_normalized').notNull(),
     serieATeamId: integer('serie_a_team_id')
       .notNull()
       .references(() => serieATeam.id),

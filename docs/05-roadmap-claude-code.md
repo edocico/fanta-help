@@ -75,7 +75,7 @@ Questa fase è uno script separato in `tools/dataset/`, indipendente dall'app. S
 
 Parser XLSX per quotazioni e statistiche. Ricerca della riga di intestazione, mappatura per nome di colonna, validazione zod, rifiuto del file intero se troppe righe falliscono. Normalizzazione dei nomi, chiavi `fc-<sourceId>`, riconciliazione tra stagioni, rapporto leggibile, `overrides.json`.
 
-**Fatto quando:** produce un `v1.json.gz` valido da file reali, e **fallisce** se restano ambiguità irrisolte.
+**Fatto quando:** produce un `v1.json.gz` valido da file reali, e **fallisce** se restano ambiguità irrisolte. C'è il test della normalizzazione dei nomi che il documento 6 §7 assegna a questo task: quattro casi, e proteggono tutta la riconciliazione a valle.
 
 **Prima di scrivere il codice:** verificare l'ipotesi che gli `Id` del listone siano stabili tra stagioni, confrontando due listoni consecutivi. Se cade, cambia la strategia di riconciliazione.
 

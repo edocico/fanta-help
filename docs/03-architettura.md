@@ -26,6 +26,7 @@ fanta-help/
 ├── tsconfig.json
 ├── tsconfig.node.json              main + preload
 ├── tsconfig.web.json               renderer
+├── vitest.config.ts                i test, documento 6
 ├── drizzle/                        migrazioni generate, spedite come risorsa
 ├── resources/                      icone applicazione
 └── src/
@@ -50,8 +51,9 @@ fanta-help/
     │   ├── http/
     │   │   └── client.ts           wrapper su fetch nativo: timeout, retry, errori
     │   ├── ipc/
-    │   │   ├── register.ts         aggancia i contratti agli handler
-    │   │   └── handlers/
+    │   │   ├── handlers.ts         mappa canale → funzione, senza importare electron
+    │   │   ├── register.ts         aggancia gli handler a ipcMain, con validazione
+    │   │   └── coverage.test.ts    contratti e handler devono coincidere
     │   └── export/
     │       ├── xlsx.ts
     │       └── json.ts
@@ -608,6 +610,10 @@ Va scritto nelle istruzioni di installazione per Mac che la prima apertura richi
 ---
 
 ## 9. Qualità
+
+> **Sostituita dal documento 6.** Quello che segue resta come sintesi; la suite di
+> test, la trappola dell'ABI, il guardrail e la configurazione stanno in
+> `06-testing.md`, scritto dopo. In caso di disaccordo vince il documento 6.
 
 Poco e mirato, perché è un progetto di una persona.
 

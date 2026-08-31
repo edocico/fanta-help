@@ -49,7 +49,9 @@ Sono già costate tempo. Non riscoprirle.
 
 | Trappola | Cosa fare |
 |---|---|
-| `PRAGMA foreign_keys` | SQLite lo tiene spento. Impostarlo **a ogni apertura**, altrimenti metà dei vincoli non esiste |
+| `PRAGMA foreign_keys` | SQLite lo tiene spento. Impostarlo **a ogni apertura**, altrimenti metà dei vincoli non esiste. È per-connessione: interrogare il `.db` dall'esterno non dice se l'app l'ha impostato, può rispondere solo l'app |
+| `enum` di Drizzle | Tipizza in TypeScript ed emette **zero** SQL. Senza un `check()` accanto il vincolo esiste solo nel compilatore, e il database accetta qualunque cosa |
+| `player_fts` contentless | `content=''` indicizza senza conservare i valori: un `MATCH` torna il rowid e colonne **vuote**. Non è rotta — si risale a `player` per rowid |
 | Migrazioni già applicate | Il migratore confronta solo il timestamp dell'**ultima** riga di `__drizzle_migrations`, e l'hash lo scrive senza mai rileggerlo. Modificare un `.sql` già applicato è un no-op silenzioso: funziona su un database nuovo e non su nessuno esistente. Ogni statement in più va in un file numerato nuovo |
 | Migrazioni Drizzle in produzione | Percorso relativo → finisce in `app.asar` e fallisce su `meta/_journal.json`. Usare percorso assoluto e spedire `drizzle/` in `extraResources` |
 | better-sqlite3 | Modulo nativo. `asarUnpack` deve includere anche `bindings` e `file-uri-to-path`, o l'app parte in dev e crolla in produzione |
@@ -57,7 +59,7 @@ Sono già costate tempo. Non riscoprirle.
 | Cross-build fra piattaforme | `package:win` e `package:linux` ricompilano `better-sqlite3` per il target e ce lo lasciano. Dopo, `npm run dev` muore con `NODE_MODULE_VERSION mismatch`: rimettere a posto con `electron-builder install-app-deps` |
 | Vitest e il modulo nativo | Vitest gira su Node, `better-sqlite3` è compilato per l'ABI di Electron: un test che lo importa muore con `NODE_MODULE_VERSION mismatch`. Non ricompilare avanti e indietro — è il segnale che la logica sta nel posto sbagliato (vedi Test) |
 | electron-vite | `externalizeDepsPlugin()` in `main` e `preload`, o la build fallisce in modo illeggibile |
-| `"type": "module"` in `package.json` | Non rimetterlo. Fa emettere a electron-vite un main ESM, e `import { BrowserWindow } from 'electron'` esplode all'istanziazione: `electron` è CJS con getter pigri. Muore con **codice 0 e stderr vuoto** dal pacchetto |
+| `"type": "module"` in `package.json` | Non rimetterlo. Fa emettere a electron-vite un main ESM, e `import { BrowserWindow } from 'electron'` esplode all'istanziazione: `electron` è CJS con getter pigri. Muore con **codice 0 e stderr vuoto** dal pacchetto. Vitest lo consiglia a ogni esecuzione: ignoralo |
 | Percorso dei dati utente | `app.getPath('userData')` deriva da `app.getName()`, che legge `package.json`. `productName` nell'`electron-builder.yml` a runtime non esiste: senza `productName` anche in `package.json`, sviluppo e app installata scrivono nello stesso database |
 | `ELECTRON_RUN_AS_NODE` | VS Code lo esporta a `1` nei suoi terminali, su entrambe le macchine. Electron esegue il main come Node normale: `require('electron').app` è `undefined` e l'app muore con `Cannot read properties of undefined (reading 'isPackaged')`. Lanciarla con `env -u ELECTRON_RUN_AS_NODE` |
 | `@theme inline` di Tailwind | Elimina le variabili che nessuna utility usa. Una mappatura sbagliata **non compare** nel CSS costruito e sembra assente: si sveglia al primo componente che la tocca |
@@ -72,7 +74,7 @@ Sono già costate tempo. Non riscoprirle.
 
 **Lingua.** Codice, identificatori, commenti e nomi di file in **inglese**. Testi rivolti all'utente in **italiano**. I messaggi d'errore stanno in `src/shared/errors.ts` accanto al codice, mai sparsi nei componenti.
 
-**Errori.** Mai eccezioni attraverso il confine IPC. Sempre l'involucro `Result<T>` con un codice.
+**Errori.** Mai eccezioni attraverso il confine IPC. Sempre l'involucro `Result<T>` con un codice. Un servizio che rifiuta chiama `raise('CODICE', {…})` da `shared/errors.ts`: un `throw new Error` qualsiasi arriva al renderer come `UNKNOWN`, e il messaggio giusto sparisce senza che niente fallisca.
 
 **Scrittura.** Ogni scrittura che tocca più tabelle sta in una transazione.
 
@@ -114,7 +116,7 @@ Per leggere cosa mostra davvero l'app: **`/prova-pacchetto`** (`dev` o `pack`) c
 
 **Strumenti del progetto:** `/apri-task <n>` apre un task leggendo solo i documenti che indica · agenti `revisore-fase` e `deriva-documenti` · gli hook in `.claude/hooks/` bloccano le violazioni delle tre regole prima che tocchino il disco.
 
-**Prima di chiudere una fase, sempre una review**, con l'agente `revisore-fase`. Che compili e giri non basta: rileggi il lavoro contro le regole di questo file e contro il documento del task, e di' cosa non torna invece di chiudere in silenzio. Ogni rilievo va verificato contro il codice prima di riportarlo: in T1 sette su dieci erano plausibili e falsi.
+**Prima di chiudere una fase, sempre una review**, con l'agente `revisore-fase`. Che compili e giri non basta: rileggi il lavoro contro le regole di questo file e contro il documento del task, e di' cosa non torna invece di chiudere in silenzio. Ogni rilievo va verificato contro il codice prima di riportarlo: in T1 sette su dieci erano plausibili e falsi. Verificare vuol dire **eseguire**: applicare il DDL a un database di scorta e confrontare i `pragma`, impacchettare un modulo con esbuild per vedere cosa tira dentro davvero.
 
 Se una specifica è ambigua o sbagliata, fermati e chiedi. Non indovinare e non "sistemare" silenziosamente una scelta che sembra strana: quasi tutte le stranezze in questi documenti sono deliberate e motivate.
 

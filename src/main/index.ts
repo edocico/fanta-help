@@ -1,8 +1,7 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import { closeDb, databasePath, ensureInstance, foreignKeysEnabled, openDb } from './db/client'
-import { fail, ok, type Result } from '@shared/errors'
-import type { AppInstance } from '@shared/types'
+import { registerAll, registerUnavailable } from './ipc/register'
 
 // main and preload are built as CommonJS, so __dirname exists. See the note in
 // package.json's missing `type: module`: the `electron` module is CJS with lazy
@@ -14,9 +13,6 @@ import type { AppInstance } from '@shared/types'
 if (!app.isPackaged) {
   app.setPath('userData', `${app.getPath('userData')} (dev)`)
 }
-
-/** Filled once at startup: the boot row is written when the app opens, not per request. */
-let instance: AppInstance | null = null
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -46,30 +42,27 @@ function createWindow(): void {
   }
 }
 
-ipcMain.handle('app.instance', (): Result<AppInstance> => {
-  // The only way `instance` stays null is openDb() throwing, i.e. the migrations
-  // failing — the exact breakage T3 exists to make legible. The generic UNKNOWN
-  // would say neither what happened nor what to do.
-  if (!instance) return fail('DB_UNAVAILABLE')
-  return ok(instance)
-})
-
 void app.whenReady().then(() => {
   try {
     // openDb runs the migrations. If they fail here, they fail loudly.
     const db = openDb()
     const { uuid, label } = ensureInstance(db)
-    instance = {
-      uuid,
-      label,
-      version: app.getVersion(),
-      databasePath: databasePath(),
-      foreignKeys: foreignKeysEnabled(),
-    }
+
+    registerAll({
+      db,
+      instance: {
+        uuid,
+        label,
+        version: app.getVersion(),
+        databasePath: databasePath(),
+        foreignKeys: foreignKeysEnabled(),
+      },
+    })
   } catch (e) {
-    // Leave `instance` null: the channel reports it and the window still opens,
-    // which is what makes a packaging failure legible instead of a blank screen.
+    // The window still opens and every channel answers DB_UNAVAILABLE, which is
+    // what makes a packaging failure legible instead of a blank screen.
     console.error('apertura del database fallita', e)
+    registerUnavailable()
   }
 
   createWindow()

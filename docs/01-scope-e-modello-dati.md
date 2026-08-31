@@ -207,7 +207,9 @@ CREATE TABLE player (
   source_id            INTEGER NOT NULL,     -- colonna 'Id' del listone
   identity_key         TEXT NOT NULL,        -- 'fc-<source_id>'
   name                 TEXT NOT NULL,
-  name_normalized      TEXT NOT NULL,        -- minuscolo, senza diacritici
+  name_normalized      TEXT NOT NULL,        -- i quattro passi del documento 4: minuscolo,
+                                             -- NFD senza diacritici, via apostrofi e
+                                             -- punteggiatura, spazi collassati
   serie_a_team_id      INTEGER NOT NULL REFERENCES serie_a_team(id),
   role_classic         TEXT NOT NULL CHECK (role_classic IN ('P','D','C','A')),
   qt_classic_initial   REAL,

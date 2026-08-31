@@ -24,6 +24,7 @@
     "src/preload/**/*",
     "src/shared/**/*",
     "electron.vite.config.ts",
-    "drizzle.config.ts"
+    "drizzle.config.ts",
+    "vitest.config.ts"
   ]
 }

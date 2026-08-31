@@ -7,7 +7,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { fail, type Result } from '@shared/errors'
+import { call, IpcError } from '@/lib/ipc'
+import { errorMessages } from '@shared/errors'
 import type { AppInstance } from '@shared/types'
 
 /**
@@ -38,13 +39,17 @@ const ROWS: Row[] = [
 ]
 
 export default function Scaffold() {
-  const [state, setState] = useState<Result<AppInstance> | null>(null)
+  const [instance, setInstance] = useState<AppInstance | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    window.api
-      .invoke('app.instance')
-      .then((res) => setState(res as Result<AppInstance>))
-      .catch((e: unknown) => setState(fail('IPC_UNAVAILABLE', String(e))))
+    // The typed wrapper: no raw channel string here, and a failure arrives as a
+    // thrown IpcError carrying the message that already lives in shared/errors.
+    call('app.instance')
+      .then(setInstance)
+      .catch((e: unknown) =>
+        setError(e instanceof IpcError ? e.message : errorMessages.IPC_UNAVAILABLE()),
+      )
   }, [])
 
   return (
@@ -115,16 +120,16 @@ export default function Scaffold() {
 
       {/* Kept from T1: proves the IPC pipe still answers inside the package. */}
       <footer className="border-t border-line px-6 py-3 text-sm text-chalk-dim">
-        {state?.ok === true && (
+        {instance && (
           <span>
-            versione {state.data.version} · istanza{' '}
-            <span className="figures">{state.data.uuid.slice(0, 8)}</span>
+            versione {instance.version} · istanza{' '}
+            <span className="figures">{instance.uuid.slice(0, 8)}</span>
           </span>
         )}
         {/* The message comes from shared/errors.ts, never written here: an error
             has to say what happened and what to do, and a component that invents
             its own copy says neither. */}
-        {state?.ok === false && <span className="text-taken">{state.error.message}</span>}
+        {error && <span className="text-taken">{error}</span>}
       </footer>
     </div>
   )
