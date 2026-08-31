@@ -1,0 +1,3 @@
+Qui vanno i file scaricati a mano da Fantacalcio.it e da FBref.
+Il contenuto della cartella è ignorato da git: questa riga tiene in piedi la
+cartella, così esiste su entrambe le macchine senza che i dati la seguano.

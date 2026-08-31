@@ -1,0 +1,44 @@
+import { describe, expect, it } from 'vitest'
+import { normalizeName } from './domain'
+
+/**
+ * The four cases document 6 §7 assigns to T5, one per step of the pipeline
+ * described in document 4 §5.
+ *
+ * They look trivial and they are not. `normalizeName` has two callers that never
+ * meet: the offline pipeline writes `player.name_normalized` with it, and the app
+ * searches that column with it. Nothing connects the two at compile time. If the
+ * function ever changes shape — a stricter punctuation class, a different Unicode
+ * form — the column and the query drift apart, searching for a name that exists
+ * returns nothing, and no other test in this repo notices.
+ *
+ * That is also why the function lives in shared/ and not in tools/, where
+ * document 6 §6 assumed it would: two implementations of this would diverge in
+ * silence.
+ */
+
+const cases: Array<{ step: string; input: string; expected: string }> = [
+  { step: 'lowercases', input: 'LAUTARO MARTINEZ', expected: 'lautaro martinez' },
+  { step: 'strips diacritics', input: 'Vlahović', expected: 'vlahovic' },
+  { step: 'drops apostrophes and punctuation', input: "N'Dicka", expected: 'ndicka' },
+  { step: 'collapses runs of whitespace', input: '  Thuram   Marcus ', expected: 'thuram marcus' },
+]
+
+describe('normalizeName', () => {
+  it.each(cases)('$step: "$input" → "$expected"', ({ input, expected }) => {
+    expect(normalizeName(input)).toBe(expected)
+  })
+
+  /**
+   * Reconciliation normalises the same string more than once — once when reading
+   * the listone, again when comparing against a past season. A step that is not
+   * idempotent would make the second pass disagree with the first, and the
+   * mismatch would look like a missing player rather than a broken function.
+   */
+  it('is idempotent', () => {
+    for (const { input } of cases) {
+      const once = normalizeName(input)
+      expect(normalizeName(once)).toBe(once)
+    }
+  })
+})

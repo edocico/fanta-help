@@ -105,9 +105,11 @@ Nessuno stadio può far fallire quelli precedenti. Se lo stadio 2 non trova un f
 | File | Colonne rilevanti |
 |---|---|
 | Quotazioni (stagione corrente) | `Id`, `R`, `RM`, `Nome`, `Squadra`, `Qt.A`, `Qt.I`, `Qt.A M`, `Qt.I M`, `FVM`, `FVM M` |
-| Statistiche (stagioni passate) | `Id`, `R`, `Nome`, `Squadra`, `Pv`, `Mv`, `Fm`, `Gf`, `Gs`, `Rp`, `Rc`, `R+`, `R-`, `Ass`, `Amm`, `Esp`, `Au` |
+| Statistiche (stagioni passate e in corso) | `Id`, `R`, `Nome`, `Squadra`, `Pv`, `Mv`, `Fm`, `Gf`, `Gs`, `Rp`, `Rc`, `R+`, `R-`, `Ass`, `Amm`, `Esp`, `Au` |
 
 **Tre stagioni di storico.** Coprono la carriera recente di chiunque conti, includono i giovani esplosi da poco e restano leggere. Nessuno compra un giocatore nel 2026 guardando come andò nel 2022.
+
+**Più la stagione in corso.** Il file statistiche della stagione appena iniziata entra nel dataset come le altre: a un'asta di inizio settembre la forma attuale pesa quanto lo storico. È però la riga più fragile che il dataset contiene, e va trattata come tale. Alla seconda giornata del 2026-27, su 524 giocatori del listone **196 hanno `Pv 0`** e i restanti una o due partite: una media voto costruita su una partita non è la stessa cosa di una costruita su trentotto, e mostrarle uguali è fuorviante quanto sbagliare il numero.
 
 `Pv` sono le partite **a voto**, non le presenze. La distinzione conta e va conservata fino all'interfaccia.
 
@@ -219,6 +221,8 @@ Il campo `note` compare nell'interfaccia quando l'app propone l'aggiornamento. "
 ```
 
 `sources` con le impronte dei file di partenza serve a una cosa: fra sei mesi, davanti a un dato strano, poter dire con certezza da quale file veniva.
+
+**Il dataset non filtra per significatività.** Ogni giocatore del listone porta tutte le righe di statistica che le fonti gli danno, comprese quelle a `Pv 0` della stagione appena iniziata. Stabilire che una riga è troppo magra per essere mostrata è una decisione di presentazione, e sta nell'app, dove si può cambiare idea. Congelarla qui significherebbe dover rigenerare il dataset per ripensarci.
 
 ### I rigoristi designati
 

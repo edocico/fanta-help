@@ -424,6 +424,8 @@ Un'app usata una sera all'anno passa molto tempo vuota. Ogni schermata vuota dic
 | Squadre | "Aggiungi le squadre che partecipano all'asta." |
 | Cronologia | "Nessuna operazione ancora." |
 
+Una sola eccezione, ed è deliberata: lo **storico assente** di un giocatore. Lì non c'è nessuna azione da proporre, perché non ha giocato, e un invito inventato sarebbe peggio del silenzio. Quella riga constata: *"Nessuna presenza nelle stagioni disponibili (2023-24 → 2025-26)."* La finestra si nomina, e le stagioni si leggono da quelle presenti in `player_season_stat` invece di essere scritte a mano. Non si dice "esordiente": sarebbe spesso falso, perché molti di quei giocatori arrivano dall'estero o dalla Serie B.
+
 ---
 
 ## 9. Decisioni prese
@@ -437,6 +439,7 @@ Un'app usata una sera all'anno passa molto tempo vuota. Ogni schermata vuota dic
 - **Il filtro dei titolari è un valore numerico di Pv minime**, con un chip preimpostato a 25, non un interruttore con una soglia nascosta.
 - **La vista Giocatori mostra la stagione della lega aperta**, o la più recente importata. Il selettore compare solo con più di una stagione presente.
 - **Le colonne che dipendono da FBref e dai dati vivi si nascondono quando la fonte manca**, invece di mostrarsi vuote.
+- **Lo storico si nasconde solo quando non c'è, mai perché è poco.** Un giocatore senza nessuna riga nelle stagioni disponibili mostra una constatazione al posto della tabella. Chi ha giocato poco mostra quello che ha, con `Pv` accanto a qualificarlo: `6,80 su 4 Pv` nessuno lo confonde con `6,80 su 34 Pv`. Una soglia di "precedenti sufficienti" sarebbe la stessa soglia nascosta che il filtro dei titolari ha già rifiutato, e quattro partite a 7,5 sono il ragazzo esploso a maggio — un'informazione, non rumore. È diverso dal caso qui sopra: lì manca la **fonte** e la colonna è vuota per tutti, qui il valore esiste e riposa su poco. Sul listone 2026-27 il caso davvero vuoto riguarda 108 giocatori su 524.
 - **Il modo proiezione passa da `F11` a `Ctrl/Cmd+P`**, perché `F11` è già lo schermo intero di sistema.
 - **L'infortunio compare nel pannello di assegnazione**, non solo nella tabella, e non blocca mai l'acquisto.
 

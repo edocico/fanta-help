@@ -34,3 +34,14 @@ release
 *.njsproj
 *.sln
 *.sw?
+
+# Materia prima e prodotto della pipeline dati (documento 4 §9).
+# Questa repo è pubblica; i listoni sono di Fantacalcio.it e non vanno
+# ridistribuiti, quindi manifest e dataset vivono in una repo privata separata.
+# Qui dentro sta lo script, mai ciò che legge né ciò che scrive.
+# Si ignorano le cartelle e non le estensioni: un .xlsx appoggiato per sbaglio
+# in tools/dataset/ finirebbe committato senza che niente si lamenti.
+tools/dataset/input/*
+!tools/dataset/input/.gitkeep
+tools/dataset/output/*
+!tools/dataset/output/.gitkeep

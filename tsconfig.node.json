@@ -23,6 +23,7 @@
     "src/main/**/*",
     "src/preload/**/*",
     "src/shared/**/*",
+    "tools/**/*",
     "electron.vite.config.ts",
     "drizzle.config.ts",
     "vitest.config.ts"
