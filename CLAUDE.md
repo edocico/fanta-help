@@ -18,7 +18,7 @@ Le specifiche complete stanno in `docs/`, un file per documento. Leggi solo quel
 
 ## Stack
 
-Electron + electron-vite + React + TypeScript · better-sqlite3 + Drizzle nel main · Tailwind v4 + shadcn/ui · Zustand + TanStack Query nel renderer · electron-builder.
+Electron + electron-vite + React + TypeScript · better-sqlite3 + Drizzle nel main · Tailwind v4 + shadcn/ui · Zustand + TanStack Query nel renderer · Vitest · electron-builder.
 
 Sono decisioni prese, non proposte. Se una sembra sbagliata, dillo prima di cambiarla.
 
@@ -52,7 +52,9 @@ Sono già costate tempo. Non riscoprirle.
 | `PRAGMA foreign_keys` | SQLite lo tiene spento. Impostarlo **a ogni apertura**, altrimenti metà dei vincoli non esiste |
 | Migrazioni Drizzle in produzione | Percorso relativo → finisce in `app.asar` e fallisce su `meta/_journal.json`. Usare percorso assoluto e spedire `drizzle/` in `extraResources` |
 | better-sqlite3 | Modulo nativo. `asarUnpack` deve includere anche `bindings` e `file-uri-to-path`, o l'app parte in dev e crolla in produzione |
+| Verificare il modulo nativo | `require('better-sqlite3')` riesce **anche con l'ABI sbagliata**: `bindings` carica il `.node` solo al primo `new Database()`. Per provarlo, istanzia — e usa l'ABI di Electron: `ELECTRON_RUN_AS_NODE=1 node_modules/electron/dist/electron -e "new (require('better-sqlite3'))(':memory:')"` |
 | Cross-build fra piattaforme | `package:win` e `package:linux` ricompilano `better-sqlite3` per il target e ce lo lasciano. Dopo, `npm run dev` muore con `NODE_MODULE_VERSION mismatch`: rimettere a posto con `electron-builder install-app-deps` |
+| Vitest e il modulo nativo | Vitest gira su Node, `better-sqlite3` è compilato per l'ABI di Electron: un test che lo importa muore con `NODE_MODULE_VERSION mismatch`. Non ricompilare avanti e indietro — è il segnale che la logica sta nel posto sbagliato (vedi Test) |
 | electron-vite | `externalizeDepsPlugin()` in `main` e `preload`, o la build fallisce in modo illeggibile |
 | `"type": "module"` in `package.json` | Non rimetterlo. Fa emettere a electron-vite un main ESM, e `import { BrowserWindow } from 'electron'` esplode all'istanziazione: `electron` è CJS con getter pigri. Muore con **codice 0 e stderr vuoto** dal pacchetto |
 | Percorso dei dati utente | `app.getPath('userData')` deriva da `app.getName()`, che legge `package.json`. `productName` nell'`electron-builder.yml` a runtime non esiste: senza `productName` anche in `package.json`, sviluppo e app installata scrivono nello stesso database |
@@ -84,14 +86,23 @@ Poco e mirato. Non serve copertura, servono questi:
 
 Niente test sull'interfaccia in v1.
 
+**Il guardrail.** I test girano su Node, quindi non possono toccare il database. Se un test ha bisogno di importare `better-sqlite3`, `electron` o qualcosa da `src/main/db/`, non è il test a essere sbagliato: è la logica che sta nel posto sbagliato e va spostata in `src/shared/domain.ts` come funzione pura. Le invarianti che contano sono aritmetica su crediti e slot: non hanno bisogno di SQLite.
+
 ---
 
 ## Come lavoriamo
 
 Un task per sessione. Alla fine di ogni fase, **produci un pacchetto installabile e provalo**, non aspettare la fine del progetto.
 
-Per leggere cosa mostra davvero l'app pacchettizzata, lanciala con `--remote-debugging-port=9222` e interroga il DOM via protocollo DevTools: Node ha un client WebSocket integrato, non serve installare niente.
+Per leggere cosa mostra davvero l'app: **`/prova-pacchetto`** (`dev` o `pack`) costruisce, lancia e stampa il DOM via DevTools. Le trappole d'avvio sono già dentro lo script: non riscoprirle.
 
-**Prima di chiudere una fase, sempre una review.** Che compili e giri non basta: rileggi il lavoro contro le regole di questo file e contro il documento del task, e di' cosa non torna invece di chiudere in silenzio. Ogni rilievo va verificato contro il codice prima di riportarlo: in T1 sette su dieci erano plausibili e falsi.
+**Strumenti del progetto:** `/apri-task <n>` apre un task leggendo solo i documenti che indica · agenti `revisore-fase` e `deriva-documenti` · gli hook in `.claude/hooks/` bloccano le violazioni delle tre regole prima che tocchino il disco.
+
+**Prima di chiudere una fase, sempre una review**, con l'agente `revisore-fase`. Che compili e giri non basta: rileggi il lavoro contro le regole di questo file e contro il documento del task, e di' cosa non torna invece di chiudere in silenzio. Ogni rilievo va verificato contro il codice prima di riportarlo: in T1 sette su dieci erano plausibili e falsi.
 
 Se una specifica è ambigua o sbagliata, fermati e chiedi. Non indovinare e non "sistemare" silenziosamente una scelta che sembra strana: quasi tutte le stranezze in questi documenti sono deliberate e motivate.
+
+---
+
+Note di questa macchina, non condivise: @.claude.local.md
+
