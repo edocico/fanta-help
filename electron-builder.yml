@@ -1,0 +1,44 @@
+appId: it.fantahelp.app
+productName: Fanta Help
+directories:
+  output: release
+  buildResources: resources
+
+files:
+  - out/**
+  - package.json
+
+extraResources:
+  - from: drizzle
+    to: drizzle
+
+asar: true
+# All three entries are required: better-sqlite3 loads its binary through
+# `bindings`, which in turn uses `file-uri-to-path`. Miss one and the app
+# starts in dev and crashes in production.
+asarUnpack:
+  - "**/node_modules/better-sqlite3/**"
+  - "**/node_modules/bindings/**"
+  - "**/node_modules/file-uri-to-path/**"
+
+npmRebuild: true
+
+# Every target pins its architectures explicitly. Without `arch`, electron-builder
+# builds only for the architecture of the machine that runs it, so a build on an
+# Apple Silicon Mac would silently produce arm64-only Windows and Linux installers.
+win:
+  target:
+    - target: nsis
+      arch: [x64, arm64]
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  category: public.app-category.sports
+linux:
+  target:
+    - target: AppImage
+      arch: [x64, arm64]
+    - target: deb
+      arch: [x64, arm64]
+  category: Sports

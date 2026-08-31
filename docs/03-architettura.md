@@ -507,16 +507,28 @@ asarUnpack:
 npmRebuild: true
 
 win:
-  target: nsis
+  target:
+    - target: nsis
+      arch: [x64, arm64]
 mac:
-  target: dmg
+  target:
+    - target: dmg
+      arch: [x64, arm64]
   category: public.app-category.sports
 linux:
-  target: [AppImage, deb]
+  target:
+    - target: AppImage
+      arch: [x64, arm64]
+    - target: deb
+      arch: [x64, arm64]
   category: Sports
 ```
 
 Le tre voci in `asarUnpack` sono tutte necessarie: `better-sqlite3` carica il proprio binario tramite `bindings`, che a sua volta usa `file-uri-to-path`. Se ne manca una, l'app parte in sviluppo e crolla in produzione.
+
+**Le architetture vanno scritte a mano.** Senza `arch`, electron-builder costruisce solo per quella della macchina che lo lancia: da un Mac Apple Silicon uscirebbero installer Windows e Linux arm64, senza un errore e senza un avviso. Servono x64 e arm64 su tutte e tre le piattaforme. Verificato in T1: i binari precompilati di `better-sqlite3` esistono per tutte le combinazioni, quindi `npmRebuild` li risolve senza toolchain di cross-compilazione.
+
+`author` con un indirizzo email è obbligatorio, altrimenti il target `deb` si ferma: fpm rifiuta di produrre un pacchetto senza campo *maintainer*. Serve anche `homepage`, che senza `repository` in `package.json` viene dedotto dal remote git e sparisce in un export senza `.git`.
 
 In `package.json`:
 

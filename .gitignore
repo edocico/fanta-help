@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# electron-vite build output and electron-builder installers
+out
+release
+*.tsbuildinfo
+
+# note locali per Claude Code, non condivise
+.claude.local.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

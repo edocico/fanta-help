@@ -11,6 +11,7 @@ Le specifiche complete stanno in `docs/`, un file per documento. Leggi solo quel
 | 3 | `03-architettura.md` | Struttura repo, IPC, livello dati, sicurezza, build |
 | 4 | `04-pipeline-dati.md` | Fonti, pipeline offline, riconciliazione, import |
 | 5 | `05-roadmap-claude-code.md` | Roadmap dei task |
+| 6 | `06-testing.md` | Suite di test con Vitest, si innesta da T4 |
 | 0 | `00-revisione.md` | Registro della revisione, chiusa |
 
 ---
@@ -51,7 +52,10 @@ Sono già costate tempo. Non riscoprirle.
 | `PRAGMA foreign_keys` | SQLite lo tiene spento. Impostarlo **a ogni apertura**, altrimenti metà dei vincoli non esiste |
 | Migrazioni Drizzle in produzione | Percorso relativo → finisce in `app.asar` e fallisce su `meta/_journal.json`. Usare percorso assoluto e spedire `drizzle/` in `extraResources` |
 | better-sqlite3 | Modulo nativo. `asarUnpack` deve includere anche `bindings` e `file-uri-to-path`, o l'app parte in dev e crolla in produzione |
+| Cross-build fra piattaforme | `package:win` e `package:linux` ricompilano `better-sqlite3` per il target e ce lo lasciano. Dopo, `npm run dev` muore con `NODE_MODULE_VERSION mismatch`: rimettere a posto con `electron-builder install-app-deps` |
 | electron-vite | `externalizeDepsPlugin()` in `main` e `preload`, o la build fallisce in modo illeggibile |
+| `"type": "module"` in `package.json` | Non rimetterlo. Fa emettere a electron-vite un main ESM, e `import { BrowserWindow } from 'electron'` esplode all'istanziazione: `electron` è CJS con getter pigri. Muore con **codice 0 e stderr vuoto** dal pacchetto |
+| Percorso dei dati utente | `app.getPath('userData')` deriva da `app.getName()`, che legge `package.json`. `productName` nell'`electron-builder.yml` a runtime non esiste: senza `productName` anche in `package.json`, sviluppo e app installata scrivono nello stesso database |
 | React Router su `file://` | `HashRouter`, mai `BrowserRouter` |
 | `F11` | È già lo schermo intero di sistema. Il modo proiezione usa `Ctrl/Cmd+P` |
 
@@ -84,5 +88,9 @@ Niente test sull'interfaccia in v1.
 ## Come lavoriamo
 
 Un task per sessione. Alla fine di ogni fase, **produci un pacchetto installabile e provalo**, non aspettare la fine del progetto.
+
+Per leggere cosa mostra davvero l'app pacchettizzata, lanciala con `--remote-debugging-port=9222` e interroga il DOM via protocollo DevTools: Node ha un client WebSocket integrato, non serve installare niente.
+
+**Prima di chiudere una fase, sempre una review.** Che compili e giri non basta: rileggi il lavoro contro le regole di questo file e contro il documento del task, e di' cosa non torna invece di chiudere in silenzio. Ogni rilievo va verificato contro il codice prima di riportarlo: in T1 sette su dieci erano plausibili e falsi.
 
 Se una specifica è ambigua o sbagliata, fermati e chiedi. Non indovinare e non "sistemare" silenziosamente una scelta che sembra strana: quasi tutte le stranezze in questi documenti sono deliberate e motivate.

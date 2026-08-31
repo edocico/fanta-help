@@ -1,0 +1,65 @@
+/* Placeholder styling for the packaging spike. T2 replaces this with the
+   colour and type tokens of document 2, via Tailwind. */
+
+:root {
+  color-scheme: dark;
+  --bg: #16181d;
+  --fg: #e6e8ec;
+  --muted: #8b919e;
+  --line: #272b33;
+  --bad: #e06c75;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+main {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+p.lede {
+  margin: 0 0 2rem;
+  color: var(--muted);
+}
+
+dl {
+  display: grid;
+  grid-template-columns: 10rem 1fr;
+  gap: 0.6rem 1rem;
+  margin: 0;
+}
+
+dt {
+  color: var(--muted);
+}
+
+dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.error {
+  border-left: 2px solid var(--bad);
+  padding-left: 0.9rem;
+}
+
+.error code {
+  color: var(--muted);
+}
