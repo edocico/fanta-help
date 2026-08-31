@@ -57,6 +57,7 @@ Sono già costate tempo. Non riscoprirle.
 | better-sqlite3 | Modulo nativo. `asarUnpack` deve includere anche `bindings` e `file-uri-to-path`, o l'app parte in dev e crolla in produzione |
 | Verificare il modulo nativo | `require('better-sqlite3')` riesce **anche con l'ABI sbagliata**: `bindings` carica il `.node` solo al primo `new Database()`. Per provarlo, istanzia — e usa l'ABI di Electron: `ELECTRON_RUN_AS_NODE=1 node_modules/electron/dist/electron -e "new (require('better-sqlite3'))(':memory:')"` |
 | Cross-build fra piattaforme | `package:win` e `package:linux` ricompilano `better-sqlite3` per il target e ce lo lasciano. Dopo, `npm run dev` muore con `NODE_MODULE_VERSION mismatch`: rimettere a posto con `electron-builder install-app-deps` |
+| `npm install` con npm 11 | Gli install script delle dipendenze sono bloccati finché non stanno in `allowScripts` di `package.json`. `npm install` lo dice in **una riga di `warn`** in mezzo all'output e prosegue: `npm install-scripts ls` mostra chi manca. Il `postinstall` del progetto rimedia per better-sqlite3, **non** per il binario di Electron. L'approvazione è **appuntata alla versione** (`better-sqlite3@11.10.0`), quindi un aggiornamento di dipendenza la fa decadere in silenzio. E `npm install-scripts approve --dry-run` non è un dry run: scrive comunque in `package.json` |
 | Vitest e il modulo nativo | Vitest gira su Node, `better-sqlite3` è compilato per l'ABI di Electron: un test che lo importa muore con `NODE_MODULE_VERSION mismatch`. Non ricompilare avanti e indietro — è il segnale che la logica sta nel posto sbagliato (vedi Test) |
 | electron-vite | `externalizeDepsPlugin()` in `main` e `preload`, o la build fallisce in modo illeggibile |
 | `"type": "module"` in `package.json` | Non rimetterlo. Fa emettere a electron-vite un main ESM, e `import { BrowserWindow } from 'electron'` esplode all'istanziazione: `electron` è CJS con getter pigri. Muore con **codice 0 e stderr vuoto** dal pacchetto. Vitest lo consiglia a ogni esecuzione: ignoralo |
@@ -91,6 +92,8 @@ Poco e mirato. Non serve copertura, servono questi:
 - La copertura dei canali IPC: la lista dei contratti e quella degli handler registrati devono coincidere.
 
 Niente test sull'interfaccia in v1.
+
+**Una guardia che non scatta mai** è indistinguibile da un dato sempre pulito. Dopo averne scritta una, rompila apposta e rilancia i test: se passano lo stesso, il test non c'è.
 
 **Il guardrail.** I test girano su Node, quindi non possono toccare il database. Se un test ha bisogno di importare `better-sqlite3`, `electron` o qualcosa da `src/main/db/`, non è il test a essere sbagliato: è la logica che sta nel posto sbagliato e va spostata in `src/shared/domain.ts` come funzione pura. Le invarianti che contano sono aritmetica su crediti e slot: non hanno bisogno di SQLite.
 

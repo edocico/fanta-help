@@ -171,7 +171,7 @@ export default defineConfig({
 }
 ```
 
-`tools/**` è incluso perché la pipeline dati ha una funzione che vale la pena testare a parte: la normalizzazione dei nomi. `Vlahović` → `vlahovic`, `N'Dicka` → `ndicka`. Sono quattro casi e proteggono tutta la riconciliazione a valle.
+`tools/**` è incluso per i test della pipeline dati. La normalizzazione dei nomi, che questo documento immaginava lì, sta invece in `src/shared/domain.ts`: il documento 4 §5 la vuole condivisa con la ricerca dell'app, e due implementazioni divergerebbero in silenzio. I suoi quattro casi — `Vlahović` → `vlahovic`, `N'Dicka` → `ndicka` — vivono quindi in `src/shared/domain.test.ts`, e proteggono tutta la riconciliazione a valle.
 
 ---
 
