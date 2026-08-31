@@ -56,6 +56,7 @@ Sono già costate tempo. Non riscoprirle.
 | electron-vite | `externalizeDepsPlugin()` in `main` e `preload`, o la build fallisce in modo illeggibile |
 | `"type": "module"` in `package.json` | Non rimetterlo. Fa emettere a electron-vite un main ESM, e `import { BrowserWindow } from 'electron'` esplode all'istanziazione: `electron` è CJS con getter pigri. Muore con **codice 0 e stderr vuoto** dal pacchetto |
 | Percorso dei dati utente | `app.getPath('userData')` deriva da `app.getName()`, che legge `package.json`. `productName` nell'`electron-builder.yml` a runtime non esiste: senza `productName` anche in `package.json`, sviluppo e app installata scrivono nello stesso database |
+| `ELECTRON_RUN_AS_NODE` | VS Code lo esporta a `1` nei suoi terminali. Electron esegue il main come Node normale: `require('electron').app` è `undefined` e l'app muore con `Cannot read properties of undefined (reading 'isPackaged')`. Lanciarla con `env -u ELECTRON_RUN_AS_NODE` |
 | React Router su `file://` | `HashRouter`, mai `BrowserRouter` |
 | `F11` | È già lo schermo intero di sistema. Il modo proiezione usa `Ctrl/Cmd+P` |
 
