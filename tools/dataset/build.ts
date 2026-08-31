@@ -17,11 +17,19 @@ import {
   type Manifest,
 } from '@shared/dataset'
 import { readQuotazioni, readStatistiche, type Statistica } from './fantacalcio'
+import { readFbref, type FbrefRow } from './fbref'
+import { readApiFootball } from './apifootball'
+import { mapClubs, matchWithinClub } from './matching'
 
 /**
- * Stage 1 of document 4, end to end: read the listone and the statistics, hang
- * the history off the current season's identities, and write the dataset plus a
- * report a person can read.
+ * The three stages of document 4 §2, end to end: read the listone and the
+ * statistics, hang the history off the current season's identities, enrich it
+ * with FBref and with the external identifiers if those files are there, and
+ * write the dataset plus a report a person can read.
+ *
+ * Stages 2 and 3 are optional in the strong sense: **neither can fail the run**.
+ * Everything they cannot do turns into a line of the report, because a player
+ * with four empty columns is a working row and a stopped pipeline is not.
  *
  * The projection matters and is deliberate: the dataset describes the players in
  * the **most recent listone**, and nobody else. A player who left Serie A has no
@@ -61,7 +69,7 @@ const overridesSchema = z.object({
     .default([]),
   birthDates: z.record(z.string(), z.string()).default({}),
   externalIds: z
-    .record(z.string(), z.object({ fbref: z.string().optional(), apiFootball: z.number().optional() }))
+    .record(z.string(), z.object({ fbref: z.string().optional(), apiFootball: z.number().int().optional() }))
     .default({}),
   penaltyTakers: z.record(z.string(), z.array(z.string())).default({}),
 })
@@ -258,7 +266,11 @@ async function main(): Promise<void> {
   }
 
   // ── History hung off those identities ───────────────────────────────────────
-  const stats: DatasetStat[] = []
+  // The name and the club of that season travel beside the row, and stage 2 is
+  // why: FBref is matched inside the club, and the club that matters is the one
+  // the player was at *that* season. The listone only knows where he is now, so
+  // matching 2023-24 against it would look for half the league in the wrong squad.
+  const history: Array<{ row: DatasetStat; name: string; team: string }> = []
   const withHistory = new Set<string>()
   let dropped = 0
   for (const [statSeason, rows] of statistiche) {
@@ -269,7 +281,10 @@ async function main(): Promise<void> {
         continue
       }
       if (statSeason !== seasonId) withHistory.add(identityKey)
-      stats.push({
+      history.push({
+        name: row.name,
+        team: row.team,
+        row: {
         identityKey,
         seasonId: statSeason,
         team: row.team,
@@ -291,6 +306,7 @@ async function main(): Promise<void> {
         starts: null,
         minutes: null,
         cleanSheets: null,
+        },
       })
     }
   }
@@ -324,6 +340,221 @@ async function main(): Promise<void> {
     )
   }
 
+  // ── Stage 2: FBref ──────────────────────────────────────────────────────────
+  // Matched per season, inside the club, exactly as document 4 §5 prescribes —
+  // and the club is the one of *that* season, taken from the statistiche row.
+  const fbref = readFbref(join(INPUT, 'fbref'))
+  const fbrefNotes = [...fbref.problems]
+  const fbrefUnmatched: string[] = []
+  const fbrefLinked = new Set<string>()
+  const fbrefEligible = new Set<string>()
+  const birthYears = new Map<string, number>()
+  let enrichedRows = 0
+  let aggregated = 0
+
+  /**
+   * The year out of a hand-written birth date, or null when there is none.
+   *
+   * The shape of the test matters more than it looks: `Number('')` is 0 and
+   * `Number.isInteger(0)` is true, so an absent override used to answer "year
+   * zero". That was harmless while the year only broke ties — zero tied with
+   * nobody — and became a veto that refused every candidate the moment the year
+   * was allowed to say no on its own.
+   */
+  const yearOf = (key: string): number | null => {
+    const raw = (overrides.birthDates[key] ?? '').slice(0, 4)
+    return /^\d{4}$/.test(raw) ? Number(raw) : null
+  }
+
+  const total = (parts: FbrefRow[], field: 'matchesPlayed' | 'starts' | 'minutes' | 'cleanSheets'): number | null => {
+    const values = parts.map((part) => part[field]).filter((value): value is number => value !== null)
+    return values.length === 0 ? null : values.reduce((sum, value) => sum + value, 0)
+  }
+
+  for (const season of fbref.seasons) {
+    const rows = history.filter((entry) => entry.row.seasonId === season.seasonId)
+    if (rows.length === 0) {
+      fbrefNotes.push(`${season.seasonId}: FBref copre la stagione, le statistiche no. Ignorata.`)
+      continue
+    }
+
+    const clubs = mapClubs(
+      [...new Set(rows.map((entry) => entry.team))],
+      season.rows.map((row) => row.team),
+    )
+    // A club that fails to map costs its whole squad, which is too large a hole
+    // to leave unnamed: one line per club, not one per player.
+    for (const club of clubs.unmapped) {
+      fbrefNotes.push(`${season.seasonId}: il club FBref "${club}" non corrisponde a nessuna squadra delle statistiche`)
+    }
+    for (const club of clubs.ambiguous) fbrefNotes.push(`${season.seasonId}: club FBref ambiguo, ${club}`)
+
+    // Indexed because the twin lookup below spans rows the club mapping threw
+    // away, and two objects have to be told apart after being copied.
+    const indexed = season.rows.map((row, index) => ({ ...row, index }))
+    const candidates = indexed
+      .map((row) => ({ ...row, team: clubs.byForeign.get(row.team) ?? '' }))
+      .filter((row) => row.team !== '')
+
+    // Over *every* row of the season, not just the ones whose club mapped. The
+    // club a player left may be one no listone player ever played for, and it is
+    // his minutes that would go missing — the half of the season nobody notices.
+    const byName = new Map<string, typeof indexed>()
+    for (const row of indexed) {
+      const key = normalizeName(row.name)
+      byName.set(key, [...(byName.get(key) ?? []), row])
+    }
+
+    const claims: Array<{ entry: (typeof rows)[number]; to: (typeof candidates)[number] }> = []
+    for (const entry of rows) {
+      fbrefEligible.add(entry.row.identityKey)
+      const outcome = matchWithinClub(entry, candidates, yearOf(entry.row.identityKey))
+      if (outcome.kind !== 'matched') {
+        fbrefUnmatched.push(
+          `${entry.name} (${entry.team}, ${season.seasonId}): ` +
+            (outcome.kind === 'ambiguous' ? `ambiguo fra ${outcome.between.join(' / ')}` : 'nessuna corrispondenza'),
+        )
+        continue
+      }
+      claims.push({ entry, to: outcome.to })
+    }
+
+    // Two players of the listone cannot be the same row of the export. When both
+    // claim it the match is wrong for at least one of them and nothing here says
+    // which, so neither keeps it. Each match is decided on its own, so without
+    // this the collision is invisible: both sides look like clean matches.
+    const byRow = new Map<number, typeof claims>()
+    for (const claim of claims) byRow.set(claim.to.index, [...(byRow.get(claim.to.index) ?? []), claim])
+
+    for (const group of byRow.values()) {
+      if (group.length > 1) {
+        fbrefNotes.push(
+          `${season.seasonId}: "${group[0].to.name}" è reclamato da ` +
+            `${group.map((claim) => `${claim.entry.name} (${claim.entry.row.identityKey})`).join(' e ')}, ` +
+            `nessuno dei due agganciato`,
+        )
+        for (const claim of group) {
+          fbrefUnmatched.push(
+            `${claim.entry.name} (${claim.entry.team}, ${season.seasonId}): conteso con un altro giocatore del listone`,
+          )
+        }
+        continue
+      }
+      const { entry, to } = group[0]
+
+      // Somebody who changed club inside Serie A has one FBref row per squad and
+      // one single row in the statistiche, so matching inside his club finds only
+      // part of his minutes. The parts are added back — but only when the birth
+      // year says they are the same person. Marcus and Khéphren Thuram are exactly
+      // what this must never fuse, and 1997 against 2001 keeps them apart.
+      const namesakes = (byName.get(normalizeName(to.name)) ?? []).filter((row) => row.index !== to.index)
+      const twins = namesakes.filter((row) => row.birthYear !== null && row.birthYear === to.birthYear)
+      if (twins.length > 0) aggregated++
+      // Refusing to add is the safe half of the decision; saying so is the other
+      // half. Without it, a season cut down to one club's worth of minutes reads
+      // exactly like a season actually spent there.
+      if (namesakes.length > twins.length) {
+        fbrefNotes.push(
+          `${season.seasonId}: "${to.name}" compare anche in ${namesakes
+            .filter((row) => !twins.includes(row))
+            .map((row) => row.team)
+            .join(', ')}, non sommato — anno di nascita mancante o diverso`,
+        )
+      }
+      const parts = [to, ...twins]
+
+      entry.row.matchesPlayed = total(parts, 'matchesPlayed')
+      entry.row.starts = total(parts, 'starts')
+      entry.row.minutes = total(parts, 'minutes')
+      entry.row.cleanSheets = total(parts, 'cleanSheets')
+      if (to.birthYear !== null) birthYears.set(entry.row.identityKey, to.birthYear)
+      fbrefLinked.add(entry.row.identityKey)
+      enrichedRows++
+    }
+  }
+  const hasFbref = enrichedRows > 0
+
+  // Document 4 §4 gives `sources` one job: "fra sei mesi, davanti a un dato
+  // strano, poter dire con certezza da quale file veniva". The four columns this
+  // stage writes are exactly the kind of strange number that gets looked up, so
+  // the exports that produced them are fingerprinted like the others.
+  for (const season of fbref.seasons) {
+    for (const file of season.files) {
+      sources.push({
+        kind: 'fbref',
+        season: season.seasonId,
+        file,
+        sha256: digest(join(INPUT, 'fbref', file)),
+      })
+    }
+  }
+
+  // ── Stage 3: the external identifiers ───────────────────────────────────────
+  // Against the current listone and its clubs, because what this feeds is the
+  // live layer of document 4 §7, which only ever asks about players you can buy.
+  const api = readApiFootball(join(INPUT, 'api-football'))
+  const apiNotes = [...api.problems]
+  const apiUnmatched: string[] = []
+  const apiIds = new Map<string, number>()
+
+  if (api.players.length > 0) {
+    const clubs = mapClubs(
+      [...new Set(quotazioni.map((player) => player.team))],
+      api.players.map((player) => player.team),
+    )
+    for (const club of clubs.unmapped) apiNotes.push(`il club "${club}" non corrisponde a nessuna squadra del listone`)
+    for (const club of clubs.ambiguous) apiNotes.push(`club ambiguo, ${club}`)
+
+    const candidates = api.players
+      .map((player) => ({ ...player, team: clubs.byForeign.get(player.team) ?? '' }))
+      .filter((player) => player.team !== '')
+
+    // A club of the listone with no roster file saved produces thirty lines of
+    // "nessuna corrispondenza" and never says why. One line, like the FBref side.
+    const covered = new Set(candidates.map((player) => player.team))
+    for (const team of [...new Set(quotazioni.map((player) => player.team))].sort()) {
+      if (!covered.has(team)) apiNotes.push(`nessuna rosa salvata per ${team}: i suoi giocatori restano senza id`)
+    }
+
+    for (const player of quotazioni) {
+      const key = `fc-${player.sourceId}`
+      const outcome = matchWithinClub(player, candidates, yearOf(key) ?? birthYears.get(key) ?? null)
+      if (outcome.kind === 'matched') apiIds.set(key, outcome.to.apiFootballId)
+      else {
+        apiUnmatched.push(
+          `${player.name} (${player.team}): ` +
+            (outcome.kind === 'ambiguous' ? `ambiguo fra ${outcome.between.join(' / ')}` : 'nessuna corrispondenza'),
+        )
+      }
+    }
+
+    // Same reasoning as the FBref rows, and a sharper consequence: two players
+    // sharing one apiFootball id means one injury lights up two rows in the app.
+    const byId = new Map<number, string[]>()
+    for (const [key, id] of apiIds) byId.set(id, [...(byId.get(id) ?? []), key])
+    for (const [id, keys] of byId) {
+      if (keys.length === 1) continue
+      apiNotes.push(`l'id ${id} è reclamato da ${keys.join(' e ')}, nessuno dei due agganciato`)
+      for (const key of keys) {
+        apiIds.delete(key)
+        apiUnmatched.push(`${key}: conteso con un altro giocatore del listone`)
+      }
+    }
+  }
+
+  /**
+   * Manual wins, here as with the penalty takers: overrides.json is a decision,
+   * a name match is an inference. Merged and not replaced, so a hand-written
+   * fbref id can sit beside an inferred apiFootball one.
+   */
+  const externalIdsFor = (key: string): DatasetPlayer['externalIds'] => {
+    const manual = overrides.externalIds[key]
+    const inferred = apiIds.get(key)
+    if (manual === undefined && inferred === undefined) return undefined
+    const merged = { ...(inferred === undefined ? {} : { apiFootball: inferred }), ...manual }
+    return Object.keys(merged).length === 0 ? undefined : merged
+  }
+
   // ── Penalty takers ──────────────────────────────────────────────────────────
   const pastSeasons = [...statistiche.keys()].filter((s) => s !== seasonId).sort()
   const lastPast = pastSeasons[pastSeasons.length - 1]
@@ -355,9 +586,10 @@ async function main(): Promise<void> {
         fvmClassic: row.fvmClassic,
         fvmMantra: row.fvmMantra,
         birthDate: overrides.birthDates[identityKey] ?? null,
+        birthYear: birthYears.get(identityKey) ?? null,
         penaltyTaker: manual || derivedTakers.has(identityKey),
         penaltyTakerSource: manual ? ('manual' as const) : derivedTakers.has(identityKey) ? ('derived' as const) : null,
-        externalIds: overrides.externalIds[identityKey],
+        externalIds: externalIdsFor(identityKey),
       }
     })
     // Sorted so that two runs on the same inputs differ only in `generatedAt`.
@@ -365,7 +597,9 @@ async function main(): Promise<void> {
     // would throw that away.
     .sort((a, b) => a.sourceId - b.sourceId)
 
-  stats.sort((a, b) => a.identityKey.localeCompare(b.identityKey) || a.seasonId.localeCompare(b.seasonId))
+  const stats: DatasetStat[] = history
+    .map((entry) => entry.row)
+    .sort((a, b) => a.identityKey.localeCompare(b.identityKey) || a.seasonId.localeCompare(b.seasonId))
 
   const built: Dataset = {
     format: DATASET_FORMAT,
@@ -373,8 +607,11 @@ async function main(): Promise<void> {
     seasonId,
     version,
     generatedAt: new Date().toISOString(),
-    hasFbref: false,
-    hasExternalIds: Object.keys(overrides.externalIds).length > 0,
+    hasFbref,
+    // What this flag promises the app is the live layer's hook, so it answers
+    // for the apiFootball id alone: a dataset carrying only fbref ids would
+    // switch the injury column on and have nothing to put in it.
+    hasExternalIds: players.some((player) => player.externalIds?.apiFootball !== undefined),
     sources,
     serieATeams: teamCodes([...new Set(quotazioni.map((p) => p.team))]),
     players,
@@ -397,12 +634,35 @@ async function main(): Promise<void> {
   // label. The lines that can legitimately read 1 are phrased around it.
   const takers = players.filter((p) => p.penaltyTaker).length
   const manual = players.filter((p) => p.penaltyTakerSource === 'manual').length
+
+  // Document 4 §5 draws this block as two lines. It grows a second line only
+  // where a stage actually ran and has a number worth the space.
+  const fbrefFiles = fbref.seasons.reduce((count, season) => count + season.files.length, 0)
+  // Conditioned on the files being there, not on the stage having succeeded. A
+  // stage that ran and matched nobody is the case the report matters most for,
+  // and "non eseguito" above a list of what it failed to match is a lie.
+  const fbrefLines =
+    fbref.seasons.length > 0
+      ? [
+          `FBref            ${fbrefLinked.size}/${fbrefEligible.size} collegati, ` +
+            `${fbrefEligible.size - fbrefLinked.size} senza corrispondenza`,
+          `                 ${enrichedRows} ${enrichedRows === 1 ? 'riga arricchita' : 'righe arricchite'} da ${fbrefFiles} file` +
+            (aggregated > 0 ? `, ${aggregated} con due squadre nella stagione, minuti sommati` : ''),
+        ]
+      : ['FBref            non eseguito']
+  const apiLines =
+    api.players.length > 0
+      ? [
+          `API-Football     ${apiIds.size}/${players.length} collegati, ` +
+            `${players.length - apiIds.size} senza corrispondenza`,
+        ]
+      : ['API-Football     non eseguito']
   const lines = [
     `Riconciliazione ${seasonId} ${version}`,
     '─'.repeat(26),
     `${pad(players.length)} giocatori nel listone`,
     `${pad(withHistory.size)} con storico agganciato per sourceId`,
-    `${pad(0)} con storico agganciato per nome + data di nascita (livello 2, non serve)`,
+    `${pad(0)} con storico agganciato per nome + anno di nascita (livello 2, non serve)`,
     `${pad(players.length - withHistory.size)} senza storico: esordienti o nuovi arrivi`,
     `${pad(undecided.length)} da decidere: ${undecided.length === 1 ? 'richiede' : 'richiedono'} una voce in overrides.json`,
     '',
@@ -410,9 +670,25 @@ async function main(): Promise<void> {
     `${pad(built.serieATeams.length)} squadre di Serie A`,
     `${pad(takers)} ${takers === 1 ? 'rigorista' : 'rigoristi'}, ${manual} per designazione manuale`,
     '',
-    'FBref            non eseguito, è lo stadio facoltativo di T6',
-    'API-Football     non eseguito',
+    ...fbrefLines,
+    ...apiLines,
   ]
+
+  /**
+   * A list cut at twelve says it was cut. Ten lines under a heading and nothing
+   * else reads as a run with ten problems, which is the one thing a report of
+   * what went wrong must never do.
+   */
+  const detail = (title: string, entries: string[]): string[] => {
+    if (entries.length === 0) return []
+    const shown = entries.slice(0, 12).map((entry) => `  ${entry}`)
+    if (entries.length > 12) shown.push(`  … e altri ${entries.length - 12}, non elencati`)
+    return ['', title, ...shown]
+  }
+  lines.push(...detail('FBREF, NOTE', fbrefNotes))
+  lines.push(...detail('FBREF, SENZA CORRISPONDENZA', fbrefUnmatched))
+  lines.push(...detail('API-FOOTBALL, NOTE', apiNotes))
+  lines.push(...detail('API-FOOTBALL, SENZA CORRISPONDENZA', apiUnmatched))
   if (undecided.length > 0) lines.push('', 'DA DECIDERE', ...undecided)
   const report = lines.join('\n')
   console.log('\n' + report + '\n')

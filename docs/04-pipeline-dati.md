@@ -22,7 +22,9 @@ Andare online a runtime per i primi due non aggiunge niente e aggiunge fragilit�
 
 Due file XLSX scaricabili: le **quotazioni** della stagione corrente e le **statistiche** di ogni stagione passata. Condividono la colonna `Id`, quindi si uniscono con una join banale.
 
-**FBref — facoltativa.** Riempie i buchi che Fantacalcio.it lascia: minuti giocati, partite da titolare, presenze totali, clean sheet dei portieri, e le **date di nascita**, che al listone mancano e che servono a distinguere gli omonimi.
+**FBref — facoltativa.** Riempie i buchi che Fantacalcio.it lascia: minuti giocati, partite da titolare, presenze totali, clean sheet dei portieri, e l'**anno di nascita**, che al listone manca e che serve a distinguere gli omonimi.
+
+L'anno e non la data: le tabelle di lega espongono `Born`, quattro cifre, mentre la data per esteso sta sulla pagina del singolo giocatore, che questa pipeline non scarica. Per gli omonimi l'anno basta quasi sempre — i due Thuram sono del 1997 e del 2001 — e le poche date vere si scrivono a mano in `overrides.json`. Nel dataset sono due campi distinti, `birthYear` e `birthDate`, perché un campo solo che a volte contiene `1997` e a volte `1997-08-22` obbliga chiunque lo legga a misurarlo prima di fidarsene.
 
 Con un avvertimento importante. **A gennaio 2026 FBref ha perso l'accesso ai dati Opta**: il fornitore ha revocato i feed e imposto la cancellazione immediata dei dati dal sito, e Sports Reference si è adeguata. I dati avanzati sono stati cancellati e non possono essere forniti.
 
@@ -64,9 +66,11 @@ Vale ancora, e ora vale per due fonti invece di una. **Lo script prende in ingre
 
 Per Fantacalcio.it sono i due tipi di XLSX. Per FBref è l'export CSV che il sito offre per ogni tabella: tre tabelle per tre stagioni, nove copia-incolla una volta a stagione.
 
+E per API-Football, la stessa disciplina: la rosa di ogni club si salva a mano da `/players/squads?team=<id>`, un file per club. La regola non ha un'eccezione qui — la rete a runtime resta concessa ai soli infortuni. Le rose cambiano una volta a stagione come tutto il resto di questa sezione, e chiedere gli id a ogni build sposterebbe online una cosa che è ferma.
+
 In cambio: nessuno scraper da manutenere, nessun captcha, nessuna dipendenza dalla struttura HTML, e nessun problema di accesso automatizzato, visto che Sports Reference lo limita ma non limita certo lo scarico manuale.
 
-Il costo onesto: tredici file da procurarsi una volta a stagione invece di quattro.
+Il costo onesto: tredici file da procurarsi una volta a stagione invece di quattro, più le rose se si vuole lo stadio 3. Nessuno dei tre gruppi è obbligatorio oltre al primo.
 
 ```
 tools/dataset/
@@ -75,10 +79,13 @@ tools/dataset/
 │   ├── statistiche-2025-26.xlsx
 │   ├── statistiche-2024-25.xlsx
 │   ├── statistiche-2023-24.xlsx
-│   └── fbref/
-│       ├── 2025-26-standard.csv
-│       ├── 2025-26-playing-time.csv
-│       ├── 2025-26-goalkeeping.csv
+│   ├── fbref/
+│   │   ├── 2025-26-standard.csv
+│   │   ├── 2025-26-playing-time.csv
+│   │   ├── 2025-26-goalkeeping.csv
+│   │   └── …
+│   └── api-football/                   una risposta salvata a mano per club
+│       ├── inter.json
 │       └── …
 ├── overrides.json                      versionato, decisioni manuali
 ├── build.ts
@@ -117,7 +124,7 @@ Nessuno stadio può far fallire quelli precedenti. Se lo stadio 2 non trova un f
 
 | Tabella | Colonne prese |
 |---|---|
-| Standard Stats | `Born` (data di nascita), `MP`, `Starts`, `Min` |
+| Standard Stats | `Born` (anno di nascita, quattro cifre), `MP`, `Starts`, `Min` |
 | Playing Time | `MP`, `Starts`, `Min` (più completa della Standard) |
 | Goalkeeping | `CS` (clean sheet), `Starts` |
 
@@ -126,6 +133,8 @@ Tre tabelle per stagione, esportate in CSV dal sito.
 ### API-Football
 
 Endpoint `injuries`, interrogato per lega e stagione. Una richiesta restituisce tutti gli indisponibili della Serie A.
+
+Gli identificativi con cui agganciarli arrivano invece da `players/squads`, una richiesta per club, salvata su disco e letta dalla pipeline. Ventuno richieste su cento, una volta a stagione, contando quella che elenca i club.
 
 ---
 
@@ -198,6 +207,7 @@ Il campo `note` compare nell'interfaccia quando l'app propone l'aggiornamento. "
       "qtMantraInitial": 34,  "qtMantraCurrent": 34,
       "fvmClassic": 145, "fvmMantra": 152,
       "birthDate": "1997-08-22",
+      "birthYear": 1997,
       "penaltyTaker": true,
       "penaltyTakerSource": "manual",
       "externalIds": { "fbref": "d609edc0", "apiFootball": 30435 }
@@ -251,14 +261,14 @@ Due problemi diversi che la stessa macchina risolve.
 `identityKey` deve restare la stessa attraverso gli anni, altrimenti le statistiche del 2023-24 non si agganciano al giocatore del listone 2026-27.
 
 1. **`fc-<sourceId>`**, se Fantacalcio.it mantiene lo stesso `Id` tra le stagioni. Va verificato confrontando due listoni consecutivi.
-2. **Nome normalizzato più data di nascita**, dove l'`Id` è cambiato. Le date arrivano da FBref.
+2. **Nome normalizzato più anno di nascita**, dove l'`Id` è cambiato. L'anno arriva da FBref; la data per esteso, nei pochi casi in cui l'anno non basta, si scrive a mano in `overrides.json`.
 3. **Nome normalizzato più squadra**, ultima risorsa, con revisione manuale.
 
 ### Tra fonti
 
 FBref e API-Football hanno i propri identificativi. La corrispondenza si fa **dentro il club**: entrambe le fonti hanno la squadra, quindi i candidati scendono da seicento a una trentina, e il cognome li separa quasi sempre.
 
-Il caso che rende evidente perché serve: in Serie A giocano **due Thuram**, Marcus e Khéphren. Una corrispondenza sul solo cognome li fonde in una persona con statistiche assurde, e non te ne accorgi finché non guardi quella riga. Ma giocano in squadre diverse, quindi cognome più club li separa da solo. Con le date di nascita in aggiunta, la corrispondenza è deterministica.
+Il caso che rende evidente perché serve: in Serie A giocano **due Thuram**, Marcus e Khéphren. Una corrispondenza sul solo cognome li fonde in una persona con statistiche assurde, e non te ne accorgi finché non guardi quella riga. Ma giocano in squadre diverse, quindi cognome più club li separa da solo. Con l'anno di nascita in aggiunta, la corrispondenza è deterministica: 1997 contro 2001 li tiene separati anche se un giorno finissero nello stesso club.
 
 ### Normalizzazione dei nomi
 

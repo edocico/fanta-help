@@ -7,8 +7,12 @@ non viene spedito nel pacchetto: le sue dipendenze stanno in `devDependencies`.
 
 ```
 tools/dataset/
-  input/     ← i file scaricati a mano. IGNORATO da git.
-  output/    ← il dataset e il rapporto. IGNORATO da git.
+  input/                 ← i file scaricati a mano. IGNORATO da git.
+    Quotazioni_…xlsx     ← obbligatori: lo stadio 1
+    Statistiche_…xlsx
+    fbref/               ← facoltativi: lo stadio 2
+    api-football/        ← facoltativi: lo stadio 3
+  output/                ← il dataset e il rapporto. IGNORATO da git.
 ```
 
 Le due cartelle sono ignorate di proposito, non per distrazione. Il documento 4
@@ -92,6 +96,135 @@ deve seguirti fra le due macchine.
 si marca `derived`. Le designazioni manuali in `overrides.json` vincono sempre e
 si marcano `manual`, e la distinzione arriva fino all'interfaccia: un rigorista
 designato a mano è certo, uno dedotto è un indizio.
+
+## Gli stadi facoltativi
+
+Il documento 4 §2 li chiama facoltativi e lo intende in senso forte: **nessuno dei
+due può far fallire la build**. Quello che non riescono a fare diventa una riga
+del rapporto, perché un giocatore con quattro colonne vuote è una riga che
+funziona e una pipeline ferma no.
+
+Si accendono da soli quando i file ci sono. Non c'è un'opzione per saltarli:
+cancellare la cartella è l'opzione.
+
+### Stadio 2 — FBref
+
+Nove CSV esportati a mano dal sito, in `input/fbref/`, nominati
+`<stagione>-<tabella>.csv`:
+
+```
+2025-26-standard.csv        Born, MP, Starts, Min
+2025-26-playing-time.csv    MP, Starts, Min — più completa, ha la precedenza
+2025-26-goalkeeping.csv     CS
+```
+
+Le tabelle sono tre e non una perché si contraddicono, e la precedenza è quella
+del documento §3. Un punto merita di essere detto: **le presenze da titolare di
+Goalkeeping sono le presenze in porta**, e lasciarle scrivere sopra a quelle
+generali riscriverebbe la stagione di ogni portiere. Non lo fanno, e c'è un test
+che se ne accorge.
+
+Un file col nome fuori schema finisce nel rapporto invece di essere ignorato:
+`2025-26-standard-stats.csv` che sta lì senza fare niente ha lo stesso aspetto di
+FBref che non copre quella stagione.
+
+**`Born` è l'anno, non la data.** Va in `birthYear`. Se un giorno FBref lo toglie
+come ha già tolto i dati Opta, il file continua a valere per le altre tre colonne
+e il rapporto dice che gli anni non ci sono.
+
+### Stadio 3 — Identificativi esterni
+
+Le rose di API-Football, salvate a mano in `input/api-football/`, un file per
+club, con qualunque nome:
+
+```
+curl -H 'x-apisports-key: …' \
+  'https://v3.football.api-sports.io/players/squads?team=505' \
+  > tools/dataset/input/api-football/inter.json
+```
+
+Ventun richieste su cento al giorno, una volta a stagione. Vanno bene sia la
+risposta intera sia il solo array che contiene, e sia `players/squads` sia
+`players`: quello che sei riuscito a salvare è quello che lo stadio usa.
+
+Serve a una cosa sola, ed è il documento 4 §7 a dirlo: senza id esterni lo strato
+degli infortuni non ha modo di agganciare una risposta a un giocatore, e resta
+spento. Per questo `hasExternalIds` risponde dell'id API-Football e non di quello
+FBref — un dataset con soli id FBref accenderebbe la colonna infortuni senza
+avere niente da metterci.
+
+### Come si agganciano, e cosa succede quando non ci riescono
+
+**Dentro il club**, come vuole il documento §5. È l'unica ragione per cui una
+corrispondenza per nome è difendibile: in Serie A giocano due Thuram, e sul solo
+cognome diventano una persona sola con numeri assurdi che nessuno nota. Giocano
+in squadre diverse, e questo li separa.
+
+Il club si riconosce **per parola condivisa**, ricavata dal listone a ogni
+esecuzione invece che da una tabella: `Hellas Verona` e `Verona` hanno una parola
+in comune, `AC Milan` e `Milan` pure. Una tabella scritta a mano sarebbe sbagliata
+una volta l'anno, a luglio, mesi prima che qualcuno rilanci la pipeline.
+
+Sui nomi si contano le parole condivise, e il punteggio più alto deve essere di
+**uno solo**. Le iniziali non fanno punteggio — `Rossi M.` e `M. Bianchi`
+condividono la lettera `m` e nient'altro.
+
+Poi vengono due veti, e sono veti e non spareggi apposta. Uno spareggio entra in
+gioco solo quando due candidati sono pari, mentre il caso ordinario è che il
+candidato sia **uno solo**: FBref elenca chi è sceso in campo, il listone porta
+anche chi non ha giocato. Una Roma con `Pellegrini Lo.` e `Pellegrini Lu.` sul
+listone e il solo Lorenzo nell'export regalava a Luca i duemiladuecento minuti di
+Lorenzo, senza opposizione, e il rapporto lo contava come aggancio pulito.
+
+- **L'abbreviazione del listone.** `Lu.` va confrontata come *prefisso* e va letta
+  **prima** della normalizzazione, che il punto se lo mangia: ridotta all'iniziale
+  `l`, non distingue più Luca da Lorenzo, che è esattamente la coppia per cui il
+  listone scrive due lettere. Se nessuna parola del candidato comincia per `lu`,
+  non è lui.
+- **L'anno di nascita**, quando `overrides.json` ne dà uno e il candidato ne ha uno
+  suo. Se non coincidono, non è lui, fosse anche l'unico in campo.
+
+Chi sopravvive ai veti passa agli spareggi — prima le iniziali, poi l'anno — e se
+resta un pareggio è ambiguo. Ambiguo vuol dire **nessun aggancio**, non un
+aggancio a caso.
+
+Infine, **due giocatori del listone non possono essere la stessa riga**. Ogni
+aggancio è deciso per conto suo, quindi una collisione è invisibile da entrambi i
+lati: sembrano due corrispondenze pulite. Quando succede la riga non va a nessuno
+dei due e il rapporto li nomina entrambi. Lo stesso vale per un id API-Football
+conteso, dove la conseguenza è più netta: un infortunio solo accenderebbe due
+righe nell'app.
+
+Le corrispondenze mancanti **non fermano niente**, al contrario delle ambiguità di
+identità dello stadio 1. La differenza è nella conseguenza: un'identità sbagliata
+dà a qualcuno lo storico di un altro, una corrispondenza mancata gli lascia quattro
+colonne vuote.
+
+### Chi cambia squadra a stagione in corso
+
+FBref gli dà una riga per squadra, Fantacalcio.it una sola: agganciare dentro il
+club troverebbe metà dei suoi minuti. Le parti si risommano, ma **solo quando
+l'anno di nascita dice che è la stessa persona**. È esattamente il caso che non
+deve fondere i due Thuram, e 1997 contro 2001 li tiene separati.
+
+Quando l'anno manca la somma non si fa, e il rapporto lo dice: una stagione
+ridotta ai minuti di un club sola ha lo stesso aspetto di una stagione passata
+davvero lì.
+
+### Quello che non è ancora stato verificato
+
+Il lettore CSV è scritto sulle colonne che il documento 4 §3 elenca e sul formato
+che l'export di FBref è documentato produrre — intestazione di gruppo sopra quella
+vera, intestazioni ripetute in mezzo alle righe, migliaia separate da virgola,
+`Save%` due volte in Goalkeeping. **Non è ancora passato su un export vero**, perché
+i CSV non erano a portata quando lo stadio è stato scritto.
+
+Se il formato è diverso, il modo in cui lo si scopre è quello giusto: il lettore
+cerca l'intestazione e nomina la colonna che non riconosce, invece di leggere la
+colonna sbagliata in silenzio. Al primo export vero, guarda il rapporto prima del
+dataset.
+
+---
 
 ## Verifica di stabilità degli Id
 

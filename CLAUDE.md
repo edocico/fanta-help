@@ -58,6 +58,7 @@ Sono già costate tempo. Non riscoprirle.
 | Verificare il modulo nativo | `require('better-sqlite3')` riesce **anche con l'ABI sbagliata**: `bindings` carica il `.node` solo al primo `new Database()`. Per provarlo, istanzia — e usa l'ABI di Electron: `ELECTRON_RUN_AS_NODE=1 node_modules/electron/dist/electron -e "new (require('better-sqlite3'))(':memory:')"` |
 | Cross-build fra piattaforme | `package:win` e `package:linux` ricompilano `better-sqlite3` per il target e ce lo lasciano. Dopo, `npm run dev` muore con `NODE_MODULE_VERSION mismatch`: rimettere a posto con `electron-builder install-app-deps` |
 | `npm install` con npm 11 | Gli install script delle dipendenze sono bloccati finché non stanno in `allowScripts` di `package.json`. `npm install` lo dice in **una riga di `warn`** in mezzo all'output e prosegue: `npm install-scripts ls` mostra chi manca. Il `postinstall` del progetto rimedia per better-sqlite3, **non** per il binario di Electron. L'approvazione è **appuntata alla versione** (`better-sqlite3@11.10.0`), quindi un aggiornamento di dipendenza la fa decadere in silenzio. E `npm install-scripts approve --dry-run` non è un dry run: scrive comunque in `package.json` |
+| `npx <binario>` con la dipendenza mancante | Non fallisce: **scarica un pacchetto diverso da internet** e lo esegue. `npx vitest run` senza vitest installato tira giù una vite qualsiasi e muore con `Cannot find module 'vitest/config'`, che sembra un config rotto e non un `node_modules` monco. Usare gli script di `package.json` (`npm test`), che passano dal binario locale o non partono |
 | Vitest e il modulo nativo | Vitest gira su Node, `better-sqlite3` è compilato per l'ABI di Electron: un test che lo importa muore con `NODE_MODULE_VERSION mismatch`. Non ricompilare avanti e indietro — è il segnale che la logica sta nel posto sbagliato (vedi Test) |
 | electron-vite | `externalizeDepsPlugin()` in `main` e `preload`, o la build fallisce in modo illeggibile |
 | `"type": "module"` in `package.json` | Non rimetterlo. Fa emettere a electron-vite un main ESM, e `import { BrowserWindow } from 'electron'` esplode all'istanziazione: `electron` è CJS con getter pigri. Muore con **codice 0 e stderr vuoto** dal pacchetto. Vitest lo consiglia a ogni esecuzione: ignoralo |
@@ -95,6 +96,11 @@ Niente test sull'interfaccia in v1.
 
 **Una guardia che non scatta mai** è indistinguibile da un dato sempre pulito. Dopo averne scritta una, rompila apposta e rilancia i test: se passano lo stesso, il test non c'è.
 
+Due modi in cui quella prova mente, incontrati tutti e due:
+
+- **Un file di test che non compila mostra *meno* test, non test che falliscono.** Se la mutazione rompe la sintassi, Vitest scarta il file e il totale cala: `21 passed (21)` dove prima erano 29 non è una guardia inerte, è una prova non eseguita. Guardare il totale, non solo i falliti.
+- **Cambiare il ruolo di un dato ne cambia la soglia di correttezza.** Un valore usato come *spareggio* può essere sbagliato senza conseguenze — non pareggia con nessuno; lo stesso valore usato come *veto* rifiuta tutto. `Number('')` è `0` e `Number.isInteger(0)` è vero, quindi «anno assente» si legge «anno zero»: innocuo per anni, fatale il giorno che l'anno acquista il potere di dire di no.
+
 **Il guardrail.** I test girano su Node, quindi non possono toccare il database. Se un test ha bisogno di importare `better-sqlite3`, `electron` o qualcosa da `src/main/db/`, non è il test a essere sbagliato: è la logica che sta nel posto sbagliato e va spostata in `src/shared/domain.ts` come funzione pura. Le invarianti che contano sono aritmetica su crediti e slot: non hanno bisogno di SQLite.
 
 ---
@@ -105,6 +111,7 @@ Il progetto si sviluppa su **Fedora x64** e su **macOS arm64**, sempre dalla ste
 
 - **Niente piattaforma cablata negli strumenti.** L'architettura si ricava da `uname -m`, il binario di Electron da `node_modules/electron/dist/path.txt`. Un percorso scritto a mano funziona su una macchina e sull'altra muore con un `No such file or directory` che sembra un'installazione rotta.
 - **Il database non viaggia.** `userData` sta in posti diversi su dischi diversi: una lega preparata di qua non si trova di là. Per spostare una sessione serve l'export/import JSON di T18, non una copia di file.
+- **Un `pull` non porta `node_modules`.** Tirando giù il lavoro fatto sull'altra macchina, l'albero è aggiornato e le dipendenze sono ferme a prima: mancano esattamente quelle aggiunte nei task nel frattempo. Il sintomo è un comando che non esiste o un import che non risolve, e sembra un'installazione rotta. `npm ci` e poi `electron-builder install-app-deps`.
 - **`.claude.local.md` esiste su una macchina sola**, perché è ignorato da git. Se una cosa vale su entrambe va qui, non lì.
 - **I limiti sono asimmetrici.** Su Fedora l'AppImage vuole `libfuse2` e il `.deb` vuole `libxcrypt-compat`; su macOS l'app non è firmata e al primo avvio va aperta col tasto destro. Chi documenta un limite dice su quale delle due vale.
 - Il `package-lock.json` porta tutte le varianti di piattaforma, quindi cambiare macchina non lo fa oscillare. Se cambia, è per una ragione vera.

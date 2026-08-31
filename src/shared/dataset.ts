@@ -41,7 +41,14 @@ export const datasetPlayer = z.object({
   qtMantraCurrent: z.number().nullable(),
   fvmClassic: z.number().nullable(),
   fvmMantra: z.number().nullable(),
-  birthDate: z.string().nullable(), // FBref, absent without the optional stage
+  // Two fields and not one, because the two sources answer different questions.
+  // FBref's league tables carry `Born`, a four-digit **year**; the full date is on
+  // each player's own page, which the pipeline does not fetch. A single field
+  // holding sometimes four characters and sometimes ten would make every reader
+  // measure a string before trusting it, and an equality between '1997' and
+  // '1997-08-22' would quietly be false.
+  birthDate: z.string().nullable(), // hand-written in overrides.json, when it matters
+  birthYear: z.number().int().nullable(), // FBref, null without the optional stage
   penaltyTaker: z.boolean(),
   penaltyTakerSource: z.enum(['derived', 'manual']).nullable(),
   externalIds: z

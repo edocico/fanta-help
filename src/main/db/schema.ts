@@ -82,7 +82,12 @@ export const player = sqliteTable(
     qtMantraCurrent: real('qt_mantra_current'),
     fvmClassic: real('fvm_classic'),
     fvmMantra: real('fvm_mantra'),
-    birthDate: text('birth_date'), // from FBref, absent without the optional stage
+    // Hand-written in overrides.json, not read from a source: FBref's league
+    // tables carry the birth *year* and the full date only lives on each
+    // player's own page. The dataset of T6 has `birthYear` beside `birthDate`
+    // for that reason, and this table has nowhere to put it yet — a decision
+    // T7 has to take, in a new numbered migration.
+    birthDate: text('birth_date'),
     penaltyTaker: integer('penalty_taker').notNull().default(0),
     penaltyTakerSource: text('penalty_taker_source', { enum: ['derived', 'manual'] }),
     delistedAt: integer('delisted_at'), // gone from a later listone

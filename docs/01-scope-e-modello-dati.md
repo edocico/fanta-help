@@ -218,7 +218,8 @@ CREATE TABLE player (
   qt_mantra_current    REAL,
   fvm_classic          REAL,
   fvm_mantra           REAL,
-  birth_date           TEXT,                 -- da FBref, assente senza lo stadio facoltativo
+  birth_date           TEXT,                 -- scritta a mano in overrides.json: FBref dà l'anno,
+                                             -- non la data. Vedi documento 4 §1
   penalty_taker        INTEGER NOT NULL DEFAULT 0,
   penalty_taker_source TEXT CHECK (penalty_taker_source IN ('derived','manual')),
   delisted_at          INTEGER,              -- sparito da un listone successivo
