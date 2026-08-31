@@ -107,7 +107,7 @@ export const playerMantraRole = sqliteTable(
     playerId: integer('player_id')
       .notNull()
       .references(() => player.id, { onDelete: 'cascade' }),
-    roleCode: text('role_code').notNull(), // Por Dc Dd Ds E M C W T A Pc
+    roleCode: text('role_code').notNull(), // Por Dd Ds Dc B E M C W T A Pc
     position: integer('position').notNull().default(0),
   },
   (t) => [

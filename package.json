@@ -24,6 +24,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dataset:verify-ids": "tsx tools/dataset/verify-ids.ts",
+    "dataset:build": "tsx tools/dataset/build.ts",
     "build": "npm run typecheck && electron-vite build",
     "package": "npm run build && electron-builder",
     "package:mac": "npm run build && electron-builder --mac",

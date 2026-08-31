@@ -7,6 +7,28 @@
  */
 
 /**
+ * The four classic roles.
+ *
+ * Here and not beside each schema that constrains them: the IPC contracts and the
+ * dataset format check the same four letters, and two copies drift the day a
+ * fifth appears. `src/main/db/schema.ts` keeps its own list on purpose — it
+ * declares itself a transcription of the DDL in document 1, and answers to that.
+ */
+export const CLASSIC_ROLES = ['P', 'D', 'C', 'A'] as const
+export type ClassicRole = (typeof CLASSIC_ROLES)[number]
+
+/**
+ * The twelve Mantra roles, in the order Fantacalcio.it lists them: goalkeeper
+ * first, then outwards from defence.
+ *
+ * The listone packs them into a single cell separated by ';', up to three per
+ * player — 'Dd;Dc', 'E;W'. `B` (braccetto) is easy to miss: it appears in the
+ * files and in no summary of the role set.
+ */
+export const MANTRA_ROLES = ['Por', 'Dd', 'Ds', 'Dc', 'B', 'E', 'M', 'C', 'W', 'T', 'A', 'Pc'] as const
+export type MantraRole = (typeof MANTRA_ROLES)[number]
+
+/**
  * The four steps of document 4: lowercase, NFD with diacritics removed,
  * apostrophes and punctuation removed, multiple spaces collapsed.
  *
@@ -17,8 +39,7 @@
  * with it and the app searches that column with it. If the two ever disagree,
  * searching for a name that exists returns nothing and no test fails.
  *
- * T5 puts the four cases above under test, per document 6 §7. Until then this
- * function is unguarded.
+ * The four cases above are under test in domain.test.ts, per document 6 §7.
  */
 export function normalizeName(value: string): string {
   return value

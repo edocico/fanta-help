@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { CLASSIC_ROLES } from './domain'
 
 /**
  * The single map of channel → input/output schema, per document 3 §3.
@@ -13,7 +14,7 @@ import { z } from 'zod'
 type Contract = { input: z.ZodType; output: z.ZodType }
 export type ContractMap = Record<string, Contract>
 
-const ROLE = z.enum(['P', 'D', 'C', 'A'])
+const ROLE = z.enum(CLASSIC_ROLES)
 
 /** Identity of this installation plus where it keeps its data. */
 const appInstance = z.object({

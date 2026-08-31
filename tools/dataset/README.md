@@ -34,6 +34,65 @@ Quindi la verifica decide una cosa sola: con quale livello si aggancia lo
 storico. Il livello 1 è un confronto fra interi. Il livello 2 vuole le date di
 nascita, che arrivano da FBref — cioè da T6, un task che viene **dopo** questo.
 
+## Costruire il dataset
+
+```
+npm run dataset:build -- [--season 2026-27] [--version v2] [--note "…"]
+```
+
+Trova da solo i file in `input/` dal loro nome, ricava la stagione, e prende come
+listone corrente il più recente. Senza `--version` numera da sé la prossima.
+
+Cosa esce, in `output/`:
+
+```
+output/
+  manifest.json          ← aggiornato a ogni giro, mai riscritto da zero
+  2026-27/
+    v1.json.gz           ← il dataset
+    v1.txt               ← il rapporto, accanto come vuole il documento 4 §5
+```
+
+**La proiezione.** Il dataset descrive i giocatori del listone più recente e
+nessun altro. Chi ha lasciato la Serie A non ha una riga, perché all'asta non lo
+puoi comprare, e le sue statistiche vengono scartate: sui file 2023-24 → 2026-27
+sono 1.151 righe su 2.568, quasi la metà di quello che viene letto.
+
+**Due esecuzioni sugli stessi file danno lo stesso file**, a parte `generatedAt`:
+giocatori ordinati per `sourceId`, statistiche per chiave e stagione. Serve al
+diff fra due versioni, che è metà del motivo per cui il formato è JSON e non
+SQLite.
+
+**Lo script si rifiuta di scrivere** se resta un'identità da decidere, e esce
+con 1. Vedi la sezione qui sotto.
+
+### Quando chiede una decisione
+
+L'aggancio per `Id` ha un solo punto cieco: un giocatore a cui l'`Id` è cambiato
+sembra in tutto e per tutto un esordiente. Per questo, di ogni giocatore senza
+storico, lo script cerca il nome normalizzato nelle statistiche. Se lo trova
+sotto un altro `Id`, si ferma e lo dice.
+
+Si risolve in `overrides.json`, in un modo o nell'altro:
+
+```json
+{ "aliases": [
+  { "identityKey": "fc-9999", "alsoKnownAs": ["fc-1111"], "note": "Id cambiato al rientro" },
+  { "identityKey": "fc-9500", "alsoKnownAs": [], "note": "omonimo, non è lui" }
+] }
+```
+
+`alsoKnownAs` vuoto significa «controllato, questo giocatore non ha davvero uno
+storico»: chiude il caso senza inventare una sezione che il documento non
+descrive. Le decisioni si scrivono una volta e sopravvivono a ogni rigenerazione,
+quindi `overrides.json` è versionato — è l'unico artefatto di questa pipeline che
+deve seguirti fra le due macchine.
+
+**I rigoristi.** Chi ha calciato almeno tre rigori nell'ultima stagione passata
+si marca `derived`. Le designazioni manuali in `overrides.json` vincono sempre e
+si marcano `manual`, e la distinzione arriva fino all'interfaccia: un rigorista
+designato a mano è certo, uno dedotto è un indizio.
+
 ## Verifica di stabilità degli Id
 
 Va lanciata **prima** di scrivere il parser.

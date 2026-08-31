@@ -26,7 +26,7 @@ import { headerKey, readSheet, type CellValue } from './xlsx'
  * and is never tested — while being the case most likely to have lost its Id,
  * having been dropped from the listone and re-added.
  *
- * Uso:
+ * Usage:
  *   npm run dataset:verify-ids -- <più-vecchio.xlsx> … <più-recente.xlsx>
  */
 
