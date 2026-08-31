@@ -2,7 +2,16 @@
 
 App desktop di supporto all'asta del fantacalcio di Serie A. Uso privato, un gruppo di amici. Serve a preparare l'asta e a registrarla dal vivo. Non gestisce il campionato.
 
-Le specifiche complete stanno in `docs/`. Leggi il documento indicato nel task, non tutti.
+Le specifiche complete stanno in `docs/`, un file per documento. Leggi solo quello indicato dal task, non tutti.
+
+| # | File | Contenuto |
+|---|---|---|
+| 1 | `01-scope-e-modello-dati.md` | Scope, dominio, schema SQLite, invarianti, snapshot |
+| 2 | `02-flussi-e-schermate.md` | Direzione visiva, viste, flusso d'asta, scorciatoie |
+| 3 | `03-architettura.md` | Struttura repo, IPC, livello dati, sicurezza, build |
+| 4 | `04-pipeline-dati.md` | Fonti, pipeline offline, riconciliazione, import |
+| 5 | `05-roadmap-claude-code.md` | Roadmap dei task |
+| 0 | `00-revisione.md` | Registro della revisione, chiusa |
 
 ---
 
