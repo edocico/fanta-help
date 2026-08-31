@@ -59,7 +59,9 @@ Una sola famiglia, **Archivo** (variabile, asse di larghezza), su tre ruoli dist
 | Interfaccia | Archivo 400/500 | tabelle, form, navigazione |
 | Etichette | Archivo 500, `letter-spacing: 0` | intestazioni colonna, campi |
 
-Le etichette in **sentence case**, non maiuscolo. Il maiuscolo spaziato su ogni intestazione è il tic più riconoscibile delle interfacce generate, e su una tabella con quindici colonne rende anche più lenta la lettura.
+**Intestazioni di colonna e valori in minuscolo, titoli di vista e di sezione in sentence case.** Gli acronimi tengono le maiuscole: `FVM`, `MV`, `FM`. Mai maiuscolo spaziato: su ogni intestazione è il tic più riconoscibile delle interfacce generate, e su una tabella con quindici colonne rende anche più lenta la lettura.
+
+Gli schemi ASCII più avanti in questo documento sono bozzetti di impaginazione, non copy letterale: dove scrivono `Giocatore` in un'intestazione di colonna vale la regola qui sopra.
 
 Le cifre tabulari sono obbligatorie ovunque compaia un numero in colonna: `font-variant-numeric: tabular-nums`. Senza, le colonne dei crediti ballano a ogni aggiornamento.
 

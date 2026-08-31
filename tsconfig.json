@@ -1,4 +1,16 @@
 {
+  // Solution file: `files: []` means this config compiles nothing, and the two
+  // referenced projects do the real work. The paths below exist purely so that
+  // tools reading the root tsconfig — the shadcn CLI in particular — can resolve
+  // the `@/` alias. Without them the CLI does not fail: it writes a directory
+  // literally named `@` in the repository root.
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/renderer/src/*"],
+      "@shared/*": ["src/shared/*"]
+    }
+  },
   "files": [],
   "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }]
 }

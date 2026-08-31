@@ -15,7 +15,7 @@ mostra davvero l'app** interrogando il DOM via DevTools invece di dedurlo.
 
 ```bash
 bash .claude/skills/prova-pacchetto/run.sh dev  [porta]   # sviluppo, dalla out/
-bash .claude/skills/prova-pacchetto/run.sh pack [porta]   # AppImage x64, poi la lancia
+bash .claude/skills/prova-pacchetto/run.sh pack [porta]   # impacchetta per l'host, poi lo lancia
 ```
 
 La porta predefinita è 9222. Lo script costruisce, avvia, aspetta la finestra,
@@ -44,17 +44,23 @@ Non vanno riscoperte, e nessuna delle tre si annuncia quando scatta.
 | `ELECTRON_RUN_AS_NODE=1` | VS Code la esporta nei suoi terminali. Electron esegue il main come Node normale, `require('electron').app` è `undefined`, e l'app muore su `isPackaged` senza nominare la causa | lancia con `env -u ELECTRON_RUN_AS_NODE` |
 | `pkill -f` | Uccide la shell chiamante: il Bash tool avvolge ogni comando in `bash -c 'eval "<testo completo>"'`, quindi il pattern sta nel cmdline dell'avvolgitore e combacia con sé stesso. Esce con 144, e i passi successivi non girano mai | chiude solo per PID salvato, e i figli con `pkill -P` (per padre, non per pattern) |
 | AppImage senza FUSE2 | Fedora non spedisce libfuse2, l'AppImage non parte | la lancia con `--appimage-extract-and-run` |
+| Nome del binario Electron | È `electron` su Linux ma `Electron.app/Contents/MacOS/Electron` su macOS: cablarne uno rompe lo script sull'altro sistema, con un `No such file or directory` che sembra un'installazione mancante | lo legge da `node_modules/electron/dist/path.txt`, che il pacchetto scrive apposta |
 
 ## Limiti noti su questa macchina
 
-- **Solo x64.** L'`electron-builder.yml` fissa `[x64, arm64]`, ma una build
-  arm64 ricompila `better-sqlite3` per l'architettura sbagliata e ce la lascia,
-  rompendo `npm run dev` finché non si rilancia
-  `electron-builder install-app-deps`. Lo script passa `--x64` apposta.
-- **Il `.deb` non si costruisce.** L'`fpm` incluso in electron-builder porta il
-  proprio Ruby, che cerca `libcrypt.so.1`, rimossa da Fedora. Serve
-  `sudo dnf install libxcrypt-compat`. Per questo lo script costruisce solo
-  l'AppImage.
+- **Sempre e solo l'architettura dell'host.** L'`electron-builder.yml` fissa
+  `[x64, arm64]`, ma una build **cross-arch** ricompila `better-sqlite3` per
+  l'ABI sbagliata e ce la lascia, rompendo `npm run dev` finché non si rilancia
+  `electron-builder install-app-deps`. Lo script ricava l'architettura da
+  `uname -m`: `--x64` su una macchina Intel o AMD, `--arm64` su Apple Silicon.
+  Non è una preferenza per x64, è il divieto di compilare per un'altra ABI.
+- **Un formato solo per sistema.** Su macOS lo script costruisce il `.dmg` e
+  lancia il `.app` che ne esce; su Linux costruisce l'AppImage. Non produce
+  l'installer di tutte le piattaforme: per quello c'è `npm run package`.
+- **Il `.deb` su Fedora non si costruisce** *(limite di Linux, non di macOS)*.
+  L'`fpm` incluso in electron-builder porta il proprio Ruby, che cerca
+  `libcrypt.so.1`, rimossa da Fedora. Serve `sudo dnf install libxcrypt-compat`.
+  È l'altro motivo per cui su Linux lo script si ferma all'AppImage.
 - **Non fidarti del codice di uscita** di una build incanalata in una pipe: è
   quello dell'ultimo comando della pipe. Le righe che contano sono quelle
   marcate `⨯`.

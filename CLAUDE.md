@@ -72,7 +72,7 @@ Sono già costate tempo. Non riscoprirle.
 
 **Scrittura.** Ogni scrittura che tocca più tabelle sta in una transazione.
 
-**Copy dell'interfaccia.** Un errore dice cosa è successo e cosa fare, non si scusa. Uno stato vuoto è un invito ad agire. Etichette in minuscolo, mai maiuscolo spaziato.
+**Copy dell'interfaccia.** Un errore dice cosa è successo e cosa fare, non si scusa. Uno stato vuoto è un invito ad agire. Intestazioni di colonna e valori in minuscolo, titoli di vista e di sezione in sentence case, acronimi con le maiuscole. Mai maiuscolo spaziato.
 
 ---
 

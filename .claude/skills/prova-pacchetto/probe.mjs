@@ -29,10 +29,16 @@ ws.onmessage = (e) => {
   const m = JSON.parse(e.data)
   if (pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id) }
 }
-const evaluate = (expression, id) =>
+const evaluate = (expression, id, awaitPromise = false) =>
   new Promise((resolve) => {
     pending.set(id, resolve)
-    ws.send(JSON.stringify({ id, method: 'Runtime.evaluate', params: { expression, returnByValue: true } }))
+    ws.send(
+      JSON.stringify({
+        id,
+        method: 'Runtime.evaluate',
+        params: { expression, returnByValue: true, awaitPromise },
+      }),
+    )
   })
 
 // Give React a moment to resolve its first IPC round-trip before sampling.
@@ -50,5 +56,18 @@ const env = await evaluate(
    })`, 2)
 console.log('\n===== AMBIENTE =====')
 console.log(env.result?.result?.value ?? JSON.stringify(env))
+
+// Asked over IPC, not scraped from the screen: which diagnostics a view happens
+// to render is a design decision, and it changed the moment T2 replaced the T1
+// screen. Expect `Fanta Help (dev)` in dev and `Fanta Help` in the package —
+// if the two coincide, the user-data split is gone.
+const db = await evaluate(
+  `window.api.invoke('app.instance').then((r) =>
+     JSON.stringify({ ok: r?.ok === true, db: r?.data?.databasePath ?? null }))`,
+  3,
+  true,
+)
+console.log('\n===== DATABASE =====')
+console.log(db.result?.result?.value ?? JSON.stringify(db))
 
 ws.close()

@@ -1,5 +1,6 @@
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'node:path'
 
 // externalizeDepsPlugin keeps `dependencies` out of the main/preload bundles.
@@ -11,7 +12,8 @@ import { resolve } from 'node:path'
 // under real ESM, `import { BrowserWindow } from 'electron'` throws at module
 // instantiation and the app dies with exit code 0 and an empty stderr.
 //
-// Tailwind is added to the renderer in T2, not here.
+// Tailwind v4 has no config file: the design tokens live in @theme inside
+// src/renderer/src/styles/base.css.
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
@@ -22,7 +24,7 @@ export default defineConfig({
     resolve: { alias: { '@shared': resolve('src/shared') } },
   },
   renderer: {
-    plugins: [react()],
+    plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
         '@': resolve('src/renderer/src'),

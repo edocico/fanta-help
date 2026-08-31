@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Launch the app and print what it renders. Usage:
 #   run.sh dev  [port]   build, then run out/ with the local electron
-#   run.sh pack [port]   build + package (x64), then run the AppImage
+#   run.sh pack [port]   build + package for the host, then run it
+#                        (macOS: dmg, then the .app · Linux: AppImage)
 #
 # Three traps are encoded here; none of them announce themselves when hit.
 #
@@ -17,6 +18,21 @@ set -uo pipefail
 MODE=${1:-dev}
 PORT=${2:-9222}
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
+
+# The electron package records its own binary path, which differs per platform:
+# `electron` on Linux, `Electron.app/Contents/MacOS/Electron` on macOS. Reading
+# it beats any `case $(uname)`.
+ELECTRON_BIN=""
+[ -f "$ROOT/node_modules/electron/path.txt" ] &&
+  ELECTRON_BIN="$ROOT/node_modules/electron/dist/$(cat "$ROOT/node_modules/electron/path.txt")"
+
+# Always package for the host architecture. The point is not x64 as such: a
+# cross-arch build rebuilds better-sqlite3 for the wrong ABI and leaves it
+# there, breaking `npm run dev` until `electron-builder install-app-deps` runs.
+case "$(uname -m)" in
+  arm64 | aarch64) ARCH_FLAG=--arm64 ;;
+  *) ARCH_FLAG=--x64 ;;
+esac
 HERE=$(cd "$(dirname "$0")" && pwd)
 RUNTIME=$HERE/.run
 mkdir -p "$RUNTIME"
@@ -38,19 +54,28 @@ echo "== build =="
 npm run build 2>&1 | tail -4 || exit 1
 
 if [ "$MODE" = "pack" ]; then
-  echo "== packaging (solo x64) =="
-  # x64 only on purpose: electron-builder.yml pins [x64, arm64], and a cross-arch
-  # build rebuilds better-sqlite3 for the wrong ABI and leaves it there, which
-  # breaks `npm run dev` until `electron-builder install-app-deps` is re-run.
-  npx electron-builder --linux AppImage --x64 2>&1 | tail -6
-  APP=$(ls -t "$ROOT"/release/*.AppImage 2>/dev/null | head -1)
-  [ -n "$APP" ] || { echo "AppImage non prodotta: guarda le righe ⨯ qui sopra"; exit 1; }
-  echo "== avvio del pacchetto: $(basename "$APP") =="
-  env -u ELECTRON_RUN_AS_NODE nohup "$APP" --appimage-extract-and-run \
-    --remote-debugging-port="$PORT" > "$RUNTIME/app.log" 2>&1 &
+  echo "== packaging ($ARCH_FLAG, architettura dell'host) =="
+  if [ "$(uname -s)" = "Darwin" ]; then
+    npx electron-builder --mac dmg "$ARCH_FLAG" 2>&1 | tail -6
+    APP=$(ls -td "$ROOT"/release/mac*/*.app 2>/dev/null | head -1)
+    [ -n "$APP" ] || { echo ".app non prodotta: guarda le righe ⨯ qui sopra"; exit 1; }
+    # The executable inside the bundle carries the productName, not the file name.
+    BIN="$APP/Contents/MacOS/$(basename "${APP%.app}")"
+    echo "== avvio del pacchetto: $(basename "$APP") =="
+    env -u ELECTRON_RUN_AS_NODE nohup "$BIN" \
+      --remote-debugging-port="$PORT" > "$RUNTIME/app.log" 2>&1 &
+  else
+    npx electron-builder --linux AppImage "$ARCH_FLAG" 2>&1 | tail -6
+    APP=$(ls -t "$ROOT"/release/*.AppImage 2>/dev/null | head -1)
+    [ -n "$APP" ] || { echo "AppImage non prodotta: guarda le righe ⨯ qui sopra"; exit 1; }
+    echo "== avvio del pacchetto: $(basename "$APP") =="
+    env -u ELECTRON_RUN_AS_NODE nohup "$APP" --appimage-extract-and-run \
+      --remote-debugging-port="$PORT" > "$RUNTIME/app.log" 2>&1 &
+  fi
 else
   echo "== avvio in sviluppo =="
-  env -u ELECTRON_RUN_AS_NODE nohup node_modules/electron/dist/electron . \
+  [ -n "$ELECTRON_BIN" ] || { echo "electron non installato: manca node_modules/electron/path.txt"; exit 1; }
+  env -u ELECTRON_RUN_AS_NODE nohup "$ELECTRON_BIN" . \
     --remote-debugging-port="$PORT" > "$RUNTIME/app.log" 2>&1 &
 fi
 

@@ -1,65 +1,133 @@
-/* Placeholder styling for the packaging spike. T2 replaces this with the
-   colour and type tokens of document 2, via Tailwind. */
+/* Design tokens of document 2 §2. Tailwind v4 has no JS config: everything
+   declared in @theme becomes both a CSS custom property and a utility class. */
 
+@import '@fontsource-variable/archivo/standard.css';
+@import 'tailwindcss';
+
+@theme {
+  /* Palette. Green-black, the pitch at night. Team colours are the only other
+     source of colour in the app, and they carry information. */
+  --color-pitch-900: #0e1512; /* application background */
+  --color-pitch-800: #161f1a; /* panels */
+  --color-pitch-700: #1f2c25; /* raised surfaces, alternating rows */
+  --color-line: #2b3a32; /* hairline borders */
+  --color-chalk: #e9efe9; /* primary text */
+  --color-chalk-dim: #8b9c92; /* secondary text, labels */
+  --color-credit: #e8b33d; /* credits, prices, maximum bid */
+  --color-taken: #a8483e; /* player no longer available */
+  --color-target: #4fb8a8; /* player is on your target list */
+
+  /* One family, three roles. The variable file carries both axes:
+     wdth 62-125 and wght 100-900. */
+  --font-sans: 'Archivo Variable', system-ui, -apple-system, sans-serif;
+}
+
+/* 4px on controls; table rows keep 0, applied where they are declared.
+   Tailwind's radius namespace is --radius-*: a bare --radius feeds no utility
+   and is dropped from the build, which would silently leave shadcn components
+   on Tailwind's 6px default. The base value stays on :root because shadcn
+   components reference var(--radius) directly. */
 :root {
-  color-scheme: dark;
-  --bg: #16181d;
-  --fg: #e6e8ec;
-  --muted: #8b919e;
-  --line: #272b33;
-  --bad: #e06c75;
+  --radius: 4px;
 }
 
-* {
-  box-sizing: border-box;
+@theme inline {
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
 }
 
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--fg);
-  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif;
+/* The document writes its tokens without the --color- prefix Tailwind requires.
+   These aliases keep document 2 literally executable: a component written from
+   the document with var(--pitch-700) resolves instead of silently falling back. */
+:root {
+  --pitch-900: var(--color-pitch-900);
+  --pitch-800: var(--color-pitch-800);
+  --pitch-700: var(--color-pitch-700);
+  --line: var(--color-line);
+  --chalk: var(--color-chalk);
+  --chalk-dim: var(--color-chalk-dim);
+  --credit: var(--color-credit);
+  --taken: var(--color-taken);
+  --target: var(--color-target);
 }
 
-main {
-  max-width: 34rem;
-  margin: 0 auto;
-  padding: 3rem 1.5rem;
+/* shadcn/ui components are written against a semantic vocabulary. Mapping it
+   onto the palette above means generated components inherit the project's look
+   with no edits, and document 2 stays the single source of truth.
+   `inline` substitutes the values instead of emitting another indirection. */
+@theme inline {
+  --color-background: var(--color-pitch-900);
+  --color-foreground: var(--color-chalk);
+  --color-card: var(--color-pitch-800);
+  --color-card-foreground: var(--color-chalk);
+  --color-popover: var(--color-pitch-800);
+  --color-popover-foreground: var(--color-chalk);
+  /* NOT credit. Amber is reserved for money — document 2: "Nient'altro usa quel
+     colore, mai per decorazione." Mapping it here would make every default
+     shadcn button amber the moment one is generated. Use text-credit explicitly
+     on a figure instead; never reach amber through a semantic name. */
+  --color-primary: var(--color-pitch-700);
+  --color-primary-foreground: var(--color-chalk);
+  --color-secondary: var(--color-pitch-700);
+  --color-secondary-foreground: var(--color-chalk);
+  --color-muted: var(--color-pitch-700);
+  --color-muted-foreground: var(--color-chalk-dim);
+  --color-accent: var(--color-pitch-700);
+  --color-accent-foreground: var(--color-chalk);
+  --color-destructive: var(--color-taken);
+  --color-destructive-foreground: var(--color-chalk);
+  --color-border: var(--color-line);
+  --color-input: var(--color-line);
+  /* Not target either: teal means "on your target list" in the players table,
+     and a focus ring wearing it would read as data. Destructive keeps `taken`
+     because red is the palette's only red and document 2 reserves amber alone. */
+  --color-ring: var(--color-chalk-dim);
 }
 
-h1 {
-  margin: 0 0 0.25rem;
-  font-size: 1.05rem;
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  /* Tailwind's preflight emits `border: 0 solid`, which leaves the default
+     border colour at currentColor. Without this, any component using a bare
+     `border` draws a chalk-white line instead of the hairline document 2 asks
+     for. Today it is masked only because the table passes border-line by hand. */
+  *,
+  ::after,
+  ::before {
+    border-color: var(--color-line);
+  }
+
+  body {
+    background-color: var(--color-pitch-900);
+    color: var(--color-chalk);
+    font-family: var(--font-sans);
+    font-weight: 400;
+  }
+}
+
+/* Figures: Archivo Expanded 600 with tabular numerals. Mandatory anywhere a
+   number appears in a column — without it the credit columns jitter on every
+   update. Amber is reserved for money and is applied separately.
+ *
+ * Declared outside any layer on purpose. Tailwind's utilities live in
+ * @layer utilities, and in the cascade an unlayered rule beats a layered one,
+ * so `font-medium` on the same element can no longer drop the 600 in silence.
+ * The signature element of document 2 — the maximum bid — is exactly where that
+ * would have happened, and it would have looked merely a little wrong. */
+.figures {
+  font-variation-settings: 'wdth' 125;
   font-weight: 600;
-}
-
-p.lede {
-  margin: 0 0 2rem;
-  color: var(--muted);
-}
-
-dl {
-  display: grid;
-  grid-template-columns: 10rem 1fr;
-  gap: 0.6rem 1rem;
-  margin: 0;
-}
-
-dt {
-  color: var(--muted);
-}
-
-dd {
-  margin: 0;
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
 }
 
-.error {
-  border-left: 2px solid var(--bad);
-  padding-left: 0.9rem;
-}
-
-.error code {
-  color: var(--muted);
+/* Labels: sentence case, never spaced capitals. Spaced capitals on every column
+   heading is the most recognisable tic of generated interfaces, and on a table
+   with fifteen columns it also slows reading down. */
+@utility label {
+  font-weight: 500;
+  letter-spacing: 0;
 }
