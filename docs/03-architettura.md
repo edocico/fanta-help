@@ -37,7 +37,9 @@ fanta-help/
     │   │   ├── schema.ts           schema Drizzle
     │   │   └── migrate.ts
     │   ├── services/               logica di dominio, qui vivono le invarianti
-    │   │   ├── dataset.ts          download, import XLSX
+    │   │   ├── dataset-import.ts   manifest, sha256, import del dataset
+    │   │   ├── listone-import.ts   anteprima e import del listone .xlsx
+    │   │   ├── xlsx-reader.ts      adattatore exceljs: workbook → griglia di celle
     │   │   ├── availability.ts     dati vivi, cache degli infortuni
     │   │   ├── update.ts           electron-updater
     │   │   ├── league.ts
@@ -63,6 +65,9 @@ fanta-help/
     │   ├── contracts.ts            mappa canale → schema input/output
     │   ├── types.ts                DTO derivati dagli schemi
     │   ├── errors.ts               codici errore e messaggi italiani
+    │   ├── dataset.ts              formato d'interscambio del dataset, in zod
+    │   ├── sheet.ts                ricerca dell'intestazione e mappatura per nome
+    │   ├── listone.ts              schema del listone, condiviso con tools/
     │   └── domain.ts               ruoli, calcoli puri, costanti
     └── renderer/
         ├── index.html
@@ -74,6 +79,7 @@ fanta-help/
             │   └── query.ts        client TanStack Query
             ├── routes/
             ├── features/           un cartella per dominio
+            │   ├── data/          onboarding e import del listone
             │   ├── players/
             │   ├── league/
             │   ├── targets/

@@ -63,3 +63,23 @@ describe('domain refusals survive the boundary', () => {
     expect(result.error.details).toBe('disco pieno')
   })
 })
+
+/**
+ * The outer half of rule 2 for the one input that cannot be taken back.
+ *
+ * `season.id` is a primary key that `league` and `player` reference and that
+ * nothing in the app deletes: a typo confirmed once in the onboarding screen
+ * would leave a season called "pippo" in the database for good. The service
+ * checks it too; this is the check that happens before the service is called.
+ */
+describe('listone.import input', () => {
+  const input = contracts['listone.import'].input
+
+  it('accepts a season', () => {
+    expect(input.safeParse({ filePath: '/x.xlsx', seasonId: '2026-27' }).success).toBe(true)
+  })
+
+  it.each(['pippo', '2026', '26-27', '2026-2027', ''])('refuses %o', (seasonId) => {
+    expect(input.safeParse({ filePath: '/x.xlsx', seasonId }).success).toBe(false)
+  })
+})

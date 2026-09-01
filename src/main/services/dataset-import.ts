@@ -115,31 +115,32 @@ function readVerified(dir: string, entry: ManifestVersion): Dataset {
   return parsed.data
 }
 
+/**
+ * Invariant 17, and both import paths call it twice on purpose.
+ *
+ * Once before the work, because it costs one query and refusing *after* having
+ * copied a 100 MB database aside would be rude for no reason. Then again as the
+ * first statement inside the transaction, because between the two there is an
+ * `await` on the backup, `ipcMain.handle` does not serialise invokes, and
+ * document 1 §5 is explicit that invariants are enforced "dentro una
+ * transazione". A check separated from the write it guards by an await guards
+ * the past.
+ */
+export function refuseIfFrozen(on: Pick<Db, 'select'>): void {
+  const frozen = on
+    .select({ id: league.id })
+    .from(league)
+    .where(inArray(league.status, ['auction', 'review', 'closed']))
+    .all()
+  if (frozen.length > 0) raise('DATASET_LOCKED')
+}
+
 export async function importDataset(
   input: { dir: string; seasonId?: string },
   ctx: ImportContext,
 ): Promise<ImportReport> {
   const { db } = ctx
   const step = (done: number, label: string): void => ctx.emit?.({ done, total: STEPS, label })
-
-  /**
-   * Invariant 17. Asked twice on purpose.
-   *
-   * Here first, because it costs one query and refusing *after* having copied a
-   * 100 MB database aside would be rude for no reason. Then again as the first
-   * statement inside the transaction, because between the two there is an `await`
-   * on the backup, `ipcMain.handle` does not serialise invokes, and document 1 §5
-   * is explicit that invariants are enforced "dentro una transazione". A check
-   * separated from the write it guards by an await guards the past.
-   */
-  const refuseIfFrozen = (on: Pick<Db, 'select'>): void => {
-    const frozen = on
-      .select({ id: league.id })
-      .from(league)
-      .where(inArray(league.status, ['auction', 'review', 'closed']))
-      .all()
-    if (frozen.length > 0) raise('DATASET_LOCKED')
-  }
 
   refuseIfFrozen(db)
 

@@ -1,84 +1,36 @@
 import { z } from 'zod'
-import { CLASSIC_ROLES, MANTRA_ROLES } from '@shared/domain'
-import { headerKey, readSheet, type Sheet } from './xlsx'
+import { CLASSIC_ROLES } from '@shared/domain'
+import {
+  cell,
+  collectRows,
+  LISTONE_MARKERS,
+  MAX_REJECTED_ROWS,
+  QUOTAZIONI_COLUMNS,
+  quotazione,
+  type Quotazione,
+} from '@shared/listone'
+import { readSheet, type Sheet } from './xlsx'
 
 /**
  * Stage 1 of document 4: the two Fantacalcio.it files.
  *
- * Robustness comes from §6, and every rule there answers a way this file has
- * moved between seasons: the header row is found rather than assumed, columns are
- * read by name rather than by position, every row is validated, and if more than
- * a handful fail the whole file is refused. A silent partial import is worse than
- * a failed one — it produces an auction with a hole in it and no error anywhere.
+ * The quotazioni half moved to `@shared/listone` when T8 taught the app to read
+ * the same file: robustness rules that two programs apply to one file have to be
+ * one implementation, or the pipeline and the app end up disagreeing about what a
+ * listone says. What stays here is the statistiche schema, which only this side
+ * reads, and the pipeline's policy on a bad row — print it and stop.
  */
-
-/**
- * How many bad rows a file may carry before it is refused whole.
- *
- * Document 4 §6 says "una manciata" and means it: one or two odd rows are a
- * quirk — a note in a cell, a spare total — while six is a file whose shape has
- * changed, and reading it row by row would produce plausible nonsense. Tolerated
- * rows are not swallowed: they are listed on stderr with their line number.
- */
-const MAX_REJECTED_ROWS = 5
 
 /**
  * zod speaks English by default, and the rows it refuses end up in front of the
  * person running the pipeline. Set here rather than in shared/ because the blast
  * radius stays the pipeline: the app never surfaces a zod message directly — the
  * IPC layer turns it into a code from shared/errors.ts long before anyone reads
- * it.
+ * it, and a shared module setting a global would decide this for both.
  */
 z.config(z.locales.it())
 
-/**
- * The listone stores numbers as numbers. A future one might switch to text with a
- * decimal comma, and that should cost a conversion, not a rejected file.
- */
-const toNumber = (value: unknown): unknown => {
-  if (typeof value !== 'string') return value
-  const text = value.trim().replace(',', '.')
-  return text === '' ? undefined : Number(text)
-}
-
-const decimal = z.preprocess(toNumber, z.number().finite())
-const whole = z.preprocess(toNumber, z.number().int())
-const filled = z.string().trim().min(1)
-
-/** 'Dd;Dc' → ['Dd', 'Dc']. Up to three, and every one has to be a known role. */
-const mantraRoles = z
-  .string()
-  .transform((value) => value.split(';').map((role) => role.trim()).filter(Boolean))
-  .pipe(z.array(z.enum(MANTRA_ROLES)).min(1).max(3))
-
-/** Keys are `headerKey(header)`: lower case, spacing collapsed, dots kept. */
-const quotazione = z
-  .object({
-    id: whole,
-    r: z.enum(CLASSIC_ROLES),
-    rm: mantraRoles,
-    nome: filled,
-    squadra: filled,
-    'qt.a': decimal,
-    'qt.i': decimal,
-    'qt.a m': decimal,
-    'qt.i m': decimal,
-    fvm: decimal,
-    'fvm m': decimal,
-  })
-  .transform((row) => ({
-    sourceId: row.id,
-    name: row.nome,
-    team: row.squadra,
-    roleClassic: row.r,
-    rolesMantra: row.rm,
-    qtClassicCurrent: row['qt.a'],
-    qtClassicInitial: row['qt.i'],
-    qtMantraCurrent: row['qt.a m'],
-    qtMantraInitial: row['qt.i m'],
-    fvmClassic: row.fvm,
-    fvmMantra: row['fvm m'],
-  }))
+const { decimal, whole, filled } = cell
 
 const statistica = z
   .object({
@@ -127,92 +79,63 @@ const statistica = z
     ownGoals: row.au,
   }))
 
-export type Quotazione = z.infer<typeof quotazione>
+export type { Quotazione }
 export type Statistica = z.infer<typeof statistica>
-
-const QUOTAZIONI_COLUMNS = ['Id', 'R', 'RM', 'Nome', 'Squadra', 'Qt.A', 'Qt.I', 'Qt.A M', 'Qt.I M', 'FVM', 'FVM M']
-/** The columns that identify the header row, per document 4 §6. */
-const MARKERS = ['Id', 'Nome', 'Squadra']
 
 const STATISTICHE_COLUMNS = ['Id', 'R', 'Nome', 'Squadra', 'Pv', 'Mv', 'Fm', 'Gf', 'Gs', 'Rp', 'Rc', 'R+', 'R-', 'Ass', 'Amm', 'Esp', 'Au']
 
-/** Document 4 §6: a refused file has to say which columns it did not recognise. */
-function requireColumns(sheet: Sheet, wanted: string[], file: string): void {
-  const present = new Set(sheet.headers.map(headerKey))
-  const missing = wanted.filter((column) => !present.has(headerKey(column)))
-  if (missing.length === 0) return
-  throw new Error(
-    `${file}: colonne non riconosciute: ${missing.join(', ')}.\n` +
-      `  intestazione trovata alla riga ${sheet.headerRow}: ${sheet.headers.join(' | ')}`,
-  )
-}
-
-function describe(error: z.ZodError): string {
-  return error.issues.map((issue) => `${issue.path.join('.') || '(riga)'} ${issue.message}`).join('; ')
-}
-
 /**
- * The validation half, kept free of the disk on purpose.
+ * The pipeline's policy on what `collectRows` reports.
  *
- * `readSheet` does the I/O and hands over a plain object; everything that can be
- * wrong with a listone is decided here, on data a test can write by hand. The
- * seam is not decoration: the three refusals below are the kind that fail
- * silently when they break — a guard that never fires looks exactly like a file
- * that is always clean.
+ * The validation itself is shared with the app; what differs is the answer. Here
+ * a refusal is fatal and printed, because the person who ran the pipeline is
+ * looking at the terminal. In the app the same outcome fills the preview of
+ * document 2 §4.1, before anything is written.
  */
 export function parseSheet<T extends { sourceId: number }>(
   sheet: Sheet,
   schema: z.ZodType<T>,
-  columns: string[],
+  columns: readonly string[],
   label: string,
 ): T[] {
-  requireColumns(sheet, columns, label)
+  const outcome = collectRows(sheet, schema, columns)
 
-  const rows: T[] = []
-  const rejected: string[] = []
-  sheet.rows.forEach((row, index) => {
-    const parsed = schema.safeParse(row)
-    if (parsed.success) rows.push(parsed.data)
-    else rejected.push(`  riga ${sheet.headerRow + 1 + index}: ${describe(parsed.error)}`)
-  })
-
-  if (rejected.length > MAX_REJECTED_ROWS) {
+  if (outcome.missing.length > 0) {
     throw new Error(
-      `${label}: ${rejected.length} righe su ${sheet.rows.length} non superano la validazione, ` +
-        `più della manciata tollerata (${MAX_REJECTED_ROWS}). Il file è rifiutato per intero: ` +
-        `un import parziale silenzioso è peggio di un import fallito.\n` +
-        rejected.slice(0, 10).join('\n') +
-        (rejected.length > 10 ? `\n  … e altre ${rejected.length - 10}` : ''),
+      `${label}: colonne non riconosciute: ${outcome.missing.join(', ')}.\n` +
+        `  intestazione trovata alla riga ${sheet.headerRow}: ${sheet.headers.join(' | ')}`,
     )
   }
-  if (rejected.length > 0) {
-    console.warn(`${label}: ${rejected.length} righe scartate, sotto la soglia di rifiuto:`)
-    console.warn(rejected.join('\n'))
+
+  if (outcome.rejected.length > MAX_REJECTED_ROWS) {
+    throw new Error(
+      `${label}: ${outcome.rejected.length} righe su ${sheet.rows.length} non superano la ` +
+        `validazione, più della manciata tollerata (${MAX_REJECTED_ROWS}). Il file è rifiutato ` +
+        `per intero: un import parziale silenzioso è peggio di un import fallito.\n  ` +
+        outcome.rejected.slice(0, 10).join('\n  ') +
+        (outcome.rejected.length > 10 ? `\n  … e altre ${outcome.rejected.length - 10}` : ''),
+    )
+  }
+  if (outcome.rejected.length > 0) {
+    console.warn(`${label}: ${outcome.rejected.length} righe scartate, sotto la soglia di rifiuto:`)
+    console.warn(outcome.rejected.map((line) => `  ${line}`).join('\n'))
   }
 
-  // Would otherwise break UNIQUE (season_id, source_id) at import time, several
-  // stages later and with nothing left to say which file caused it.
-  const seen = new Set<number>()
-  const duplicates = new Set<number>()
-  for (const row of rows) {
-    if (seen.has(row.sourceId)) duplicates.add(row.sourceId)
-    else seen.add(row.sourceId)
-  }
-  if (duplicates.size > 0) {
-    throw new Error(`${label}: Id ripetuti nello stesso file: ${[...duplicates].join(', ')}`)
+  if (outcome.duplicates.length > 0) {
+    throw new Error(`${label}: Id ripetuti nello stesso file: ${outcome.duplicates.join(', ')}`)
   }
 
-  return rows
+  return outcome.rows
 }
 
 /** The current season's listone: roles, teams, quotazioni. */
 export async function readQuotazioni(file: string): Promise<Quotazione[]> {
-  return parseSheet(await readSheet(file, MARKERS), quotazione, QUOTAZIONI_COLUMNS, file)
+  return parseSheet(await readSheet(file, LISTONE_MARKERS), quotazione, QUOTAZIONI_COLUMNS, file)
 }
 
 /** One season of statistics, past or in progress. */
 export async function readStatistiche(file: string): Promise<Statistica[]> {
-  return parseSheet(await readSheet(file, MARKERS), statistica, STATISTICHE_COLUMNS, file)
+  return parseSheet(await readSheet(file, LISTONE_MARKERS), statistica, STATISTICHE_COLUMNS, file)
 }
 
 /** Exported for the test, which builds its sheets by hand. */

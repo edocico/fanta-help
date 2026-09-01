@@ -1,0 +1,227 @@
+import { useState } from 'react'
+import { call, IpcError } from '@/lib/ipc'
+import { errorMessages } from '@shared/errors'
+import type { Output } from '@shared/contracts'
+
+/**
+ * Onboarding dati, document 2 §4.1: one screen, two possibilities, no suggested
+ * preference.
+ *
+ * The download half belongs to T7b — the manifest lives in a private repo behind
+ * a build-injected token, and until that exists there is no URL to point at. It
+ * is shown anyway, and says so: document 4 §9 already treats the XLSX as a
+ * complete alternative route rather than a fallback, so a screen offering only
+ * one of the two would be describing the app wrongly rather than describing it
+ * early.
+ */
+
+type Preview = Output<'listone.preview'>
+type Report = Output<'listone.import'>
+
+/** `2026-27`. Checked here for courtesy; the service builds the row regardless. */
+const SEASON = /^\d{4}-\d{2}$/
+
+function message(e: unknown): string {
+  return e instanceof IpcError ? e.message : errorMessages.IPC_UNAVAILABLE()
+}
+
+export default function Onboarding({ onDone }: { onDone: () => void }): JSX.Element {
+  const [preview, setPreview] = useState<Preview | null>(null)
+  const [filePath, setFilePath] = useState<string | null>(null)
+  const [seasonId, setSeasonId] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [report, setReport] = useState<Report | null>(null)
+
+  async function pick(): Promise<void> {
+    setError(null)
+    try {
+      const chosen = await call('listone.pick')
+      if (!chosen) return // cancelled: not an error, and not worth a message
+      setBusy(true)
+      const read = await call('listone.preview', { filePath: chosen.filePath })
+      setFilePath(chosen.filePath)
+      setPreview(read)
+      // The proposal of document 4 §6: what the file name says, else the most
+      // recent season already installed. Never silently applied — it lands in a
+      // field the person has to look at.
+      setSeasonId(read.seasonGuess ?? read.seasons.at(-1)?.id ?? '')
+    } catch (e) {
+      setError(message(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function confirm(): Promise<void> {
+    if (!filePath) return
+    setBusy(true)
+    setError(null)
+    try {
+      setReport(await call('listone.import', { filePath, seasonId }))
+    } catch (e) {
+      setError(message(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const known = preview?.seasons.find((s) => s.id === seasonId)
+  const canImport = preview !== null && preview.refusal === null && SEASON.test(seasonId)
+
+  if (report) {
+    return (
+      <Frame>
+        <h1 className="text-lg font-medium">Listone importato</h1>
+        <p className="mt-2 text-sm text-chalk-dim">
+          {report.label} · {report.added + report.updated} giocatori, {report.teams} squadre.
+          {report.delisted > 0 && ` ${report.delisted} non sono più nel listone e restano marcati.`}
+        </p>
+        <p className="mt-1 text-sm text-chalk-dim">
+          {report.statsUntouched > 0
+            ? `Le ${report.statsUntouched} righe di storico non sono state toccate: il file delle quotazioni non contiene statistiche.`
+            : 'Non c’è storico per questa stagione: le colonne di rendimento restano vuote finché non importi un dataset completo.'}
+        </p>
+        <button className={PRIMARY} onClick={onDone}>
+          Continua
+        </button>
+      </Frame>
+    )
+  }
+
+  return (
+    <Frame>
+      <h1 className="text-lg font-medium">Servono i giocatori</h1>
+      <p className="mt-2 text-sm text-chalk-dim">
+        Fanta Help parte da un listone di Serie A. Puoi scaricarlo o importarlo da un file.
+      </p>
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        {/* Present and honest about itself, rather than absent. T7b turns it on. */}
+        <section className="rounded-md border border-line bg-pitch-800 p-4 opacity-60">
+          <h2 className="text-sm font-medium">Scarica il listone</h2>
+          <p className="mt-1 text-sm text-chalk-dim">
+            Non ancora disponibile: arriva col collegamento alla repo del listone. Intanto usa il
+            file XLSX di Fantacalcio.it.
+          </p>
+          <button className={SECONDARY} disabled>
+            Scarica
+          </button>
+        </section>
+
+        <section className="rounded-md border border-line bg-pitch-800 p-4">
+          <h2 className="text-sm font-medium">Importa un file</h2>
+          <p className="mt-1 text-sm text-chalk-dim">
+            Le quotazioni scaricate da Fantacalcio.it, in formato XLSX.
+          </p>
+          <button className={PRIMARY} onClick={() => void pick()} disabled={busy}>
+            {preview ? 'Scegli un altro file' : 'Scegli un file'}
+          </button>
+        </section>
+      </div>
+
+      {error && <p className="mt-4 text-sm text-taken">{error}</p>}
+
+      {preview && (
+        <div className="mt-6 rounded-md border border-line bg-pitch-800 p-4">
+          <h2 className="text-sm font-medium">{preview.file}</h2>
+
+          {preview.refusal ? (
+            <p className="mt-2 text-sm text-taken">{preview.refusal.message}</p>
+          ) : (
+            <p className="mt-2 text-sm text-chalk-dim">
+              {preview.validRows} giocatori, intestazione alla riga {preview.headerRow}.
+            </p>
+          )}
+
+          <dl className="mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[10rem_1fr]">
+            <dt className="label text-chalk-dim">colonne riconosciute</dt>
+            <dd className="figures">{preview.recognised.join(', ') || '—'}</dd>
+
+            {preview.missing.length > 0 && (
+              <>
+                <dt className="label text-chalk-dim">colonne mancanti</dt>
+                <dd className="figures text-taken">{preview.missing.join(', ')}</dd>
+              </>
+            )}
+
+            {preview.unrecognised.length > 0 && (
+              <>
+                <dt className="label text-chalk-dim">colonne ignorate</dt>
+                <dd className="figures text-chalk-dim">{preview.unrecognised.join(', ')}</dd>
+              </>
+            )}
+
+            {preview.rejectedTotal > 0 && (
+              <>
+                <dt className="label text-chalk-dim">righe scartate</dt>
+                <dd className="figures text-chalk-dim">
+                  {preview.rejectedTotal}
+                  <ul className="mt-1 space-y-0.5">
+                    {preview.rejected.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </dd>
+              </>
+            )}
+          </dl>
+
+          {preview.refusal === null && (
+            <div className="mt-5 border-t border-line pt-4">
+              {/* Document 4 §6: the file does not say its season reliably, so the
+                  import always asks — even when the guess looks obvious. */}
+              <label className="label block text-chalk-dim" htmlFor="season">
+                stagione
+              </label>
+              <input
+                id="season"
+                className="figures mt-1 w-32 rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+                value={seasonId}
+                onChange={(e) => setSeasonId(e.target.value.trim())}
+                placeholder="2026-27"
+              />
+              {preview.seasons.length > 0 && (
+                <p className="mt-2 text-sm text-chalk-dim">
+                  già installate:{' '}
+                  {preview.seasons.map((s) => (
+                    <button
+                      key={s.id}
+                      className="mr-2 underline underline-offset-2"
+                      onClick={() => setSeasonId(s.id)}
+                    >
+                      {s.id}
+                    </button>
+                  ))}
+                </p>
+              )}
+
+              <p className="mt-3 text-sm text-chalk-dim">
+                {known && known.stats > 0
+                  ? `Le ${known.stats} righe di storico di ${known.label} restano come sono: questo file contiene solo quotazioni e ruoli.`
+                  : 'Questa stagione non ha storico: le colonne di rendimento resteranno vuote finché non importi un dataset completo.'}
+              </p>
+
+              <button className={PRIMARY} onClick={() => void confirm()} disabled={!canImport || busy}>
+                {busy ? 'Importo…' : 'Importa'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </Frame>
+  )
+}
+
+function Frame({ children }: { children: React.ReactNode }): JSX.Element {
+  return (
+    <div className="min-h-screen bg-pitch-900 text-chalk">
+      <div className="mx-auto max-w-3xl px-6 py-12">{children}</div>
+    </div>
+  )
+}
+
+const PRIMARY =
+  'mt-4 rounded-md bg-pitch-700 px-3 py-1.5 text-sm text-chalk hover:bg-line disabled:opacity-40'
+const SECONDARY =
+  'mt-4 rounded-md border border-line px-3 py-1.5 text-sm text-chalk-dim disabled:opacity-40'

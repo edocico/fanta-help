@@ -47,6 +47,27 @@ export const errorMessages = {
   DATASET_CHECKSUM_MISMATCH: (p: { file: string }) =>
     `${p.file} non corrisponde al manifest. Riscaricalo o rigeneralo.`,
   DATASET_INVALID: () => 'Il dataset non ha il formato atteso. Rigeneralo con la pipeline.',
+
+  /* import of a listone .xlsx — document 4 §6, "Dal file XLSX" */
+  XLSX_UNREADABLE: () => 'Il file non si apre. Deve essere un .xlsx scaricato da Fantacalcio.it.',
+  XLSX_NO_HEADER: (p: { columns: string }) =>
+    `Nessuna riga del foglio contiene le colonne ${p.columns}. Non sembra un listone.`,
+  XLSX_DUPLICATE_COLUMN: (p: { column: string }) =>
+    `La riga di intestazione ripete la colonna ${p.column}: non si può leggere per nome.`,
+  // Names the likeliest cause and not just the fact: the file that trips this is
+  // almost always Statistiche_*.xlsx, which sits in the same download folder as
+  // the one that works, one letter apart in the file picker.
+  XLSX_MISSING_COLUMNS: (p: { columns: string }) =>
+    `Colonne mancanti: ${p.columns}. Se hai scaricato le statistiche, serve invece il file delle quotazioni.`,
+  XLSX_NO_ROWS: () =>
+    'Il file ha le colonne giuste e nessun giocatore. Controlla di aver scaricato il listone completo.',
+  XLSX_SEASON_INVALID: (p: { seasonId: string }) =>
+    `"${p.seasonId}" non è una stagione. Il formato è 2026-27.`,
+  // Document 4 §6: "un import parziale silenzioso è peggio di un import fallito".
+  XLSX_TOO_MANY_BAD_ROWS: (p: { n: number; total: number }) =>
+    `${p.n} righe su ${p.total} non si leggono. Il file è di un formato diverso: controlla di aver scaricato le quotazioni.`,
+  XLSX_DUPLICATE_IDS: (p: { ids: string }) =>
+    `Il file ripete gli Id ${p.ids}: non è un listone intero, riscaricalo.`,
 } as const
 
 export type ErrorCode = keyof typeof errorMessages
@@ -75,6 +96,18 @@ function buildError<C extends ErrorCode>(code: C, ...args: ErrorParams<C>): AppE
 
 export function fail<C extends ErrorCode>(code: C, ...args: ErrorParams<C>): Result<never> {
   return { ok: false, error: buildError(code, ...args) }
+}
+
+/**
+ * The AppError for a code, without failing anything.
+ *
+ * For the one case that is neither a success nor a refusal: the XLSX preview of
+ * document 2 §4.1 has to *show* why a file cannot be imported while the call
+ * itself succeeds. Carrying the same AppError the import would later raise keeps
+ * the two from ever wording it differently.
+ */
+export function appError<C extends ErrorCode>(code: C, ...args: ErrorParams<C>): AppError {
+  return buildError(code, ...args)
 }
 
 /**

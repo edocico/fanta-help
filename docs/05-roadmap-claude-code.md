@@ -110,9 +110,13 @@ Già fatto in T7, da non rifare: verifica `sha256`, confronto fra `latest` e la 
 **Fatto quando:** un import parte dalla repo privata senza che nessun percorso locale compaia nel codice, e staccando la rete l'app lo dice una volta e resta usabile.
 
 ### T8 · Import XLSX in-app
-**Documenti:** 4 (§6)
+**Documenti:** 4 (§6), 2 (§4.1)
 
 Selettore di file, anteprima delle colonne riconosciute, **conferma della stagione**, creazione della riga `season` se manca, avviso esplicito che le statistiche non vengono aggiornate.
+
+La schermata è l'onboarding dati del documento 2 §4.1, non una vista nuova: due possibilità affiancate senza preferenza suggerita, e l'altra è il download di T7b.
+
+**Fatto quando:** un import XLSX sopra una stagione che ha già lo storico aggiorna prezzi e ruoli e **non tocca** né le statistiche né gli acquisti.
 
 ---
 

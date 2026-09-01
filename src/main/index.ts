@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, dialog } from 'electron'
 import { join } from 'node:path'
 import {
   closeDb,
@@ -9,6 +9,7 @@ import {
   takeBackup,
 } from './db/client'
 import { registerAll, registerUnavailable } from './ipc/register'
+import { readGrid } from './services/xlsx-reader'
 
 // main and preload are built as CommonJS, so __dirname exists. See the note in
 // package.json's missing `type: module`: the `electron` module is CJS with lazy
@@ -58,6 +59,17 @@ void app.whenReady().then(() => {
     registerAll({
       db,
       backup: takeBackup,
+      readGrid,
+      // The renderer never names a path of its own: it asks for the dialog and
+      // gets back whatever the person actually picked.
+      chooseXlsx: async () => {
+        const chosen = await dialog.showOpenDialog({
+          title: 'Scegli il listone',
+          filters: [{ name: 'Listone Fantacalcio', extensions: ['xlsx'] }],
+          properties: ['openFile'],
+        })
+        return chosen.canceled ? null : (chosen.filePaths[0] ?? null)
+      },
       // Every open window, rather than one remembered webContents: a window can
       // be closed and reopened on macOS, and a stale reference sends progress
       // into a destroyed renderer instead of the live one.

@@ -1,9 +1,11 @@
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import type { Channel, EventPayload, EventTopic, Input, Output } from '@shared/contracts'
 import { normalizeName } from '@shared/domain'
+import type { CellValue } from '@shared/sheet'
 import type { AppInstance } from '@shared/types'
 import type { Db } from '../db/client'
 import { importDataset } from '../services/dataset-import'
+import { importListone, previewListone } from '../services/listone-import'
 import { player, playerMantraRole, purchase, season, serieATeam } from '../db/schema'
 
 /**
@@ -30,6 +32,15 @@ export type HandlerContext = {
    */
   backup: () => Promise<string>
   emit: <T extends EventTopic>(topic: T, payload: EventPayload<T>) => void
+  /** The native file dialog. Null when it was cancelled. */
+  chooseXlsx: () => Promise<string | null>
+  /**
+   * Opening a workbook needs exceljs, 22 MB of it. Injected rather than imported
+   * so this file's runtime graph stays what coverage.test.ts can load on Node in
+   * a few hundred milliseconds — the same reason `backup` and `emit` arrive this
+   * way, one step further out.
+   */
+  readGrid: (file: string) => Promise<CellValue[][]>
 }
 
 type Handler<C extends Channel> = (
@@ -62,6 +73,17 @@ export const handlers: HandlerMap = {
       backup: ctx.backup,
       emit: (progress) => ctx.emit('dataset.progress', progress),
     }),
+
+  'listone.pick': async (_input, ctx) => {
+    const filePath = await ctx.chooseXlsx()
+    return filePath === null ? null : { filePath }
+  },
+
+  'listone.preview': (input, ctx) =>
+    previewListone(input, { db: ctx.db, readGrid: ctx.readGrid, backup: ctx.backup }),
+
+  'listone.import': (input, ctx) =>
+    importListone(input, { db: ctx.db, readGrid: ctx.readGrid, backup: ctx.backup }),
 
   'player.list': (input, ctx) => {
     const where = [eq(player.seasonId, input.seasonId)]

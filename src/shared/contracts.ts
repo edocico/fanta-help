@@ -71,6 +71,61 @@ const importReport = z.object({
   hasExternalIds: z.boolean(),
 })
 
+/**
+ * An AppError travelling as *data* rather than as a refusal.
+ *
+ * Only the XLSX preview needs this: it succeeds while reporting that the file it
+ * read cannot be imported. `code` is typed as a plain string here because the
+ * authoritative list is `ErrorCode` in shared/errors.ts and this end only ever
+ * echoes what the main process built there — validating the spelling of a string
+ * the main process just produced would be theatre.
+ */
+const appErrorShape = z.object({
+  code: z.string(),
+  message: z.string(),
+  details: z.unknown().optional(),
+})
+
+/** What an .xlsx would do if imported, per document 2 §4.1 and document 4 §6. */
+const listonePreview = z.object({
+  file: z.string(),
+  /** Only ever a proposal: the file does not say its season reliably. */
+  seasonGuess: z.string().nullable(),
+  seasons: z.array(
+    z.object({
+      id: z.string(),
+      label: z.string(),
+      /** History rows this season already has. An XLSX import leaves them alone. */
+      stats: z.number().int(),
+    }),
+  ),
+  headerRow: z.number().int().nullable(),
+  recognised: z.array(z.string()),
+  /** Columns the file has and the app ignores: how a changed file announces itself. */
+  unrecognised: z.array(z.string()),
+  missing: z.array(z.string()),
+  validRows: z.number().int(),
+  rejected: z.array(z.string()),
+  rejectedTotal: z.number().int(),
+  duplicates: z.array(z.number().int()),
+  /** Null when the file can be imported as it stands. */
+  refusal: appErrorShape.nullable(),
+})
+
+const listoneReport = z.object({
+  seasonId: z.string(),
+  label: z.string(),
+  seasonCreated: z.boolean(),
+  added: z.number().int(),
+  updated: z.number().int(),
+  delisted: z.number().int(),
+  restored: z.number().int(),
+  teams: z.number().int(),
+  backup: z.string(),
+  /** Left untouched: the quotazioni file has no statistics in it. */
+  statsUntouched: z.number().int(),
+})
+
 export const contracts = {
   'app.instance': {
     input: z.void(),
@@ -90,6 +145,29 @@ export const contracts = {
   'dataset.import': {
     input: z.object({ dir: z.string(), seasonId: z.string().optional() }),
     output: importReport,
+  },
+
+  /** Opens the native file dialog in the main process. Null if it was cancelled. */
+  'listone.pick': {
+    input: z.void(),
+    output: z.object({ filePath: z.string() }).nullable(),
+  },
+
+  'listone.preview': {
+    input: z.object({ filePath: z.string() }),
+    output: listonePreview,
+  },
+
+  'listone.import': {
+    input: z.object({
+      filePath: z.string(),
+      // Refused here, before the service is ever called: `season.id` is a primary
+      // key that `league` and `player` reference and that nothing in the app
+      // deletes, so a typo confirmed once stays for good. The service checks
+      // again — this is the outer of the two, not the only one.
+      seasonId: z.string().regex(/^\d{4}-\d{2}$/, "non è una stagione nella forma '2026-27'"),
+    }),
+    output: listoneReport,
   },
 
   'player.list': {
