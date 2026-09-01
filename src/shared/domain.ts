@@ -461,6 +461,155 @@ export function coherenceWarnings(input: {
   return warnings
 }
 
+/* ---------------------------------------------------------- the auction */
+
+/**
+ * What one team's roster is, arithmetically. Everything the invariants of
+ * document 1 §5 need, and nothing else.
+ *
+ * This is the shape document 6 §3 prescribes, and the reason it exists: "le
+ * invarianti che contano davvero — puntata massima, completabilità, slot pieni,
+ * crediti residui — sono aritmetica su un oggetto piccolo. **Non hanno bisogno
+ * di un database.**" The service reads three numbers out of SQLite and hands
+ * them over; the rules live here, where a test on plain Node can reach them.
+ */
+export type RosterState = {
+  /** Credits not yet spent. */
+  credits: number
+  /** Slots already taken, per role. */
+  filled: Readonly<Record<ClassicRole, number>>
+  /** Slots the league gives, per role. */
+  slots: Readonly<Record<ClassicRole, number>>
+}
+
+export function freeSlots(r: RosterState): number {
+  return CLASSIC_ROLES.reduce((n, role) => n + (r.slots[role] - r.filled[role]), 0)
+}
+
+/**
+ * Invariant 5, the signature element of document 2 §2 — "la cifra più grande
+ * sullo schermo dopo il nome del giocatore in asta".
+ *
+ * `crediti − (slot_liberi − 1) × min_bid`, with the guard the invariant names by
+ * hand: at zero free slots it is zero, and without that line the formula would
+ * return `credits + minBid` — forty credits becoming forty-one on precisely the
+ * team that can no longer buy anything.
+ *
+ * The floor at zero covers the other end. A team cannot get there during an
+ * auction, because invariant 4 refuses the purchase that would put it there —
+ * but revision can, since invariant 11 lets those violations through as
+ * warnings, and a negative maximum bid on screen would be nonsense.
+ */
+export function maxBid(r: RosterState, minBid: number): number {
+  const free = freeSlots(r)
+  if (free <= 0) return 0
+  return Math.max(0, r.credits - (free - 1) * minBid)
+}
+
+/**
+ * The four codes an assignment can break. A subset of `ErrorCode` by hand,
+ * because `shared/errors.ts` imports this file and the arrow cannot go both
+ * ways: the service that raises them turns each into its message.
+ */
+export type ViolationCode = Violation['code']
+
+/**
+ * A violation carries the numbers its message will need, and the union is
+ * discriminated so the compiler knows *which* numbers.
+ *
+ * Not `detail: Record<string, number>`, which is what this was first: on that
+ * type `detail.n` is a `number` even when there is no `n`, so renaming a key
+ * here would leave the refusal saying "Alfa ha undefined crediti" with the
+ * typecheck green and every test passing. The header of shared/errors.ts
+ * promises that a missing parameter is a compile error; between the check and
+ * the message that promise is only true if this union keeps it.
+ */
+export type Violation =
+  | { code: 'BELOW_MIN_BID'; blocking: boolean; detail: { n: number } }
+  | { code: 'ROLE_SLOTS_FULL'; blocking: boolean; detail: { n: number } }
+  | { code: 'INSUFFICIENT_CREDITS'; blocking: boolean; detail: { n: number } }
+  | { code: 'EXCEEDS_MAX_BID'; blocking: boolean; detail: { max: number; keep: number } }
+
+/**
+ * Every rule of merit an assignment has to satisfy, in one function with the
+ * severity as a parameter.
+ *
+ * One function and not two, and that is invariant 11 made testable: during the
+ * auction these refuse, in revision they are computed and shown. Two
+ * implementations would share the arithmetic on the first day and disagree on
+ * some later one — and the one that runs a single evening a year is the one that
+ * would be wrong.
+ *
+ * What is *not* here: invariants 1, 6 and 7 — the same player twice, the slot
+ * that must match the role, the player from another season. Document 1 §5 calls
+ * them structural and keeps them blocking even in revision, and they need the
+ * database to answer, so they stay in the service beside the query that sees
+ * them.
+ */
+export function checkPurchase(
+  r: RosterState,
+  role: ClassicRole,
+  price: number,
+  minBid: number,
+  severity: 'blocking' | 'advisory',
+): Violation[] {
+  const blocking = severity === 'blocking'
+  const violations: Violation[] = []
+
+  if (price < minBid) {
+    violations.push({ code: 'BELOW_MIN_BID', blocking, detail: { n: minBid } })
+  }
+
+  // Invariant 3.
+  if (r.filled[role] >= r.slots[role]) {
+    violations.push({ code: 'ROLE_SLOTS_FULL', blocking, detail: { n: r.filled[role] } })
+  }
+
+  /**
+   * Invariants 2 and 4, and only one of the two ever speaks.
+   *
+   * They overlap: a price above the credits is also above the maximum bid, so
+   * both would fire and the screen would carry two sentences about the same
+   * money. Document 2 §7 gives them separate rows because they answer different
+   * questions — "ha 218 crediti" is the blunt fact, "può arrivare a 205" is the
+   * precise one — and printed together the precise one makes the problem look
+   * like thirteen credits when it is eighty.
+   *
+   * Invariant 4 is not a third check. Completability says the credits left must
+   * cover the free slots at the minimum bid; substitute it into the maximum bid
+   * of invariant 5 and it is the same inequality. Writing them separately is how
+   * they would come to disagree.
+   */
+  if (price > r.credits) {
+    violations.push({ code: 'INSUFFICIENT_CREDITS', blocking, detail: { n: r.credits } })
+  } else {
+    const max = maxBid(r, minBid)
+    if (price > max) {
+      violations.push({
+        code: 'EXCEEDS_MAX_BID',
+        blocking,
+        detail: { max, keep: Math.max(0, freeSlots(r) - 1) * minBid },
+      })
+    }
+  }
+
+  return violations
+}
+
+/**
+ * Invariant 8: an auction opens with at least two teams and the slots set.
+ *
+ * "Gli slot configurati" is read as at least one slot somewhere: a league whose
+ * roster is entirely zeroes has nothing to auction, and the wizard cannot
+ * produce one — but the rules stay editable until this moment, so somebody can.
+ */
+export function canStartAuction(input: {
+  teams: number
+  slots: Readonly<Record<ClassicRole, number>>
+}): boolean {
+  return input.teams >= 2 && totalSlots(input.slots) > 0
+}
+
 /* ------------------------------------------------- objectives and plans */
 
 /**

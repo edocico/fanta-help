@@ -34,3 +34,8 @@ export type TargetRow = Output<'target.list'>[number]
 /** A plan with its cells, document 2 §4.7. */
 export type PlanDetail = Output<'plan.list'>[number]
 export type PlanItemRow = PlanDetail['items'][number]
+
+/** Everything the auction screen of document 2 §4.8 consumes. */
+export type AuctionState = NonNullable<Output<'auction.state'>>
+export type AuctionTeam = AuctionState['teams'][number]
+export type AuctionLogEntry = Output<'auction.history'>[number]

@@ -319,6 +319,99 @@ const planDetail = z.object({
   items: z.array(planItemRow),
 })
 
+/* --------------------------------------------------------- the auction */
+
+/**
+ * One team as the rose grid of document 2 §4.8 draws it: "crediti residui e
+ * puntata massima in ambra, pallini pieni per slot occupati, vuoti per liberi".
+ *
+ * `maxBid` and `complete` are computed in the main process and travel, rather
+ * than being recomputed here from credits and slots. They are invariant 5, and
+ * two implementations of an invariant is exactly what document 6 warns about —
+ * the screen and the service would agree until the evening they did not.
+ */
+const auctionTeam = z.object({
+  id: z.number().int(),
+  uuid: z.string(),
+  name: z.string(),
+  color: z.string().nullable(),
+  isMine: z.boolean(),
+  orderIndex: z.number().int(),
+  spent: z.number().int(),
+  credits: z.number().int(),
+  maxBid: z.number().int(),
+  filled: slots,
+  /** No free slots left: document 2 §7, "la squadra sparisce dal selettore". */
+  complete: z.boolean(),
+  /** Expanded under the row on click, per §4.8. */
+  roster: z.array(
+    z.object({
+      purchaseId: z.number().int(),
+      playerId: z.number().int(),
+      name: z.string(),
+      teamCode: z.string(),
+      slotRole: ROLE,
+      price: z.number().int(),
+      sequence: z.number().int(),
+    }),
+  ),
+})
+
+const auctionState = z.object({
+  league: z.object({
+    id: z.number().int(),
+    name: z.string(),
+    seasonId: z.string(),
+    mode: MODE,
+    auctionFormat: AUCTION_FORMAT,
+    budget: z.number().int(),
+    minBid: z.number().int(),
+    status: LEAGUE_STATUS,
+  }),
+  slots,
+  /** Shown and, in the call format, moved by hand — document 2 §9. */
+  currentTurnTeamId: z.number().int().nullable(),
+  slotsTotal: z.number().int(),
+  assigned: z.number().int(),
+  teams: z.array(auctionTeam),
+  /**
+   * "I tuoi target ancora non assegnati", §4.8. Whoever has been bought is gone
+   * from the list — by anyone, not only by you: that is the point of the panel.
+   */
+  targetsFree: z.array(
+    z.object({
+      playerId: z.number().int(),
+      name: z.string(),
+      roleClassic: ROLE,
+      teamCode: z.string(),
+      tier: TIER.nullable(),
+      rating: RATING.nullable(),
+      maxPrice: PRICE.nullable(),
+    }),
+  ),
+  /** What the toast of document 2 §5 names, and what Ctrl+Z would undo. */
+  lastPurchase: z
+    .object({
+      purchaseId: z.number().int(),
+      playerId: z.number().int(),
+      name: z.string(),
+      fantaTeamId: z.number().int(),
+      teamName: z.string(),
+      price: z.number().int(),
+    })
+    .nullable(),
+})
+
+/** One line of the append-only register of document 1 §3. */
+const logEntry = z.object({
+  id: z.number().int(),
+  phase: z.enum(['auction', 'review']),
+  action: z.string(),
+  /** JSON as written: the renderer shows it, nothing reads it back as truth. */
+  payload: z.string(),
+  createdAt: z.number().int(),
+})
+
 const listoneReport = z.object({
   seasonId: z.string(),
   label: z.string(),
@@ -600,6 +693,70 @@ export const contracts = {
   'plan.removeItem': {
     input: z.object({ planId: z.number().int(), playerId: z.number().int() }),
     output: z.array(planDetail),
+  },
+
+  /**
+   * The state of the auction, and the answer of every mutation that touches it.
+   *
+   * Null when the league is gone, like `league.get`. All of it at once because
+   * one purchase changes the rose grid for the buying team, the count in the
+   * header, the turn if the format is a draft, and the list of free objectives:
+   * four pieces of the same photograph, and stitching them together in the
+   * renderer would mean holding one of them stale.
+   */
+  'auction.state': {
+    input: z.object({ leagueId: z.number().int() }),
+    output: auctionState.nullable(),
+  },
+
+  /** Invariant 8. From here on the rules and the listone import are locked. */
+  'auction.start': {
+    input: z.object({ leagueId: z.number().int() }),
+    output: auctionState,
+  },
+
+  /**
+   * `slotRole` is not an input: the player's role decides it.
+   *
+   * That is invariant 6 made impossible rather than checked. The price is judged
+   * by invariants 2, 4 and 5 in the service and not here: a schema that refused
+   * a price too high would answer "Richiesta non valida" where the sentence has
+   * to be "Real Fanta può arrivare a 205".
+   */
+  'auction.assign': {
+    input: z.object({
+      leagueId: z.number().int(),
+      playerId: z.number().int(),
+      fantaTeamId: z.number().int(),
+      price: z.number().int().min(0),
+    }),
+    output: auctionState,
+  },
+
+  /** `Ctrl/Cmd+Z`: the last purchase, deleted for real. */
+  'auction.undo': {
+    input: z.object({ leagueId: z.number().int() }),
+    output: auctionState,
+  },
+
+  /** The arrow of the call format. Null takes the turn away from everyone. */
+  'auction.setTurn': {
+    input: z.object({
+      leagueId: z.number().int(),
+      fantaTeamId: z.number().int().nullable(),
+    }),
+    output: auctionState,
+  },
+
+  /** Moves the league into revision. Incomplete rosters do not stop it. */
+  'auction.close': {
+    input: z.object({ leagueId: z.number().int() }),
+    output: auctionState,
+  },
+
+  'auction.history': {
+    input: z.object({ leagueId: z.number().int() }),
+    output: z.array(logEntry),
   },
 
   'player.list': {

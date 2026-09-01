@@ -23,8 +23,16 @@ export const errorMessages = {
   /* domain — document 3 §3 */
   PLAYER_ALREADY_OWNED: (p: { team: string; price: number }) =>
     `Già a ${p.team} per ${p.price}`,
-  ROLE_SLOTS_FULL: (p: { team: string; n: number; role: string }) =>
-    `${p.team} ha già ${p.n} ${p.role}`,
+  // Tre rami come PLAN_ROLE_FULL, e per lo stesso motivo: un ruolo con zero slot
+  // esiste (il regolamento resta modificabile fino all'apertura), e «ha già 0
+  // portieri» non è una frase. Il ramo plurale è quello del documento 2 §7,
+  // parola per parola: «Real Fanta ha già 8 difensori».
+  ROLE_SLOTS_FULL: (p: { team: string; n: number; one: string; many: string }) =>
+    p.n === 0
+      ? `La lega non ha slot per i ${p.many}.`
+      : p.n === 1
+        ? `${p.team} ha già un ${p.one}`
+        : `${p.team} ha già ${p.n} ${p.many}`,
   INSUFFICIENT_CREDITS: (p: { team: string; n: number }) => `${p.team} ha ${p.n} crediti`,
   EXCEEDS_MAX_BID: (p: { team: string; max: number; n: number }) =>
     `${p.team} può arrivare a ${p.max}: deve tenere ${p.n} crediti per gli slot rimasti`,
@@ -81,6 +89,17 @@ export const errorMessages = {
         : `Il piano ha già ${p.n} ${p.many}: liberane una casella o alza gli slot.`,
   PLAN_MISSING: () => 'Questo piano non esiste più.',
   PLAN_ITEM_MISSING: () => 'Questa casella non è più nel piano.',
+
+  /* l'asta — T13, invarianti 8 e 13 */
+  // Assegnare, annullare e passare il turno hanno tutti lo stesso presupposto.
+  // Ci si arriva solo con un'interfaccia rimasta indietro rispetto al database.
+  AUCTION_NOT_OPEN: () => 'L’asta non è aperta.',
+  AUCTION_ALREADY_OPEN: () => 'L’asta è già stata aperta.',
+  // L'altra metà dell'invariante 8. Il wizard non può produrre una rosa di soli
+  // zeri, ma il regolamento resta modificabile fino a questo momento.
+  LEAGUE_SLOTS_EMPTY: () =>
+    'La rosa non ha nessuno slot: configurala prima di aprire l’asta.',
+  NOTHING_TO_UNDO: () => 'Non c’è niente da annullare.',
 
   /* import of a dataset — document 4 §6 */
   DATASET_MANIFEST_UNREADABLE: () =>

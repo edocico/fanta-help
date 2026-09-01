@@ -4,6 +4,15 @@ import type { ClassicRole } from '@shared/domain'
 import type { CellValue } from '@shared/sheet'
 import type { AppInstance, SeasonStats } from '@shared/types'
 import type { Db } from '../db/client'
+import {
+  assign,
+  auctionHistory,
+  auctionState,
+  closeAuction,
+  setTurn,
+  startAuction,
+  undo,
+} from '../services/auction'
 import { importDataset } from '../services/dataset-import'
 import {
   createLeague,
@@ -155,6 +164,16 @@ export const handlers: HandlerMap = {
   'plan.addItem': (input, ctx) => addPlanItem(input, ctx.db),
   'plan.updateItem': (input, ctx) => updatePlanItem(input, ctx.db),
   'plan.removeItem': (input, ctx) => removePlanItem(input, ctx.db),
+
+  /* -------------------------------------------------------------- auction */
+
+  'auction.state': (input, ctx) => auctionState(ctx.db, input.leagueId),
+  'auction.start': (input, ctx) => startAuction(input, ctx.db, ctx.instance.uuid),
+  'auction.assign': (input, ctx) => assign(input, ctx.db, ctx.instance.uuid),
+  'auction.undo': (input, ctx) => undo(input, ctx.db, ctx.instance.uuid),
+  'auction.setTurn': (input, ctx) => setTurn(input, ctx.db, ctx.instance.uuid),
+  'auction.close': (input, ctx) => closeAuction(input, ctx.db, ctx.instance.uuid),
+  'auction.history': (input, ctx) => auctionHistory(ctx.db, input.leagueId),
 
   'player.list': (input, ctx) => {
     const info = ctx.db

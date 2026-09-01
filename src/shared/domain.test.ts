@@ -2,8 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   backupsToPrune,
   bonusIndex,
+  canStartAuction,
   canTransition,
   chartBounds,
+  checkPurchase,
+  freeSlots,
+  maxBid,
   coherenceWarnings,
   DEFAULT_SLOTS,
   frozen,
@@ -30,6 +34,9 @@ import {
   TEAM_COLORS,
   teamListEditable,
   totalSlots,
+  type ClassicRole,
+  type RosterState,
+  type Violation,
 } from './domain'
 
 /**
@@ -631,6 +638,207 @@ describe('la barra del piano, documento 2 §4.7', () => {
     // Speso resta quello vero: i crediti del terzo difensore sono impegnati lo
     // stesso, ed è proprio quello che rende il piano da sistemare.
     expect(totals.spent).toBe(30)
+  })
+})
+
+/**
+ * T13. La tabella del documento 6 §4, riga per riga.
+ *
+ * Scritti prima del servizio, che è l'ordine che il §7 impone: «le funzioni pure
+ * sono la definizione di cosa è corretto, e scrivere il servizio prima significa
+ * scoprire le regole mentre si scrive il codice che le applica».
+ *
+ * Sono anche i test che il criterio di completamento di T13 nomina — «la puntata
+ * massima a rosa quasi completa e la regola di completabilità» — e gli unici in
+ * tutta la suite che riguardano la sera per cui l'app esiste.
+ */
+describe('la puntata massima, invariante 5', () => {
+  /** Una rosa da 25 slot, con quanti ne ha già presi e quanti crediti restano. */
+  const roster = (credits: number, filled: Partial<Record<ClassicRole, number>>): RosterState => ({
+    credits,
+    slots: DEFAULT_SLOTS,
+    filled: { P: 0, D: 0, C: 0, A: 0, ...filled },
+  })
+
+  it('con un solo slot libero vale tutti i crediti', () => {
+    // 24 slot su 25 occupati: non deve tenere niente da parte.
+    expect(maxBid(roster(40, { P: 3, D: 8, C: 8, A: 5 }), 1)).toBe(40)
+  })
+
+  it('con cinque slot liberi tiene da parte i quattro che restano', () => {
+    expect(maxBid(roster(40, { P: 3, D: 8, C: 6, A: 3 }), 1)).toBe(36)
+  })
+
+  /**
+   * La riga in grassetto del documento 6 §4, e la ragione per cui la guardia
+   * esiste: senza, la formula tornerebbe `crediti + min_bid` — quaranta crediti
+   * diventerebbero quarantuno proprio sulla squadra che non può più comprare.
+   */
+  it('a rosa completa vale zero, non i crediti più la puntata minima', () => {
+    expect(maxBid(roster(40, { P: 3, D: 8, C: 8, A: 6 }), 1)).toBe(0)
+  })
+
+  it('vale zero anche con una rosa più che completa', () => {
+    // Non capita, ma se capitasse `free` sarebbe negativo e la formula
+    // restituirebbe più dei crediti disponibili.
+    expect(maxBid(roster(40, { P: 4, D: 8, C: 8, A: 6 }), 1)).toBe(0)
+  })
+
+  it('conta la puntata minima della lega, non uno', () => {
+    // 5 slot liberi a puntata minima 3: 40 − 4×3 = 28.
+    expect(maxBid(roster(40, { P: 3, D: 8, C: 6, A: 3 }), 3)).toBe(28)
+  })
+
+  it('non promette crediti che non ci sono', () => {
+    expect(maxBid(roster(0, { P: 3, D: 8, C: 8, A: 5 }), 1)).toBe(0)
+  })
+
+  /**
+   * Il pavimento a zero, e il caso che ci arriva davvero.
+   *
+   * Durante l'asta non capita: l'invariante 4 rifiuta l'acquisto che ci porta. Ma
+   * la revisione ci arriva, perché l'invariante 11 lascia passare proprio quelle
+   * violazioni come segnalazioni — e una puntata massima negativa a schermo non
+   * vuol dire niente.
+   */
+  it('a crediti insufficienti per gli slot liberi resta a zero, non va sotto', () => {
+    // 5 crediti, 10 slot liberi, puntata minima 1: la formula darebbe −4.
+    expect(maxBid(roster(5, { P: 3, D: 8, C: 4, A: 0 }), 1)).toBe(0)
+  })
+})
+
+/**
+ * L'invariante 8. Non è aritmetica su una rosa ma sulla lega, e sta qui per la
+ * stessa ragione: il servizio che apre l'asta deve poterla chiedere, e un test
+ * su Node deve poterla verificare.
+ */
+describe('quando si può aprire l’asta, invariante 8', () => {
+  it('vuole almeno due squadre', () => {
+    expect(canStartAuction({ teams: 2, slots: DEFAULT_SLOTS })).toBe(true)
+    expect(canStartAuction({ teams: 1, slots: DEFAULT_SLOTS })).toBe(false)
+    expect(canStartAuction({ teams: 0, slots: DEFAULT_SLOTS })).toBe(false)
+  })
+
+  it('vuole degli slot: una rosa di soli zeri non ha niente da battere', () => {
+    expect(canStartAuction({ teams: 10, slots: { P: 0, D: 0, C: 0, A: 0 } })).toBe(false)
+    expect(canStartAuction({ teams: 10, slots: { P: 1, D: 0, C: 0, A: 0 } })).toBe(true)
+  })
+})
+
+describe('gli slot liberi', () => {
+  it('somma i quattro ruoli', () => {
+    expect(
+      freeSlots({ credits: 0, slots: DEFAULT_SLOTS, filled: { P: 1, D: 2, C: 0, A: 0 } }),
+    ).toBe(22)
+  })
+
+  it('a rosa completa è zero', () => {
+    expect(freeSlots({ credits: 0, slots: DEFAULT_SLOTS, filled: DEFAULT_SLOTS })).toBe(0)
+  })
+})
+
+describe('il controllo di un acquisto, documento 6 §4', () => {
+  const roster = (credits: number, filled: Partial<Record<ClassicRole, number>>): RosterState => ({
+    credits,
+    slots: DEFAULT_SLOTS,
+    filled: { P: 0, D: 0, C: 0, A: 0, ...filled },
+  })
+  const codes = (v: Violation[]): string[] => v.map((x) => x.code)
+
+  it('lascia passare un acquisto sostenibile', () => {
+    expect(checkPurchase(roster(500, {}), 'A', 47, 1, 'blocking')).toEqual([])
+  })
+
+  /**
+   * Le due righe del documento 6 §4, con i suoi numeri: «20 crediti, 15 slot
+   * liberi, prezzo 19 → violazione di completabilità» e «prezzo 5 → nessuna
+   * violazione».
+   *
+   * Il fissato è costruito per avere esattamente quei quindici slot liberi, e non
+   * per assomigliarci: la completabilità dell'invariante 4 e la puntata massima
+   * della 5 sono la stessa aritmetica, 20 − 14×1 = 6, e quel 6 esiste solo con
+   * quel numero di slot. Un commento che cita numeri diversi da quelli eseguiti è
+   * una specifica che non è più tale.
+   */
+  it('rifiuta un prezzo che lascerebbe la rosa incompletabile', () => {
+    const r = roster(20, { P: 3, D: 5, C: 2, A: 0 })
+    expect(freeSlots(r)).toBe(15)
+    expect(maxBid(r, 1)).toBe(6)
+    expect(codes(checkPurchase(r, 'A', 19, 1, 'blocking'))).toEqual(['EXCEEDS_MAX_BID'])
+  })
+
+  it('e lascia passare il prezzo 5 della riga accanto', () => {
+    expect(checkPurchase(roster(20, { P: 3, D: 5, C: 2, A: 0 }), 'A', 5, 1, 'blocking')).toEqual([])
+  })
+
+  // Cinque slot liberi invece di quindici: la massima sale a 16, ed è il confine
+  // che il servizio ha poi confermato sul database vero.
+  it('sul filo passa: la puntata massima esatta è ammessa', () => {
+    const r = roster(20, { P: 3, D: 8, C: 8, A: 1 })
+    expect(freeSlots(r)).toBe(5)
+    expect(maxBid(r, 1)).toBe(16)
+    expect(checkPurchase(r, 'A', 16, 1, 'blocking')).toEqual([])
+    expect(codes(checkPurchase(r, 'A', 17, 1, 'blocking'))).toEqual(['EXCEEDS_MAX_BID'])
+  })
+
+  it('rifiuta un ruolo con gli slot pieni', () => {
+    expect(codes(checkPurchase(roster(500, { A: 6 }), 'A', 10, 1, 'blocking'))).toContain(
+      'ROLE_SLOTS_FULL',
+    )
+  })
+
+  it('rifiuta un prezzo sotto la puntata minima', () => {
+    expect(codes(checkPurchase(roster(500, {}), 'A', 0, 1, 'blocking'))).toContain('BELOW_MIN_BID')
+  })
+
+  /**
+   * Prezzo oltre i crediti: due righe del documento 2 §7 si sovrappongono, e ne
+   * esce una sola. «Real Fanta ha 218 crediti» dice la cosa più grossa; «può
+   * arrivare a 205» sarebbe vero e più preciso, e messo accanto all'altro
+   * sembrerebbe che il problema siano tredici crediti invece di ottanta.
+   */
+  it('dice i crediti quando il prezzo li supera, e non anche la puntata massima', () => {
+    expect(codes(checkPurchase(roster(100, { A: 1 }), 'A', 300, 1, 'blocking'))).toEqual([
+      'INSUFFICIENT_CREDITS',
+    ])
+  })
+
+  it('porta i numeri che il messaggio dovrà scrivere', () => {
+    const [violation] = checkPurchase(roster(20, { P: 3, D: 5, C: 2, A: 0 }), 'A', 19, 1, 'blocking')
+    // «può arrivare a 6: deve tenere 14 crediti per gli slot rimasti»
+    expect(violation.detail).toEqual({ max: 6, keep: 14 })
+  })
+
+  /**
+   * L'ultima riga della tabella del §4, e quella che protegge l'invariante 11:
+   * in revisione le violazioni di merito si segnalano e non bloccano. Deve essere
+   * la stessa funzione con un parametro diverso — una seconda implementazione
+   * userebbe la stessa aritmetica il primo giorno e un'altra il secondo.
+   */
+  it('in revisione le stesse violazioni ci sono ma non bloccano', () => {
+    const r = roster(20, { P: 3, D: 5, C: 2, A: 0 })
+    const blocking = checkPurchase(r, 'A', 19, 1, 'blocking')
+    const advisory = checkPurchase(r, 'A', 19, 1, 'advisory')
+    expect(codes(advisory)).toEqual(codes(blocking))
+    expect(advisory.every((v) => v.blocking)).toBe(false)
+    expect(blocking.every((v) => v.blocking)).toBe(true)
+  })
+
+  /**
+   * L'invariante 11 declassa la 2, la 3 e la 4 — non la 1, la 6 e la 7, che sono
+   * errori strutturali. La puntata minima non è fra quelle che declassa: un
+   * prezzo sotto il minimo resta un errore di merito, e in revisione si segnala
+   * come gli altri.
+   */
+  it('anche la puntata minima si declassa in revisione', () => {
+    expect(checkPurchase(roster(500, {}), 'A', 0, 1, 'advisory')[0].blocking).toBe(false)
+  })
+
+  it('accumula più violazioni insieme', () => {
+    // Ruolo pieno e prezzo sotto il minimo nello stesso acquisto.
+    expect(codes(checkPurchase(roster(500, { A: 6 }), 'A', 0, 1, 'blocking')).sort()).toEqual(
+      ['BELOW_MIN_BID', 'ROLE_SLOTS_FULL'].sort(),
+    )
   })
 })
 
