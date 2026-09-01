@@ -87,7 +87,7 @@ Sono già costate tempo. Non riscoprirle.
 
 **Lingua.** Codice, identificatori, commenti e nomi di file in **inglese**. Testi rivolti all'utente in **italiano**. I messaggi d'errore stanno in `src/shared/errors.ts` accanto al codice, mai sparsi nei componenti.
 
-**Errori.** Mai eccezioni attraverso il confine IPC. Sempre l'involucro `Result<T>` con un codice. Un servizio che rifiuta chiama `raise('CODICE', {…})` da `shared/errors.ts`: un `throw new Error` qualsiasi arriva al renderer come `UNKNOWN`, e il messaggio giusto sparisce senza che niente fallisca. Lo stesso vale per ciò che **non** hai lanciato tu: un vincolo che lo schema zod non sa esprimere lo fa rispettare SQLite, e un `UNIQUE constraint failed` da dentro una transazione arriva come `UNKNOWN` dopo che l'anteprima aveva dichiarato il file buono. Se una tabella ha un `UNIQUE`, lo schema che la alimenta deve averlo.
+**Errori.** Mai eccezioni attraverso il confine IPC. Sempre l'involucro `Result<T>` con un codice. Un servizio che rifiuta chiama `raise('CODICE', {…})` da `shared/errors.ts`: un `throw new Error` qualsiasi arriva al renderer come `UNKNOWN`, e il messaggio giusto sparisce senza che niente fallisca. Lo stesso vale per ciò che **non** hai lanciato tu: un vincolo che lo schema zod non sa esprimere lo fa rispettare SQLite, e un `UNIQUE constraint failed` da dentro una transazione arriva come `UNKNOWN` dopo che l'anteprima aveva dichiarato il file buono. Se una tabella ha un `UNIQUE`, lo schema che la alimenta deve averlo. E i parametri di un messaggio sono controllati solo se chi li produce è tipizzato **per codice**: un `detail: Record<string, number>` fa passare `detail.n` anche dove `n` non esiste, e il rifiuto dice «ha undefined crediti» con typecheck e test verdi. `Violation` in `domain.ts` è un'unione discriminata per questo.
 
 **Scrittura.** Ogni scrittura che tocca più tabelle sta in una transazione. Se fra il controllo di un'invariante e la scrittura che protegge c'è un `await`, il controllo va rifatto **dentro** la transazione: `ipcMain.handle` non serializza le invoke, e una guardia separata dalla sua scrittura da un'attesa protegge il passato.
 
@@ -95,7 +95,7 @@ Sono già costate tempo. Non riscoprirle.
 
 **Formato d'interscambio.** Un campo aggiunto al dataset è additivo e il **lettore** lo tratta come opzionale; solo un cambiamento che invalida i file vecchi alza `formatVersion`. Aggiungerlo obbligatorio senza alzare il numero rende illeggibile tutto ciò che è stato pubblicato prima, mentre il file continua a dichiararsi della stessa versione.
 
-**Copy dell'interfaccia.** Un errore dice cosa è successo e cosa fare, non si scusa. Uno stato vuoto è un invito ad agire. Intestazioni di colonna e valori in minuscolo, titoli di vista e di sezione in sentence case, acronimi con le maiuscole — ma un troncamento non è un acronimo: `FVM`, `MV`, `Pv`, `CS` restano maiuscoli, `qt.`, `bon`, `tit.`, `min` no. Mai maiuscolo spaziato.
+**Copy dell'interfaccia.** Un messaggio che conta sa contare fino a **uno e a zero**: «ha già 1 difensori» e «ha già 0 portieri» sono usciti da tre codici diversi in tre task di fila, e la terza volta l'ha preso la revisione. `ROLE_LABELS` e `ROLE_LABELS_ONE` in `domain.ts` esistono per questo. Un errore dice cosa è successo e cosa fare, non si scusa. Uno stato vuoto è un invito ad agire. Intestazioni di colonna e valori in minuscolo, titoli di vista e di sezione in sentence case, acronimi con le maiuscole — ma un troncamento non è un acronimo: `FVM`, `MV`, `Pv`, `CS` restano maiuscoli, `qt.`, `bon`, `tit.`, `min` no. Mai maiuscolo spaziato.
 
 ---
 
@@ -111,15 +111,18 @@ Niente test sull'interfaccia in v1.
 
 **Una guardia che non scatta mai** è indistinguibile da un dato sempre pulito. Dopo averne scritta una, rompila apposta e rilancia i test: se passano lo stesso, il test non c'è.
 
-Tre modi in cui quella prova mente, incontrati tutti e tre:
+Quattro modi in cui quella prova mente, incontrati tutti:
 
 - **Un file di test che non compila mostra *meno* test, non test che falliscono.** Se la mutazione rompe la sintassi, Vitest scarta il file e il totale cala: `21 passed (21)` dove prima erano 29 non è una guardia inerte, è una prova non eseguita. Guardare il totale, non solo i falliti.
 - **Cambiare il ruolo di un dato ne cambia la soglia di correttezza.** Un valore usato come *spareggio* può essere sbagliato senza conseguenze — non pareggia con nessuno; lo stesso valore usato come *veto* rifiuta tutto. `Number('')` è `0` e `Number.isInteger(0)` è vero, quindi «anno assente» si legge «anno zero»: innocuo per anni, fatale il giorno che l'anno acquista il potere di dire di no.
+- **La guardia può essere irraggiungibile per costruzione.** La mutazione sopravvive, e non c'è nessun test da aggiungere: è la riga a non servire. `permutationOf` controllava i doppioni dopo un controllo di appartenenza che li prendeva già tutti; `planCells` metteva un `Math.max(0, …)` su una differenza che uno `slice` teneva già non negativa. Il rimedio non è un test più contorto: è far dire alla funzione quello che intende davvero — o togliere la riga.
 - **Il caso che dài alla guardia può non esistere nei dati.** È il modo peggiore, perché la mutazione fallisce come deve e la prova sembra riuscita. In T10 `hasHistory({})` passava, la mutazione la faceva fallire, e la guardia non è mai scattata su nessuno dei 524 giocatori: `{}` non esiste, perché la riga della stagione in corso ce l'hanno tutti e porta **zeri, non null**. La mutazione prova che il test guarda *qualcosa*, non che guardi il caso vero. Il fissato va preso dal dataset costruito, non inventato.
 
 **I numeri nei documenti sono specifiche eseguibili.** Quando un documento dà un conteggio — «108 giocatori su 524», «0 Id cambiati su 589» — quel numero *è* il test, ed è più forte di qualunque caso scritto a mano. `src/shared/domain.ts` è puro, quindi si esegue sul dataset vero senza Vitest e senza l'app: `node --experimental-strip-types` su uno script che importa la funzione e apre `tools/dataset/output/<stagione>/v1.json.gz`. Se il conteggio non torna, la guardia è sbagliata anche se i test sono verdi.
 
 **Il guardrail.** I test girano su Node, quindi non possono toccare il database. Se un test ha bisogno di importare `better-sqlite3`, `electron` o qualcosa da `src/main/db/`, non è il test a essere sbagliato: è la logica che sta nel posto sbagliato e va spostata in `src/shared/domain.ts` come funzione pura. Le invarianti che contano sono aritmetica su crediti e slot: non hanno bisogno di SQLite.
+
+**Provare un servizio del main.** Il guardrail vale per Vitest, non per te. I difetti che i tipi non vedono — un rifiuto senza il suo messaggio, una transazione che non torna indietro, una grammatica che non sa contare fino a uno — escono solo esercitando il servizio vero su un database di scorta, ed è così che T12 e T13 li hanno trovati. Si impacchetta con `node_modules/.bin/esbuild h.ts --bundle --platform=node --format=cjs --external:better-sqlite3 --external:drizzle-orm --outfile=h.cjs` e si lancia con `NODE_PATH=$PWD/node_modules ELECTRON_RUN_AS_NODE=1 node_modules/electron/dist/electron /percorso/h.cjs`. Due dettagli, un giro perso a testa: **dalla radice del progetto**, perché il percorso del binario di Electron è relativo, e `NODE_PATH` esplicito se il bundle sta fuori dal progetto, o `better-sqlite3` non si risolve. Lo schema si applica leggendo i `.sql` di `drizzle/` divisi su `--> statement-breakpoint`.
 
 ---
 
@@ -143,6 +146,8 @@ Un task per sessione. Alla fine di ogni fase, **produci un pacchetto installabil
 Per leggere cosa mostra davvero l'app: **`/prova-pacchetto`** (`dev` o `pack`) costruisce, lancia e stampa il DOM via DevTools. Le trappole d'avvio sono già dentro lo script: non riscoprirle.
 
 **Strumenti del progetto:** `/apri-task <n>` apre un task leggendo solo i documenti che indica · agenti `revisore-fase` e `deriva-documenti` · gli hook in `.claude/hooks/` bloccano le violazioni delle tre regole prima che tocchino il disco.
+
+**Mentre `revisore-fase` gira, non toccare i file.** Rivede un albero che si muove e deve riverificare da capo ogni citazione: è successo in T11 e in T12, e in entrambi i casi l'ha segnalato lui.
 
 **Prima di chiudere una fase, sempre una review**, con l'agente `revisore-fase`. Che compili e giri non basta: rileggi il lavoro contro le regole di questo file e contro il documento del task, e di' cosa non torna invece di chiudere in silenzio. Ogni rilievo va verificato contro il codice prima di riportarlo: in T1 sette su dieci erano plausibili e falsi. Verificare vuol dire **eseguire**: applicare il DDL a un database di scorta e confrontare i `pragma`, impacchettare un modulo con esbuild per vedere cosa tira dentro davvero.
 
