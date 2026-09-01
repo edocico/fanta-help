@@ -79,6 +79,7 @@ Sono già costate tempo. Non riscoprirle.
 | Breakpoint che la finestra non raggiunge mai | La finestra si apre a **900×620** (`main/index.ts`) e ogni utility `lg:` parte da 1024: quello che sta dietro un `lg:` non si vede mai alla dimensione predefinita. Compila, passa il typecheck, e la funzione sembra fatta. In T12 ci è finito il confronto fra due piani, che il documento 2 §4.7 chiede |
 | La riga fantasma del virtualizzatore | Il primo `tbody tr` della vista Giocatori è lo spaziatore di `@tanstack/react-virtual`: `<tr style="height:0px">` senza celle. `document.querySelector('tbody tr').click()` clicca il vuoto e sembra che il pannello non si apra più. Prendere la prima riga con `tr.cells.length > 3`. Stesso genere: `document.querySelectorAll('select')[0]` è il selettore di lega della barra laterale, non il primo select della pagina |
 | Guidare l'interfaccia da DevTools | Scrivere in un input col setter nativo **non gli dà il fuoco**, quindi un `blur()` dopo non fa scattare niente e la modifica non parte mai. Il DOM mostra il testo, il modello non l'ha ricevuto, e sembra un difetto dell'app: in T11 ha finto due volte un bug che non c'era. Mettere `el.focus()` prima di scrivere — e non basta: **con la finestra non a fuoco** (`document.hasFocus()` falso, che è la regola quando a guidare è un terminale) `el.focus()` sposta `document.activeElement` ma il `blur()` successivo non emette nessun `focusout`, quindi l'`onBlur` di React tace lo stesso. Emettere `new FocusEvent('focusout', { bubbles: true })` a mano, o portare davanti la finestra |
+| Testo italiano dentro uno script bash | Un apostrofo dentro un'espansione — `${1:?serve il file dell'harness}` — apre una virgoletta che non si chiude, e lo script muore all'esecuzione con «EOF non atteso», non mentre lo scrivi. `bash -n` prima di consegnarlo. Vale per hook e skill, che qui sono tutti commentati in italiano |
 | Comando Bash negato | Se il permesso viene negato, **non è stato eseguito niente**, nemmeno le parti prima della `&&`. Un `git add … && git commit …` negato lascia l'indice intatto, e il commit successivo prende quello vecchio: sembra riuscito e gli mancano i file. Tenere `add` e `commit` in due chiamate, e guardare `git status` dopo ogni negazione |
 
 ---
@@ -109,7 +110,7 @@ Poco e mirato. Non serve copertura, servono questi:
 
 Niente test sull'interfaccia in v1.
 
-**Una guardia che non scatta mai** è indistinguibile da un dato sempre pulito. Dopo averne scritta una, rompila apposta e rilancia i test: se passano lo stesso, il test non c'è.
+**Una guardia che non scatta mai** è indistinguibile da un dato sempre pulito. Dopo averne scritta una, rompila apposta e rilancia i test: se passano lo stesso, il test non c'è. Il giro lo fa **`/muta`**, che distingue la guardia inerte dall'espressione che non ha combaciato e dal file scartato — a occhio sono la stessa riga verde.
 
 Quattro modi in cui quella prova mente, incontrati tutti:
 
@@ -122,7 +123,7 @@ Quattro modi in cui quella prova mente, incontrati tutti:
 
 **Il guardrail.** I test girano su Node, quindi non possono toccare il database. Se un test ha bisogno di importare `better-sqlite3`, `electron` o qualcosa da `src/main/db/`, non è il test a essere sbagliato: è la logica che sta nel posto sbagliato e va spostata in `src/shared/domain.ts` come funzione pura. Le invarianti che contano sono aritmetica su crediti e slot: non hanno bisogno di SQLite.
 
-**Provare un servizio del main.** Il guardrail vale per Vitest, non per te. I difetti che i tipi non vedono — un rifiuto senza il suo messaggio, una transazione che non torna indietro, una grammatica che non sa contare fino a uno — escono solo esercitando il servizio vero su un database di scorta, ed è così che T12 e T13 li hanno trovati. Si impacchetta con `node_modules/.bin/esbuild h.ts --bundle --platform=node --format=cjs --external:better-sqlite3 --external:drizzle-orm --outfile=h.cjs` e si lancia con `NODE_PATH=$PWD/node_modules ELECTRON_RUN_AS_NODE=1 node_modules/electron/dist/electron /percorso/h.cjs`. Due dettagli, un giro perso a testa: **dalla radice del progetto**, perché il percorso del binario di Electron è relativo, e `NODE_PATH` esplicito se il bundle sta fuori dal progetto, o `better-sqlite3` non si risolve. Lo schema si applica leggendo i `.sql` di `drizzle/` divisi su `--> statement-breakpoint`.
+**Provare un servizio del main.** Il guardrail vale per Vitest, non per te. I difetti che i tipi non vedono — un rifiuto senza il suo messaggio, una transazione che non torna indietro, una grammatica che non sa contare fino a uno — escono solo esercitando il servizio vero su un database di scorta, ed è così che T12 e T13 li hanno trovati. Lo fa **`/prova-servizio`**: copi il modello, scrivi le prove in fondo, lo lanci. Il documento 6 §5 chiama questa strada «uno script separato eseguito sotto Electron, non Vitest».
 
 ---
 
@@ -145,7 +146,7 @@ Un task per sessione. Alla fine di ogni fase, **produci un pacchetto installabil
 
 Per leggere cosa mostra davvero l'app: **`/prova-pacchetto`** (`dev` o `pack`) costruisce, lancia e stampa il DOM via DevTools. Le trappole d'avvio sono già dentro lo script: non riscoprirle.
 
-**Strumenti del progetto:** `/apri-task <n>` apre un task leggendo solo i documenti che indica · agenti `revisore-fase` e `deriva-documenti` · gli hook in `.claude/hooks/` bloccano le violazioni delle tre regole prima che tocchino il disco.
+**Strumenti del progetto:** `/apri-task <n>` apre un task leggendo solo i documenti che indica · `/muta` rompe le guardie e verifica che i test se ne accorgano · `/prova-servizio` esegue un servizio contro un database vero sotto l'ABI di Electron · agenti `revisore-fase` e `deriva-documenti` · in `.claude/hooks/`, `boundaries` e `typecheck` **bloccano**, `palette` **avvisa e basta** — l'ambra sul denaro è corretta e frequente, e una guardia che la rifiutasse verrebbe aggirata dentro un task.
 
 **Mentre `revisore-fase` gira, non toccare i file.** Rivede un albero che si muove e deve riverificare da capo ogni citazione: è successo in T11 e in T12, e in entrambi i casi l'ha segnalato lui.
 
