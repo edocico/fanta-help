@@ -373,9 +373,9 @@ Tre `Invio` e il nome del giocatore. Nel caso migliore, quando la squadra di tur
 | `Ctrl/Cmd+F` | Apri i filtri | giocatori |
 | `Spazio` | Espandi la rosa della squadra selezionata | griglia rose |
 | `Ctrl/Cmd+P` | Modo proiezione | asta |
-| `?` | Elenco delle scorciatoie | ovunque |
+| `?` | Riferimento: scorciatoie e sigle | ovunque |
 
-`?` apre un pannello con tutte le scorciatoie. Serve una volta sola, la prima sera, ma serve.
+`?` apre un pannello a due sezioni: tutte le scorciatoie, e tutte le sigle dell'interfaccia con il significato per esteso. Le scorciatoie servono una volta sola, la prima sera, ma quella sera servono. Le sigle servono a chiunque non conosca a memoria la differenza tra `Pv` e `MV`, che è quasi tutti.
 
 ---
 

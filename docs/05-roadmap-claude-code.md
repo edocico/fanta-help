@@ -131,6 +131,8 @@ Tabella virtualizzata con TanStack Table + Virtual, filtri come chip, ricerca fu
 
 Quello che il documento 2 §4.4 elenca e T9 **non** ha, perché ha bisogno di una lega: la fascia di colore della squadra che ha comprato e la riga attenuata (T13), la stella degli obiettivi (T12), il prezzo atteso e il punteggio sintetico (T11 per i pesi, T12 per le fasce), il pannello di dettaglio al click (T10). Non sono mostrati vuoti: vale la regola che il §4.4 si dà per le colonne FBref, «le nasconde invece di mostrare quindici trattini».
 
+**Nota:** le etichette di colonna vengono da `src/shared/glossario.ts`, non scritte a mano nella tabella. La mappa è dati puri e può atterrare già qui; il componente `Sigla` che ne mostra l'espansione arriva più avanti, a T23. Farlo in quest'ordine evita di riscrivere le intestazioni due volte.
+
 ### T10 · Dettaglio giocatore
 **Documenti:** 2 (§4.5)
 
@@ -223,6 +225,40 @@ Dati, Aggiornamenti, Aspetto, Backup. Chiave API con lo stato della quota residu
 
 ---
 
+## Fase 8 — Refactoring visivo
+
+Dopo l'MVP, non durante. Le viste vanno prima costruite e usate: un design system applicato a schermate che non hanno ancora affrontato dati veri fissa decisioni prese al buio.
+
+### T22 · Token e mappatura
+**Documenti:** 7 (§3, §4, §9)
+
+Primitivi e semantici in `:root`, blocco `@theme` con la mappatura shadcn **e con il namespace `--color-*` che genera le utility dell'app**, IBM Plex Sans per interfaccia e colonne, Archivo per titoli e cifre grandi.
+
+**Fatto quando:** l'applicazione ha l'aspetto nuovo ovunque **senza che un solo componente sia stato modificato**. È il passo col miglior rapporto tra risultato e rischio, e va verificato da solo prima di andare avanti. Il criterio regge solo se le utility già in uso (`text-chalk-dim`, `border-line`, `bg-pitch-800`: 71 occorrenze) continuano a risolvere, quindi il §9 va applicato per intero e non solo nella parte shadcn.
+
+### T23 · Primitivi dell'app
+**Documenti:** 7 (§10)
+
+`Cifra`, `TabellaDati`, `ChipFiltro`, `BadgeRuolo`, `Sigla`.
+
+Con `Sigla` arriva anche il pannello di riferimento: `?` passa da elenco delle scorciatoie a due sezioni, scorciatoie e sigle.
+
+**Fatto quando:** nessun numero dell'applicazione è più scritto a mano dentro un `<span>`, e nessuna sigla compare fuori dal componente. Il tipo `Sigla = keyof typeof glossario` deve impedire che una sigla senza voce nel glossario compili.
+
+### T24 · La board delle rose
+**Documenti:** 7 (§10, §11)
+
+Sostituisce il pannello a righe con una board a colonne: squadre in colonna, slot in riga raggruppati per ruolo. È l'unico cambiamento **strutturale** del refactoring, non solo di aspetto, quindi va isolato dagli altri.
+
+**Fatto quando:** funziona con dieci squadre a rose piene, e la proiezione è la stessa board a scala doppia senza la striscia di assegnazione — non un secondo layout.
+
+### T25 · Viste e passata finale
+**Documenti:** 7 (§10, §14)
+
+Vista per vista, l'asta per prima. Poi la lista dei tic della sezione 14.
+
+---
+
 ## 2. Prompt di apertura
 
 Da usare alla prima sessione, dopo aver messo i documenti in `docs/` e il `CLAUDE.md` nella radice.
@@ -260,5 +296,7 @@ L'unica ipotesi che restava da verificare sul campo — la stabilità degli `Id`
 | 3 | Struttura repo, contratti IPC, livello dati, sicurezza, build, aggiornamento |
 | 4 | Tre fonti, pipeline offline, riconciliazione, import, dati vivi, le due repo |
 | 5 | Questo: roadmap dei task |
+| 6 | Suite di test. Aggiunto dopo l'avvio dell'implementazione, si innesta da T4 |
+| 7 | Design system. Token, componenti, regole. Si applica in refactoring **dopo l'MVP** |
 | `CLAUDE.md` | Regole e trappole, nella radice della repo |
 | 0 | Revisione, chiusa. Registro di cosa era stato trovato |

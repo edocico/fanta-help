@@ -12,6 +12,7 @@ Le specifiche complete stanno in `docs/`, un file per documento. Leggi solo quel
 | 4 | `04-pipeline-dati.md` | Fonti, pipeline offline, riconciliazione, import |
 | 5 | `05-roadmap-claude-code.md` | Roadmap dei task |
 | 6 | `06-testing.md` | Suite di test con Vitest, si innesta da T4 |
+| 7 | `07-design-system.md` | Design system: token, tipografia, componenti. Si applica **dopo l'MVP**, in fase 8 |
 | 0 | `00-revisione.md` | Registro della revisione, chiusa |
 
 ---
