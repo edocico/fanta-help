@@ -65,6 +65,7 @@ Sono già costate tempo. Non riscoprirle.
 | `"type": "module"` in `package.json` | Non rimetterlo. Fa emettere a electron-vite un main ESM, e `import { BrowserWindow } from 'electron'` esplode all'istanziazione: `electron` è CJS con getter pigri. Muore con **codice 0 e stderr vuoto** dal pacchetto. Vitest lo consiglia a ogni esecuzione: ignoralo |
 | Percorso dei dati utente | `app.getPath('userData')` deriva da `app.getName()`, che legge `package.json`. `productName` nell'`electron-builder.yml` a runtime non esiste: senza `productName` anche in `package.json`, sviluppo e app installata scrivono nello stesso database |
 | `ELECTRON_RUN_AS_NODE` | VS Code lo esporta a `1` nei suoi terminali, su entrambe le macchine. Electron esegue il main come Node normale: `require('electron').app` è `undefined` e l'app muore con `Cannot read properties of undefined (reading 'isPackaged')`. Lanciarla con `env -u ELECTRON_RUN_AS_NODE` |
+| Finestra occlusa e protocollo DevTools | Quando il terminale prende il fuoco la finestra va in `visibilityState: hidden`: niente `requestAnimationFrame` e **niente eventi `scroll`**. Una lista virtualizzata sembra congelata sulle prime venti righe e si "scopre" un difetto che non c'è. Portarla davanti (`osascript -e 'tell application "Fanta Help" to activate'`) o emettere `dispatchEvent(new Event('scroll'))` a mano |
 | `@theme inline` di Tailwind | Elimina le variabili che nessuna utility usa. Una mappatura sbagliata **non compare** nel CSS costruito e sembra assente: si sveglia al primo componente che la tocca |
 | Raggi in Tailwind v4 | Vivono sotto `--radius-*`. Un `--radius` nudo non alimenta nessuna utility e viene scartato, e ogni `rounded-md` torna al default di 6px |
 | CLI di shadcn | Senza `paths` nel `tsconfig.json` di radice non fallisce: crea una cartella chiamata letteralmente `@` |
@@ -77,13 +78,15 @@ Sono già costate tempo. Non riscoprirle.
 
 **Lingua.** Codice, identificatori, commenti e nomi di file in **inglese**. Testi rivolti all'utente in **italiano**. I messaggi d'errore stanno in `src/shared/errors.ts` accanto al codice, mai sparsi nei componenti.
 
-**Errori.** Mai eccezioni attraverso il confine IPC. Sempre l'involucro `Result<T>` con un codice. Un servizio che rifiuta chiama `raise('CODICE', {…})` da `shared/errors.ts`: un `throw new Error` qualsiasi arriva al renderer come `UNKNOWN`, e il messaggio giusto sparisce senza che niente fallisca.
+**Errori.** Mai eccezioni attraverso il confine IPC. Sempre l'involucro `Result<T>` con un codice. Un servizio che rifiuta chiama `raise('CODICE', {…})` da `shared/errors.ts`: un `throw new Error` qualsiasi arriva al renderer come `UNKNOWN`, e il messaggio giusto sparisce senza che niente fallisca. Lo stesso vale per ciò che **non** hai lanciato tu: un vincolo che lo schema zod non sa esprimere lo fa rispettare SQLite, e un `UNIQUE constraint failed` da dentro una transazione arriva come `UNKNOWN` dopo che l'anteprima aveva dichiarato il file buono. Se una tabella ha un `UNIQUE`, lo schema che la alimenta deve averlo.
 
-**Scrittura.** Ogni scrittura che tocca più tabelle sta in una transazione.
+**Scrittura.** Ogni scrittura che tocca più tabelle sta in una transazione. Se fra il controllo di un'invariante e la scrittura che protegge c'è un `await`, il controllo va rifatto **dentro** la transazione: `ipcMain.handle` non serializza le invoke, e una guardia separata dalla sua scrittura da un'attesa protegge il passato.
 
 **Interazione.** Tutto ciò su cui si clicca ha il cursore a mano, e ciò che è disabilitato no. La regola sta una volta sola in `base.css` come selettore globale, non componente per componente: appiccicata a mano, il primo che se la dimentica produce un elemento che sembra inerte, e nessun test dell'interfaccia esiste per accorgersene.
 
-**Copy dell'interfaccia.** Un errore dice cosa è successo e cosa fare, non si scusa. Uno stato vuoto è un invito ad agire. Intestazioni di colonna e valori in minuscolo, titoli di vista e di sezione in sentence case, acronimi con le maiuscole. Mai maiuscolo spaziato.
+**Formato d'interscambio.** Un campo aggiunto al dataset è additivo e il **lettore** lo tratta come opzionale; solo un cambiamento che invalida i file vecchi alza `formatVersion`. Aggiungerlo obbligatorio senza alzare il numero rende illeggibile tutto ciò che è stato pubblicato prima, mentre il file continua a dichiararsi della stessa versione.
+
+**Copy dell'interfaccia.** Un errore dice cosa è successo e cosa fare, non si scusa. Uno stato vuoto è un invito ad agire. Intestazioni di colonna e valori in minuscolo, titoli di vista e di sezione in sentence case, acronimi con le maiuscole — ma un troncamento non è un acronimo: `FVM`, `MV`, `Pv`, `CS` restano maiuscoli, `qt.`, `bon`, `tit.`, `min` no. Mai maiuscolo spaziato.
 
 ---
 

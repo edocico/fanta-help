@@ -25,6 +25,22 @@ sfondo, famiglia di caratteri), poi lascia l'app aperta e dice come chiuderla.
 Se serve un controllo diverso da quelli predefiniti, aggiungi una `evaluate()`
 in `probe.mjs`: prende un'espressione JavaScript e la valuta nel renderer.
 
+## Guidare l'app, non solo leggerla
+
+Oltre al DOM, dal protocollo DevTools si invocano i canali IPC e si valuta
+qualunque espressione nel renderer — che è come si prova un servizio senza
+costruirgli un'interfaccia attorno:
+
+```js
+// nel renderer, via Runtime.evaluate con awaitPromise: true
+window.api.invoke('dataset.import', { dir: '…' }).then((r) => JSON.stringify(r))
+```
+
+Serve per i task che scrivono un servizio prima della sua vista (T7, T8, T13).
+Per misurare la reattività, un `MutationObserver` sull'elemento che cambia dà la
+latenza vera; due `requestAnimationFrame` di attesa aggiungono 33 ms di
+pavimento e li fanno sembrare il costo del lavoro.
+
 ## Cosa verifica un'esecuzione riuscita
 
 - Il modulo nativo `better-sqlite3` si carica sotto l'ABI di Electron.
