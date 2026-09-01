@@ -107,10 +107,13 @@ Niente test sull'interfaccia in v1.
 
 **Una guardia che non scatta mai** è indistinguibile da un dato sempre pulito. Dopo averne scritta una, rompila apposta e rilancia i test: se passano lo stesso, il test non c'è.
 
-Due modi in cui quella prova mente, incontrati tutti e due:
+Tre modi in cui quella prova mente, incontrati tutti e tre:
 
 - **Un file di test che non compila mostra *meno* test, non test che falliscono.** Se la mutazione rompe la sintassi, Vitest scarta il file e il totale cala: `21 passed (21)` dove prima erano 29 non è una guardia inerte, è una prova non eseguita. Guardare il totale, non solo i falliti.
 - **Cambiare il ruolo di un dato ne cambia la soglia di correttezza.** Un valore usato come *spareggio* può essere sbagliato senza conseguenze — non pareggia con nessuno; lo stesso valore usato come *veto* rifiuta tutto. `Number('')` è `0` e `Number.isInteger(0)` è vero, quindi «anno assente» si legge «anno zero»: innocuo per anni, fatale il giorno che l'anno acquista il potere di dire di no.
+- **Il caso che dài alla guardia può non esistere nei dati.** È il modo peggiore, perché la mutazione fallisce come deve e la prova sembra riuscita. In T10 `hasHistory({})` passava, la mutazione la faceva fallire, e la guardia non è mai scattata su nessuno dei 524 giocatori: `{}` non esiste, perché la riga della stagione in corso ce l'hanno tutti e porta **zeri, non null**. La mutazione prova che il test guarda *qualcosa*, non che guardi il caso vero. Il fissato va preso dal dataset costruito, non inventato.
+
+**I numeri nei documenti sono specifiche eseguibili.** Quando un documento dà un conteggio — «108 giocatori su 524», «0 Id cambiati su 589» — quel numero *è* il test, ed è più forte di qualunque caso scritto a mano. `src/shared/domain.ts` è puro, quindi si esegue sul dataset vero senza Vitest e senza l'app: `node --experimental-strip-types` su uno script che importa la funzione e apre `tools/dataset/output/<stagione>/v1.json.gz`. Se il conteggio non torna, la guardia è sbagliata anche se i test sono verdi.
 
 **Il guardrail.** I test girano su Node, quindi non possono toccare il database. Se un test ha bisogno di importare `better-sqlite3`, `electron` o qualcosa da `src/main/db/`, non è il test a essere sbagliato: è la logica che sta nel posto sbagliato e va spostata in `src/shared/domain.ts` come funzione pura. Le invarianti che contano sono aritmetica su crediti e slot: non hanno bisogno di SQLite.
 
