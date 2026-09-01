@@ -82,12 +82,16 @@ export const player = sqliteTable(
     qtMantraCurrent: real('qt_mantra_current'),
     fvmClassic: real('fvm_classic'),
     fvmMantra: real('fvm_mantra'),
-    // Hand-written in overrides.json, not read from a source: FBref's league
-    // tables carry the birth *year* and the full date only lives on each
-    // player's own page. The dataset of T6 has `birthYear` beside `birthDate`
-    // for that reason, and this table has nowhere to put it yet — a decision
-    // T7 has to take, in a new numbered migration.
+    // Two columns, because the two sources answer different questions and one
+    // column holding sometimes '1997' and sometimes '1997-08-22' would make every
+    // reader measure a string before trusting it.
+    //
+    // `birth_date` is hand-written in overrides.json. `birth_year` is what FBref's
+    // league tables actually carry — the full date lives only on each player's own
+    // page, which the pipeline does not fetch. T7 added the second one in
+    // 0001_player_birth_year.sql; it stays null until the optional stage runs.
     birthDate: text('birth_date'),
+    birthYear: integer('birth_year'),
     penaltyTaker: integer('penalty_taker').notNull().default(0),
     penaltyTakerSource: text('penalty_taker_source', { enum: ['derived', 'manual'] }),
     delistedAt: integer('delisted_at'), // gone from a later listone

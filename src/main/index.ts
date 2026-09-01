@@ -1,6 +1,13 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'node:path'
-import { closeDb, databasePath, ensureInstance, foreignKeysEnabled, openDb } from './db/client'
+import {
+  closeDb,
+  databasePath,
+  ensureInstance,
+  foreignKeysEnabled,
+  openDb,
+  takeBackup,
+} from './db/client'
 import { registerAll, registerUnavailable } from './ipc/register'
 
 // main and preload are built as CommonJS, so __dirname exists. See the note in
@@ -50,6 +57,15 @@ void app.whenReady().then(() => {
 
     registerAll({
       db,
+      backup: takeBackup,
+      // Every open window, rather than one remembered webContents: a window can
+      // be closed and reopened on macOS, and a stale reference sends progress
+      // into a destroyed renderer instead of the live one.
+      emit: (topic, payload) => {
+        for (const w of BrowserWindow.getAllWindows()) {
+          w.webContents.send(`event:${topic}`, payload)
+        }
+      },
       instance: {
         uuid,
         label,

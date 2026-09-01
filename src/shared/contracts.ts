@@ -50,6 +50,27 @@ const playerRow = z.object({
   owned: z.boolean(),
 })
 
+/**
+ * What an import did, per document 4 §6. `upToDate` is the answer to step 2 —
+ * `latest` already installed — and when it is true every count below is zero and
+ * no backup was taken.
+ */
+const importReport = z.object({
+  seasonId: z.string(),
+  version: z.string(),
+  upToDate: z.boolean(),
+  added: z.number().int(),
+  updated: z.number().int(),
+  /** Marked with `delisted_at`, never removed: invariant 10. */
+  delisted: z.number().int(),
+  restored: z.number().int(),
+  teams: z.number().int(),
+  stats: z.number().int(),
+  backup: z.string().nullable(),
+  hasFbref: z.boolean(),
+  hasExternalIds: z.boolean(),
+})
+
 export const contracts = {
   'app.instance': {
     input: z.void(),
@@ -59,6 +80,16 @@ export const contracts = {
   'dataset.list': {
     input: z.void(),
     output: z.array(seasonSummary),
+  },
+
+  /**
+   * `dir` is the folder holding `manifest.json`, which the download of T7b will
+   * replace with the fixed URL of document 4 §9. Until then it is the only way to
+   * point the app at a dataset, and it is why this channel takes a path at all.
+   */
+  'dataset.import': {
+    input: z.object({ dir: z.string(), seasonId: z.string().optional() }),
+    output: importReport,
   },
 
   'player.list': {
@@ -82,9 +113,9 @@ export type Output<C extends Channel> = z.infer<(typeof contracts)[C]['output']>
  * Topics the main process pushes without being asked. Parallel to the channels
  * and typed the same way.
  *
- * Only one for now, and nothing emits it yet: `dataset.progress` belongs to the
- * import of T7. `update.status` arrives with T20, from document 3 §8 — inventing
- * its shape here without reading that section would be guessing.
+ * Only one for now. `dataset.progress` is emitted by the import service of T7,
+ * five times per run. `update.status` arrives with T20, from document 3 §8 —
+ * inventing its shape here without reading that section would be guessing.
  */
 export type EventMap = Record<string, z.ZodType>
 

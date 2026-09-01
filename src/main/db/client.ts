@@ -4,7 +4,9 @@ import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { eq } from 'drizzle-orm'
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
+import { raise } from '@shared/errors'
 import * as schema from './schema'
+import { backupDatabase } from './backup'
 import { appInstance } from './schema'
 import { runMigrations } from './migrate'
 
@@ -49,6 +51,18 @@ export function closeDb(): void {
   connection?.close()
   connection = null
   database = null
+}
+
+/**
+ * The backup document 4 §6 puts before every import.
+ *
+ * It lives here and not in the import service because it needs two things the
+ * service is not allowed to touch: the raw better-sqlite3 handle, for the online
+ * backup API, and `userData`, which comes from electron.
+ */
+export function takeBackup(): Promise<string> {
+  if (!connection) raise('DB_UNAVAILABLE')
+  return backupDatabase(connection, app.getPath('userData'))
 }
 
 export function foreignKeysEnabled(): boolean {

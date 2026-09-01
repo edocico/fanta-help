@@ -140,6 +140,17 @@ In v1 **non si testa**, ed è una scelta, non una dimenticanza.
 - **I vincoli dello schema stesso.** Indici unici, chiavi esterne e `CHECK` falliscono rumorosamente. Un giocatore comprato due volte nella stessa lega non passa, e non serve un test per verificarlo.
 - **Una verifica manuale su un caso solo**, quello che si rompe in silenzio: un reimport del listone non deve toccare gli acquisti già registrati. È già il criterio di completamento del task T7.
 
+### Come si esegue quella verifica
+
+Serve perché non è automatizzata: senza le istruzioni, la prossima volta si salta. Vale per T7, e di nuovo per T7b e T8, che rifanno passare i dati per la stessa strada.
+
+1. Importa un listone e prendi nota di un `player.id`.
+2. Con l'app chiusa, semina a mano una `league` (in stato `setup` o `pre_auction`, o l'invariante 17 rifiuta), una `fanta_team` e una `purchase` su quel giocatore. Il database di sviluppo sta in `userData` di `Fanta Help (dev)`, e per aprirlo serve l'ABI di Electron: `ELECTRON_RUN_AS_NODE=1 node_modules/electron/dist/<binario> script.cjs`.
+3. Prepara una seconda versione del dataset **che tolga quel giocatore** dal listone, con il suo `sha256` nel manifest, e importala.
+4. Guarda quattro cose, non una: la riga `purchase` è identica; `player.delisted_at` è valorizzato e la riga **non** è sparita; i suoi `player_mantra_role` e `player_external_id` sono ancora lì; `pragma foreign_key_check` non dice niente.
+
+Il terzo punto è quello che è già stato sbagliato una volta: cancellare ruoli e id esterni per tutta la stagione e reinserirli solo per chi è nel dataset nuovo lascia il giocatore comprato senza né gli uni né gli altri, e la riga `player` intatta fa sembrare che l'invariante 10 abbia retto.
+
 Se in futuro servissero test d'integrazione veri sul livello dati, la strada pulita è uno script separato eseguito sotto Electron, non Vitest. Va tenuto fuori dal ciclo veloce dei test, che deve restare istantaneo per essere usato.
 
 ---

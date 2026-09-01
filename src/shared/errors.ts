@@ -4,7 +4,7 @@
  * The messages are the direct translation of the edge-case table of document 2,
  * as listed in document 3 §3. They live here and never in a component.
  *
- * Each code is a function, not a string, because five of them take parameters.
+ * Each code is a function, not a string, because some of them take parameters.
  * That makes `fail('EXCEEDS_MAX_BID', { team, max, n })` a compile error when a
  * parameter is missing or misspelled — the alternative, `{placeholder}` strings
  * with a substitution helper, fails silently and puts a literal `{team}` on
@@ -30,6 +30,23 @@ export const errorMessages = {
   LEAGUE_FROZEN: () => 'Il resoconto è cristallizzato. Riaprilo per modificarlo.',
   RULES_LOCKED: () => 'Il regolamento si blocca quando parte l’asta.',
   DATASET_LOCKED: () => 'Non puoi aggiornare il listone durante un’asta.',
+
+  /* import of a dataset — document 4 §6 */
+  DATASET_MANIFEST_UNREADABLE: () =>
+    'Il manifest del dataset non si legge. Controlla la cartella indicata.',
+  DATASET_SEASON_MISSING: (p: { seasonId: string }) =>
+    `Il manifest non contiene la stagione ${p.seasonId}`,
+  // Distinct from the one above on purpose: a manifest whose `latest` names a
+  // version its own `versions` list does not have is a broken manifest, and
+  // saying the season is missing sends whoever reads it to look at the wrong end.
+  DATASET_VERSION_MISSING: (p: { seasonId: string; version: string }) =>
+    `Il manifest indica ${p.version} per ${p.seasonId} ma non la elenca`,
+  DATASET_FILE_MISSING: (p: { file: string }) =>
+    `Manca il file ${p.file} che il manifest indica`,
+  // Step 3 of document 4 §6: "verifica lo sha256. Se non corrisponde, si ferma."
+  DATASET_CHECKSUM_MISMATCH: (p: { file: string }) =>
+    `${p.file} non corrisponde al manifest. Riscaricalo o rigeneralo.`,
+  DATASET_INVALID: () => 'Il dataset non ha il formato atteso. Rigeneralo con la pipeline.',
 } as const
 
 export type ErrorCode = keyof typeof errorMessages

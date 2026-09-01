@@ -1,8 +1,9 @@
 import { and, eq, inArray, sql } from 'drizzle-orm'
-import type { Channel, Input, Output } from '@shared/contracts'
+import type { Channel, EventPayload, EventTopic, Input, Output } from '@shared/contracts'
 import { normalizeName } from '@shared/domain'
 import type { AppInstance } from '@shared/types'
 import type { Db } from '../db/client'
+import { importDataset } from '../services/dataset-import'
 import { player, playerMantraRole, purchase, season, serieATeam } from '../db/schema'
 
 /**
@@ -21,6 +22,14 @@ export type HandlerContext = {
   db: Db
   /** Resolved once at startup by the main process, which is allowed to use electron. */
   instance: AppInstance
+  /**
+   * The two things a service needs and may not do for itself, both supplied from
+   * index.ts. They arrive as functions for the same reason `instance` does: their
+   * implementations use `electron` and `app.getPath`, and one runtime import of
+   * either in this file would kill coverage.test.ts under Node.
+   */
+  backup: () => Promise<string>
+  emit: <T extends EventTopic>(topic: T, payload: EventPayload<T>) => void
 }
 
 type Handler<C extends Channel> = (
@@ -46,6 +55,13 @@ export const handlers: HandlerMap = {
         hasFbref: s.hasFbref === 1,
         importedAt: s.importedAt,
       })),
+
+  'dataset.import': (input, ctx) =>
+    importDataset(input, {
+      db: ctx.db,
+      backup: ctx.backup,
+      emit: (progress) => ctx.emit('dataset.progress', progress),
+    }),
 
   'player.list': (input, ctx) => {
     const where = [eq(player.seasonId, input.seasonId)]

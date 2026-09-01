@@ -34,7 +34,14 @@ export const datasetPlayer = z.object({
   name: z.string(),
   team: z.string(),
   roleClassic: z.enum(CLASSIC_ROLES),
-  rolesMantra: z.array(z.enum(MANTRA_ROLES)),
+  // Unique, because `player_mantra_role` has PRIMARY KEY (player_id, role_code)
+  // and a repeated code would reach SQLite as a constraint violation — which
+  // crosses the IPC boundary as UNKNOWN, losing the one message that says what to
+  // do. The shape is reachable: the parser splits the listone's `RM` column on
+  // ';' without deduplicating, so a cell reading `Dc;Dc` gets this far.
+  rolesMantra: z
+    .array(z.enum(MANTRA_ROLES))
+    .refine((roles) => new Set(roles).size === roles.length, 'ruoli Mantra ripetuti'),
   qtClassicInitial: z.number().nullable(),
   qtClassicCurrent: z.number().nullable(),
   qtMantraInitial: z.number().nullable(),
@@ -48,7 +55,14 @@ export const datasetPlayer = z.object({
   // measure a string before trusting it, and an equality between '1997' and
   // '1997-08-22' would quietly be false.
   birthDate: z.string().nullable(), // hand-written in overrides.json, when it matters
-  birthYear: z.number().int().nullable(), // FBref, null without the optional stage
+  // Absent and null mean the same thing here — the optional stage did not run —
+  // so the key is not required. That is not laxity, it is what `formatVersion`
+  // means: a field added to the format is additive and must read as optional,
+  // and only a change that invalidates old files bumps the number. T6 added this
+  // one as required without bumping, which made every dataset published before it
+  // unreadable while still calling itself version 1. T7 was the first reader, and
+  // the first chance to notice.
+  birthYear: z.number().int().nullable().default(null), // FBref; null without the optional stage
   penaltyTaker: z.boolean(),
   penaltyTakerSource: z.enum(['derived', 'manual']).nullable(),
   externalIds: z
@@ -93,7 +107,18 @@ export const dataset = z.object({
   sources: z.array(datasetSource),
   serieATeams: z.array(z.object({ name: z.string(), code: z.string() })),
   players: z.array(datasetPlayer),
-  stats: z.array(datasetStat),
+  // Same reason as `rolesMantra`: `player_season_stat` is UNIQUE on
+  // (identity_key, season_id), so two rows for one player in one season are not a
+  // dataset with a duplicate — they are an insert that will fail halfway through
+  // the import and surface as UNKNOWN. Document 4 §6 step 4 asks for everything to
+  // be validated with zod *before* touching the database; a constraint the schema
+  // cannot express is a constraint the database ends up enforcing instead.
+  stats: z
+    .array(datasetStat)
+    .refine(
+      (rows) => new Set(rows.map((r) => `${r.identityKey}\u0000${r.seasonId}`)).size === rows.length,
+      'due righe di statistica per lo stesso giocatore nella stessa stagione',
+    ),
 })
 
 export const manifestVersion = z.object({

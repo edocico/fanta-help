@@ -50,3 +50,21 @@ export function normalizeName(value: string): string {
     .replace(/\s+/g, ' ')
     .trim()
 }
+
+/**
+ * Which backup files to delete so that at most `keep` survive, newest kept.
+ *
+ * Pure, and here rather than beside the code that unlinks files, for one reason:
+ * it is the only part of the rotation of document 4 §6 that can be off by one,
+ * and it cannot fire until an eleventh import — long after anyone is watching it.
+ * The names carry a sortable timestamp (see db/backup.ts, which builds them), so
+ * lexicographic order is chronological order and no date is ever parsed back.
+ *
+ * A negative `keep` is clamped to zero rather than refused: this decides how many
+ * files to *delete*, and there is no reading of a bad argument that should end in
+ * deleting more than everything.
+ */
+export function backupsToPrune(names: readonly string[], keep: number): string[] {
+  const sorted = [...names].sort()
+  return sorted.slice(0, Math.max(0, sorted.length - Math.max(0, keep)))
+}

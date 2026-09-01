@@ -218,8 +218,12 @@ CREATE TABLE player (
   qt_mantra_current    REAL,
   fvm_classic          REAL,
   fvm_mantra           REAL,
-  birth_date           TEXT,                 -- scritta a mano in overrides.json: FBref dà l'anno,
-                                             -- non la data. Vedi documento 4 §1
+  birth_date           TEXT,                 -- scritta a mano in overrides.json. Vedi documento 4 §1
+  birth_year           INTEGER,              -- da FBref, che dà l'anno e non la data. Due colonne e
+                                             -- non una: '1997' e '1997-08-22' non si confrontano,
+                                             -- e una colonna che a volte è l'uno e a volte l'altro
+                                             -- costringe a misurare una stringa prima di fidarsene.
+                                             -- Aggiunta in T7 con 0001_player_birth_year.sql
   penalty_taker        INTEGER NOT NULL DEFAULT 0,
   penalty_taker_source TEXT CHECK (penalty_taker_source IN ('derived','manual')),
   delisted_at          INTEGER,              -- sparito da un listone successivo

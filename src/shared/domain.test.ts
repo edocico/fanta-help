@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeName } from './domain'
+import { backupsToPrune, normalizeName } from './domain'
 
 /**
  * The four cases document 6 §7 assigns to T5, one per step of the pipeline
@@ -40,5 +40,41 @@ describe('normalizeName', () => {
       const once = normalizeName(input)
       expect(normalizeName(once)).toBe(once)
     }
+  })
+})
+
+/**
+ * The rotation of document 4 §6, which keeps ten backups and deletes the rest.
+ *
+ * It is tested for one reason: it does nothing at all until an eleventh import,
+ * and until then a broken rotation and a correct one are the same empty list.
+ * The eleventh import happens months later, alone, on a database that by then
+ * has an auction in it.
+ */
+describe('backupsToPrune', () => {
+  // Zero-padded on purpose. Unpadded, the tenth name grows a digit and sorts
+  // before the first — which is the very failure the sortable stamp prevents,
+  // and it showed up here first.
+  const name = (n: number): string =>
+    `fanta-help-202609${String(n).padStart(2, '0')}T120000000.db`
+
+  it('keeps the newest and returns exactly the overflow', () => {
+    const twelve = Array.from({ length: 12 }, (_, i) => name(i))
+    expect(backupsToPrune(twelve, 10)).toEqual([name(0), name(1)])
+  })
+
+  /** The off-by-one that matters: at the limit nothing is deleted yet. */
+  it('deletes nothing when the folder holds exactly the limit', () => {
+    const ten = Array.from({ length: 10 }, (_, i) => name(i))
+    expect(backupsToPrune(ten, 10)).toEqual([])
+  })
+
+  /**
+   * readdir does not promise an order, so the function sorts. Feeding it the
+   * newest first must not make it delete the newest.
+   */
+  it('sorts by name instead of trusting the order it is given', () => {
+    const shuffled = [name(3), name(0), name(2), name(1)]
+    expect(backupsToPrune(shuffled, 2)).toEqual([name(0), name(1)])
   })
 })

@@ -93,6 +93,22 @@ Manifest, download, verifica sha256, validazione, upsert su `(season_id, source_
 
 **Fatto quando:** un secondo import con un listone diverso non tocca gli acquisti già registrati. Va testato esplicitamente: è l'invariante che si rompe in silenzio.
 
+### T7b · Download del dataset — *rimandato da T7*
+**Documenti:** 4 (§6, §8, §9), 3 (§5)
+
+T7 ha fatto tutto l'import tranne la rete: legge il manifest da una **cartella** invece che dall'URL fisso. Quello che manca, e che va fatto tutto insieme perché è un pezzo solo:
+
+- Manifest letto dall'URL fisso di `edocico/fanta-help-dataset`, che è privata.
+- Token fine-grained di sola lettura, **iniettato in fase di build** da una variabile d'ambiente e mai nel sorgente: nella repo pubblica dell'app GitHub lo revoca da solo in pochi minuti.
+- Download del `.json.gz` con la `fetch` nativa del main. Niente axios.
+- **Il percorso del fallimento**, che è metà del task: token che non funziona → l'app lo dice **una volta sola**, passa all'import XLSX e non riprova a ogni avvio.
+- Controllo all'avvio senza scaricare (§8): avviso discreto col bottone, e fallimento in silenzio quando manca la rete.
+- Togliere l'ingresso `dir` da `dataset.import`. Quel canale prende un percorso del filesystem **solo** per questo buco: è l'unica cosa che oggi permette di indicare un dataset all'app.
+
+Già fatto in T7, da non rifare: verifica `sha256`, confronto fra `latest` e la versione installata, validazione zod, la transazione unica, il backup con rotazione, le invarianti 10 e 17.
+
+**Fatto quando:** un import parte dalla repo privata senza che nessun percorso locale compaia nel codice, e staccando la rete l'app lo dice una volta e resta usabile.
+
 ### T8 · Import XLSX in-app
 **Documenti:** 4 (§6)
 
