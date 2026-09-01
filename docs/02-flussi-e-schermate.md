@@ -405,6 +405,11 @@ Ogni riga è un comportamento da implementare, non un suggerimento.
 | Modifica su lega cristallizzata | Bloccata, con la via d'uscita | "Il resoconto è cristallizzato. Riaprilo per modificarlo." |
 | Riapertura di un resoconto | Permessa, con avviso | "La prossima cristallizzazione creerà la versione 2. La versione 1 resta consultabile." |
 | Modifica del regolamento a asta avviata | Bloccata | "Il regolamento si blocca quando parte l'asta." |
+| Squadra con un nome già usato nella lega | Bloccata, il campo torna com'era | "C'è già una squadra che si chiama Bomber FC" |
+| Squadra aggiunta, tolta o riordinata a asta avviata | Bloccata | "Le squadre si aggiungono, si tolgono e si riordinano prima dell'asta." |
+| Lega creata con meno di due squadre | Bloccata | "Servono almeno due squadre." |
+| Lega creata su una stagione non installata | Bloccata | "La stagione 2026-27 non è installata. Importa il listone prima di creare la lega." |
+| Cancellazione di una lega con acquisti registrati | Bloccata | "Questa lega ha 12 acquisti: toglili dalla revisione prima di cancellarla." |
 | Installazione aggiornamento con asta in corso | Bloccata | "Installare richiede il riavvio. Chiudi l'asta prima di aggiornare." |
 | Controllo aggiornamenti senza rete | Silenzioso all'avvio, esplicito se richiesto a mano | "Non riesco a controllare gli aggiornamenti." |
 

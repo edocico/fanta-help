@@ -1,4 +1,4 @@
-import type { Output } from './contracts'
+import type { Input, Output } from './contracts'
 
 /**
  * DTOs, derived from the contract schemas and never rewritten beside them: if a
@@ -15,3 +15,16 @@ export type PlayerList = Output<'player.list'>
 export type PlayerRow = PlayerList['players'][number]
 /** One season of a player's history. `PlayerRow['stats']` is these, keyed by season. */
 export type SeasonStats = PlayerRow['stats'][string]
+
+/** One row of the home, document 2 §4.2. */
+export type LeagueSummary = Output<'league.list'>[number]
+/**
+ * A league with its teams and slots. `league.get` answers with null for an id
+ * that names nothing, and every screen here has already dealt with that case —
+ * hence the NonNullable rather than a second nullable type travelling around.
+ */
+export type LeagueDetail = NonNullable<Output<'league.get'>>
+export type FantaTeam = LeagueDetail['teams'][number]
+export type SlotsByRole = LeagueDetail['slots']
+/** A team the wizard is still collecting: no id, because nothing is written yet. */
+export type TeamDraft = Input<'league.create'>['teams'][number]

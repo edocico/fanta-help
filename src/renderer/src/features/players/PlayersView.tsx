@@ -11,6 +11,7 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useQuery } from '@tanstack/react-query'
 import { call, IpcError } from '@/lib/ipc'
+import { useLeagueStore } from '@/stores/league'
 import { usePlayersStore, type Filters } from '@/stores/players'
 import { haystack, search as fuzzy } from './search'
 import PlayerDetail from './PlayerDetail'
@@ -113,15 +114,28 @@ export default function PlayersView(): JSX.Element {
   const seasons = seasonsQuery.data ?? []
 
   /**
+   * The league that is open, if one is: document 2 §9 decides that "la vista
+   * Giocatori mostra la stagione della lega aperta, o la più recente importata".
+   * Cached under the same key the league view uses, so opening a league and
+   * coming here costs nothing.
+   */
+  const activeLeagueId = useLeagueStore((s) => s.activeLeagueId)
+  const leagueQuery = useQuery({
+    queryKey: ['league.get', activeLeagueId],
+    queryFn: () => call('league.get', { id: activeLeagueId as number }),
+    enabled: activeLeagueId !== null,
+  })
+
+  /**
    * Derived, not stored: the store holds an override and null means "whatever
    * the data says". Writing the default back into the store on arrival would be
    * an effect that reacts to its own result, and the two would disagree for one
    * render every time the query refetched.
    *
-   * With no league to take it from, the most recent import — document 2 §4.4
-   * asks for the open league's season first, and T11 is where that comes from.
+   * Three sources in the order document 2 §9 puts them: what was picked here,
+   * then the open league's season, then the most recent import.
    */
-  const seasonId = chosenSeason ?? seasons.at(-1)?.id ?? null
+  const seasonId = chosenSeason ?? leagueQuery.data?.seasonId ?? seasons.at(-1)?.id ?? null
 
   const listQuery = useQuery({
     // Channel and input, as document 3 §4 spells the convention.

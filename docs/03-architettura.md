@@ -249,6 +249,23 @@ I codici sono la traduzione diretta della tabella dei casi limite del documento 
 | `LEAGUE_FROZEN` | Il resoconto è cristallizzato. Riaprilo per modificarlo. |
 | `RULES_LOCKED` | Il regolamento si blocca quando parte l'asta. |
 | `DATASET_LOCKED` | Non puoi aggiornare il listone durante un'asta. |
+| `TEAMS_LOCKED` | Le squadre si aggiungono, si tolgono e si riordinano prima dell'asta. |
+| `TEAM_NAME_TAKEN` | C'è già una squadra che si chiama {name} |
+| `TOO_FEW_TEAMS` | Servono almeno due squadre. |
+| `TOO_MANY_MINE` | Una sola squadra può essere la tua. |
+| `LEAGUE_SEASON_MISSING` | La stagione {seasonId} non è installata. Importa il listone prima di creare la lega. |
+| `LEAGUE_HAS_PURCHASES` | Questa lega ha {n} acquisti: toglili dalla revisione prima di cancellarla. |
+| `LEAGUE_MISSING` / `TEAM_MISSING` | Questa lega / questa squadra non esiste più. |
+
+Le prime otto righe traducono la tabella dei casi limite del documento 2, che
+parla dell'asta. Le sette aggiunte in coda sono di T11 e arrivano da prima
+dell'asta, dove il documento non prevedeva che si potesse sbagliare. Tre di esse
+— `TEAM_NAME_TAKEN`, `TOO_MANY_MINE`, `LEAGUE_SEASON_MISSING` — esistono perché
+il **database** sa già rifiutare quel caso da sé: `UNIQUE (league_id, name)`,
+l'indice parziale `idx_one_mine`, la chiave esterna su `season`. Senza un codice
+accanto quel rifiuto arriverebbe al renderer come
+`UNKNOWN` da dentro una transazione, dopo che l'interfaccia aveva detto di sì. Un
+vincolo dello schema senza un codice accanto è un messaggio che sparisce.
 
 ### I canali
 

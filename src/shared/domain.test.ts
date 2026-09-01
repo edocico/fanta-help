@@ -2,8 +2,17 @@ import { describe, expect, it } from 'vitest'
 import {
   backupsToPrune,
   bonusIndex,
+  canTransition,
   chartBounds,
+  coherenceWarnings,
+  DEFAULT_SLOTS,
+  frozen,
   hasHistory,
+  LEAGUE_STATUSES,
+  LEAGUE_TRANSITIONS,
+  move,
+  permutationOf,
+  rulesEditable,
   seasonWindow,
   cleanSheetRate,
   concededPerMatch,
@@ -14,6 +23,9 @@ import {
   normalizeName,
   reliability,
   startShare,
+  TEAM_COLORS,
+  teamListEditable,
+  totalSlots,
 } from './domain'
 
 /**
@@ -248,6 +260,243 @@ describe('la scala del grafico, documento 2 §4.5', () => {
   it('senza niente da disegnare non inventa una scala', () => {
     expect(chartBounds([])).toBeNull()
     expect(chartBounds([[null, null]])).toBeNull()
+  })
+})
+
+/**
+ * T11. Il ciclo di vita del documento 1 §3 e le invarianti 9, 13 e 16.
+ *
+ * Sono qui e non in un test del servizio per la ragione del documento 6 §3: i
+ * test girano su Node e il database è compilato per l'ABI di Electron. Una
+ * guardia che vive dentro una query non è provabile; la stessa guardia come
+ * funzione pura sì, e il servizio la chiama invece di riscriverla.
+ */
+describe('il ciclo di vita della lega, documento 1 §3', () => {
+  it('percorre le frecce del diagramma', () => {
+    expect(canTransition('setup', 'pre_auction')).toBe(true)
+    expect(canTransition('pre_auction', 'auction')).toBe(true)
+    expect(canTransition('auction', 'review')).toBe(true)
+    expect(canTransition('review', 'closed')).toBe(true)
+  })
+
+  it('riapre un resoconto cristallizzato, e solo verso la revisione', () => {
+    expect(canTransition('closed', 'review')).toBe(true)
+    expect(canTransition('closed', 'auction')).toBe(false)
+    expect(canTransition('closed', 'pre_auction')).toBe(false)
+  })
+
+  it('non torna indietro a mercato aperto: gli acquisti esistono già', () => {
+    expect(canTransition('auction', 'pre_auction')).toBe(false)
+    expect(canTransition('review', 'auction')).toBe(false)
+  })
+
+  it('non salta uno stato', () => {
+    expect(canTransition('setup', 'auction')).toBe(false)
+    expect(canTransition('pre_auction', 'review')).toBe(false)
+    expect(canTransition('auction', 'closed')).toBe(false)
+  })
+
+  it('non resta fermo dicendo di essersi mosso', () => {
+    for (const status of LEAGUE_STATUSES) expect(canTransition(status, status)).toBe(false)
+  })
+
+  /**
+   * Il diagramma del documento 1 §3 ha cinque nodi e cinque frecce: le quattro in
+   * avanti più la riapertura. Contarle è il solo modo di accorgersi di una
+   * freccia aggiunta per comodità in un task futuro — i casi qui sopra dicono che
+   * ogni freccia *attesa* c'è, non che non ce ne siano altre.
+   */
+  it('ha esattamente le cinque transizioni del diagramma', () => {
+    const arrows = LEAGUE_STATUSES.flatMap((from) => LEAGUE_TRANSITIONS[from])
+    expect(arrows).toHaveLength(5)
+  })
+})
+
+describe('chi può scrivere cosa, invarianti 9, 13 e 16', () => {
+  it('il regolamento si blocca quando parte l’asta, revisione compresa', () => {
+    expect(rulesEditable('setup')).toBe(true)
+    expect(rulesEditable('pre_auction')).toBe(true)
+    expect(rulesEditable('auction')).toBe(false)
+    expect(rulesEditable('review')).toBe(false)
+    expect(rulesEditable('closed')).toBe(false)
+  })
+
+  it('le squadre si aggiungono e si tolgono solo prima dell’asta', () => {
+    expect(teamListEditable('setup')).toBe(true)
+    expect(teamListEditable('pre_auction')).toBe(true)
+    expect(teamListEditable('auction')).toBe(false)
+    expect(teamListEditable('review')).toBe(false)
+    expect(teamListEditable('closed')).toBe(false)
+  })
+
+  it('cristallizzata vuol dire sola lettura, e solo quella', () => {
+    expect(frozen('closed')).toBe(true)
+    for (const status of ['setup', 'pre_auction', 'auction', 'review'] as const) {
+      expect(frozen(status)).toBe(false)
+    }
+  })
+})
+
+describe('la rosa e le tinte, documento 2 §4.3', () => {
+  it('precompila 3/8/8/6, che fanno i 25 slot di una rosa', () => {
+    expect(DEFAULT_SLOTS).toEqual({ P: 3, D: 8, C: 8, A: 6 })
+    expect(totalSlots(DEFAULT_SLOTS)).toBe(25)
+  })
+
+  it('offre dieci tinte, tutte diverse fra loro', () => {
+    expect(TEAM_COLORS).toHaveLength(10)
+    expect(new Set(TEAM_COLORS.map((c) => c.value)).size).toBe(10)
+  })
+
+  /**
+   * Le tre tinte riservate del documento 2 §2 — l’ambra del denaro, il rosso del
+   * già preso, il verde acqua dell’obiettivo — non possono comparire fra i colori
+   * squadra: la stessa tinta direbbe due cose diverse nella stessa schermata.
+   */
+  it('non riusa nessuno dei tre colori che significano già qualcosa', () => {
+    const reserved = ['#E8B33D', '#A8483E', '#4FB8A8']
+    for (const { value } of TEAM_COLORS) expect(reserved).not.toContain(value.toUpperCase())
+  })
+})
+
+describe('lo spostamento di una squadra nell’ordine', () => {
+  const teams = ['a', 'b', 'c', 'd']
+
+  it('porta l’elemento dove è stato lasciato', () => {
+    expect(move(teams, 0, 2)).toEqual(['b', 'c', 'a', 'd'])
+    expect(move(teams, 3, 0)).toEqual(['d', 'a', 'b', 'c'])
+  })
+
+  it('non consuma né duplica nessuno', () => {
+    expect(move(teams, 1, 3)).toHaveLength(teams.length)
+    expect(new Set(move(teams, 1, 3)).size).toBe(teams.length)
+  })
+
+  it('lascia la lista com’è quando il gesto non ha spostato niente', () => {
+    expect(move(teams, 2, 2)).toEqual(teams)
+    expect(move(teams, 0, 9)).toEqual(teams)
+    expect(move(teams, -1, 1)).toEqual(teams)
+  })
+
+  it('non tocca la lista che ha ricevuto', () => {
+    const original = [...teams]
+    move(teams, 0, 3)
+    expect(teams).toEqual(original)
+  })
+})
+
+/**
+ * La guardia di `team.reorder`. Il vincolo `UNIQUE (league_id, order_index)` che
+ * il CLAUDE.md dice di non togliere prenderebbe comunque un riordino monco — da
+ * dentro la transazione, come `UNKNOWN`, che è esattamente il modo in cui un
+ * rifiuto perde il proprio messaggio.
+ */
+describe('il riordino accetta solo un permutazione della lista vera', () => {
+  it('accetta le stesse squadre in un altro ordine', () => {
+    expect(permutationOf([1, 2, 3], [3, 1, 2])).toEqual([3, 1, 2])
+  })
+
+  it('rifiuta una squadra che non è di questa lega', () => {
+    expect(permutationOf([1, 2, 3], [1, 2, 9])).toBeNull()
+  })
+
+  it('rifiuta una lista monca o gonfia', () => {
+    expect(permutationOf([1, 2, 3], [1, 2])).toBeNull()
+    expect(permutationOf([1, 2, 3], [1, 2, 3, 4])).toBeNull()
+  })
+
+  it('rifiuta un id ripetuto, che passerebbe un controllo di sola appartenenza', () => {
+    expect(permutationOf([1, 2, 3], [1, 2, 2])).toBeNull()
+    // Il caso che distingue davvero il multinsieme dall'insieme: qui ogni id di
+    // una lista compare nell'altra, e nessuna delle due è un riordino dell'altra.
+    expect(permutationOf([1, 1, 2], [1, 2, 2])).toBeNull()
+  })
+})
+
+describe('i controlli di coerenza del wizard, documento 2 §4.3 passo 3', () => {
+  const slots = DEFAULT_SLOTS
+
+  /**
+   * Il listone 2026-27, contato dall'app dopo l'import del file vero: 524
+   * giocatori, che è il numero che il documento 2 §9 usa per il caso dello
+   * storico vuoto. Inventarlo sarebbe l'errore che il CLAUDE.md descrive — un
+   * fissato scelto a mano prova che la funzione guarda *qualcosa*, non che
+   * guardi il caso vero. Qui la differenza si vede: i portieri sono 63, non i
+   * 120 che verrebbero da immaginare "un quinto di 524".
+   */
+  const listone = { P: 63, D: 186, C: 187, A: 88 }
+
+  it('tace su una lega normale: dieci squadre e la rosa predefinita', () => {
+    expect(
+      coherenceWarnings({ teams: 10, slots, budget: 500, minBid: 1, available: listone }),
+    ).toEqual([])
+  })
+
+  it('dice quale ruolo non basta, con i due numeri', () => {
+    // Quindici squadre da sei attaccanti sono 90 posti e il listone ne ha 88.
+    // Non è un caso di scuola: è la lega a quindici che qualcuno propone ogni anno.
+    const warnings = coherenceWarnings({
+      teams: 15,
+      slots,
+      budget: 500,
+      minBid: 1,
+      available: listone,
+    })
+    expect(warnings).toContainEqual({
+      code: 'NOT_ENOUGH_PLAYERS',
+      role: 'A',
+      needed: 90,
+      available: 88,
+    })
+    // E solo quello: portieri, difensori e centrocampisti bastano ancora.
+    expect(warnings.filter((w) => w.code === 'NOT_ENOUGH_PLAYERS')).toHaveLength(1)
+  })
+
+  it('sul filo non avvisa: esattamente quanti ne servono bastano', () => {
+    // 21 squadre × 3 portieri sono 63, che è esattamente quanti ne ha il listone.
+    const exact = coherenceWarnings({
+      teams: 21,
+      slots: { P: 3, D: 8, C: 8, A: 4 },
+      budget: 5000,
+      minBid: 1,
+      available: listone,
+    })
+    expect(exact.filter((w) => w.code === 'NOT_ENOUGH_PLAYERS' && w.role === 'P')).toEqual([])
+  })
+
+  it('avvisa quando il budget non copre nemmeno gli slot alla puntata minima', () => {
+    expect(
+      coherenceWarnings({ teams: 10, slots, budget: 20, minBid: 1, available: listone }),
+    ).toContainEqual({ code: 'BUDGET_BELOW_SLOTS', budget: 20, needed: 25 })
+  })
+
+  it('sul filo tace anche qui: 25 slot a 1 credito con 25 di budget si riempiono', () => {
+    expect(
+      coherenceWarnings({ teams: 10, slots, budget: 25, minBid: 1, available: listone }),
+    ).toEqual([])
+  })
+
+  it('conta la puntata minima, non gli slot', () => {
+    // 25 slot a 21 crediti sono 525: cinque più del budget predefinito.
+    expect(
+      coherenceWarnings({ teams: 10, slots, budget: 500, minBid: 21, available: listone }),
+    ).toContainEqual({ code: 'BUDGET_BELOW_SLOTS', budget: 500, needed: 525 })
+  })
+
+  /**
+   * Senza listone importato il controllo dei ruoli non ha dati, e tacere è
+   * l’unica risposta onesta: «0 attaccanti disponibili» sarebbe un allarme falso
+   * sulla schermata che meno se lo può permettere.
+   */
+  it('senza listone controlla solo il budget, e non inventa un ruolo vuoto', () => {
+    const warnings = coherenceWarnings({
+      teams: 10,
+      slots,
+      budget: 20,
+      minBid: 1,
+      available: null,
+    })
+    expect(warnings).toEqual([{ code: 'BUDGET_BELOW_SLOTS', budget: 20, needed: 25 }])
   })
 })
 

@@ -107,6 +107,27 @@
     font-family: var(--font-sans);
     font-weight: 400;
   }
+
+  /* Caselle e radio: il browser le disegna col blu di sistema, che in questa
+     palette non esiste. Il documento 2 §2 dà tre colori e li impegna tutti —
+     l'ambra è il denaro e "nient'altro usa quel colore" — quindi una spunta
+     prende il grigio del testo, non una quarta tinta con un significato nuovo.
+     Regola globale come quella del cursore: appiccicata a mano, il primo che se
+     ne dimentica rimette il blu in mezzo allo schermo. */
+  input[type='checkbox'],
+  input[type='radio'] {
+    accent-color: var(--color-chalk-dim);
+  }
+
+  /* Il fuoco: l'anello predefinito di Chromium è un doppio bordo bianco e nero,
+     pensato per una pagina chiara e su questo fondo sembra un errore di
+     rendering. Un filo di gesso a un pixel dice la stessa cosa con la palette
+     del documento 2 §2. `:focus-visible` e non `:focus`, così chi clicca non
+     vede niente e chi arriva col tab sì. */
+  :focus-visible {
+    outline: 1px solid var(--color-chalk-dim);
+    outline-offset: 1px;
+  }
 }
 
 /* Figures: Archivo Expanded 600 with tabular numerals. Mandatory anywhere a

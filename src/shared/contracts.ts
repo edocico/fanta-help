@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { CLASSIC_ROLES } from './domain'
+import { CLASSIC_ROLES, LEAGUE_STATUSES } from './domain'
 
 /**
  * The single map of channel → input/output schema, per document 3 §3.
@@ -25,6 +25,19 @@ const appInstance = z.object({
   foreignKeys: z.boolean(),
 })
 
+/** How many slots a role has. Zero is legal: a league can decide to skip a role. */
+const SLOT_COUNT = z.number().int().min(0)
+
+/**
+ * Slots per role, and the shape `league_slot` is read and written as.
+ *
+ * The four keys are spelled out rather than built from `CLASSIC_ROLES`, so the
+ * inferred type is `{ P: number; D: number; ... }` and a caller that forgets one
+ * fails to compile — a `z.record` would infer a partial map and hand back
+ * `undefined` at runtime for the role nobody set.
+ */
+const slots = z.object({ P: SLOT_COUNT, D: SLOT_COUNT, C: SLOT_COUNT, A: SLOT_COUNT })
+
 /** One imported season. `dataset.list` answers with these. */
 const seasonSummary = z.object({
   id: z.string(),
@@ -33,6 +46,18 @@ const seasonSummary = z.object({
   source: z.string(),
   hasFbref: z.boolean(),
   importedAt: z.number().int(),
+  /**
+   * Players per role still in the listone, which is the right-hand side of the
+   * first coherence check of document 2 §4.3 — "squadre × slot totali contro i
+   * giocatori disponibili per ruolo".
+   *
+   * Here rather than on `player.list`, which the wizard would otherwise have to
+   * call to count four numbers: this channel is already loaded by the home and
+   * by the onboarding, and four integers cost nothing beside the season's own
+   * row. Delisted players are excluded — invariant 10 keeps them in the table
+   * with a `delisted_at`, and nobody can buy one.
+   */
+  playersByRole: slots,
 })
 
 /**
@@ -150,6 +175,91 @@ const listonePreview = z.object({
   refusal: appErrorShape.nullable(),
 })
 
+/* ------------------------------------------------------------------ league */
+
+const LEAGUE_STATUS = z.enum(LEAGUE_STATUSES)
+const MODE = z.enum(['classic', 'mantra'])
+const AUCTION_FORMAT = z.enum(['call', 'draft'])
+const INSTANCE_ROLE = z.enum(['admin', 'participant'])
+
+/** A hex colour from the palette of document 2 §4.3, or none chosen yet. */
+const COLOR = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'non è un colore')
+const TEAM_NAME = z.string().trim().min(1).max(60)
+const MANAGER = z.string().trim().max(60).nullable()
+
+const teamRow = z.object({
+  id: z.number().int(),
+  /** The identity that travels in an export, per document 1 §3. */
+  uuid: z.string(),
+  name: z.string(),
+  manager: z.string().nullable(),
+  color: z.string().nullable(),
+  isMine: z.boolean(),
+  /** The turn, per document 1 §3. Contiguous from 0, and unique in the league. */
+  orderIndex: z.number().int(),
+})
+
+/**
+ * One row of the home, document 2 §4.2: "nome, stagione, modalità, numero di
+ * squadre, stato, e una barra di avanzamento degli slot assegnati se l'asta è in
+ * corso".
+ *
+ * The progress bar is two numbers rather than a percentage, because a bar is not
+ * the only reader: "18 slot su 250" is what the row says when the auction has
+ * barely started, and a percentage rounded to zero would say nothing.
+ */
+const leagueSummary = z.object({
+  id: z.number().int(),
+  uuid: z.string(),
+  name: z.string(),
+  seasonId: z.string(),
+  seasonLabel: z.string(),
+  mode: MODE,
+  auctionFormat: AUCTION_FORMAT,
+  status: LEAGUE_STATUS,
+  budget: z.number().int(),
+  minBid: z.number().int(),
+  teamCount: z.number().int(),
+  /** `teamCount × slot totali`: what the auction has to fill. */
+  slotsTotal: z.number().int(),
+  /** Purchases registered so far. Zero until T13 writes the first one. */
+  slotsFilled: z.number().int(),
+  updatedAt: z.number().int(),
+})
+
+/**
+ * A league with everything the league views need, teams included.
+ *
+ * Every mutation of this task answers with one of these rather than with what it
+ * changed. A reorder moves nine rows, adding a team renumbers nothing but
+ * changes what the coherence check says, and a renderer stitching partial
+ * answers together would hold an order the database does not have. One shape,
+ * one query key, no reconciliation.
+ */
+const leagueDetail = leagueSummary.extend({
+  /** Stored as 0/1 — document 1 §4 — and a flag on both sides of the boundary. */
+  defenseModifier: z.boolean(),
+  instanceRole: INSTANCE_ROLE,
+  slots,
+  teams: z.array(teamRow),
+  createdAt: z.number().int(),
+})
+
+/**
+ * A team as the wizard has it before there is a league to hang it on.
+ *
+ * No id and no uuid: both are the database's to give. The wizard collects rows
+ * and `league.create` writes them in the one transaction that creates the league
+ * — document 2 §4.3 ends with "un riepilogo finale", and a summary you can still
+ * back out of cannot have been written already.
+ */
+const teamDraft = z.object({
+  name: TEAM_NAME,
+  manager: MANAGER,
+  color: COLOR.nullable(),
+  isMine: z.boolean(),
+})
+
 const listoneReport = z.object({
   seasonId: z.string(),
   label: z.string(),
@@ -218,6 +328,129 @@ export const contracts = {
    * `%dimarko%` matches nothing, while the fuzzy search finds Dimarco. Keeping
    * both would have meant two searches that disagree about the same listone.
    */
+  /**
+   * The leagues, newest first: document 2 §4.2 lists them as rows and says
+   * nothing about their order, and "the one I was working on" is nearly always
+   * the last one touched.
+   */
+  'league.list': {
+    input: z.void(),
+    output: z.array(leagueSummary),
+  },
+
+  /** Null when the id names nothing: a route left open on a deleted league. */
+  'league.get': {
+    input: z.object({ id: z.number().int() }),
+    output: leagueDetail.nullable(),
+  },
+
+  /**
+   * The whole wizard in one transaction: rules, teams and slots.
+   *
+   * Nothing here is a domain rule. "Almeno due squadre", the names that must
+   * differ, the season that has to exist and the single team that may be yours
+   * are all checked by the service, which has a message for each — refusing them
+   * here would answer the person who typed a duplicate name with "Richiesta non
+   * valida". What the schema does check is shape: a colour that is a colour, a
+   * season written the way seasons are written, integers that are integers.
+   *
+   * `minBid` is at least 1 and `budget` may be anything from 0 up. That is not
+   * an oversight: a puntata minima of zero would make invariant 5's maximum bid
+   * meaningless, while a budget too small for the roster is a coherence *warning*
+   * of document 2 §4.3 — "lo dice subito, senza bloccare" — and a schema that
+   * refused it would be blocking what the document asks to be told.
+   */
+  'league.create': {
+    input: z.object({
+      name: z.string().trim().min(1).max(60),
+      seasonId: z.string().regex(/^\d{4}-\d{2}$/, "non è una stagione nella forma '2026-27'"),
+      mode: MODE,
+      auctionFormat: AUCTION_FORMAT,
+      budget: z.number().int().min(0),
+      minBid: z.number().int().min(1),
+      slots,
+      teams: z.array(teamDraft),
+    }),
+    output: leagueDetail,
+  },
+
+  /**
+   * The rules, and only in `setup` and `pre_auction` — invariant 16. Every field
+   * is optional and only what arrives is written, so the defence modifier and the
+   * admin/participant role can be flipped without resending a budget.
+   */
+  'league.update': {
+    input: z.object({
+      id: z.number().int(),
+      name: z.string().trim().min(1).max(60).optional(),
+      mode: MODE.optional(),
+      auctionFormat: AUCTION_FORMAT.optional(),
+      budget: z.number().int().min(0).optional(),
+      minBid: z.number().int().min(1).optional(),
+      defenseModifier: z.boolean().optional(),
+      instanceRole: INSTANCE_ROLE.optional(),
+      slots: slots.optional(),
+    }),
+    output: leagueDetail,
+  },
+
+  /**
+   * Removing a league removes its teams, purchases, targets, plans and snapshots
+   * with it, by cascade.
+   *
+   * Refused on a crystallised league — invariant 13 — and on one that has
+   * purchases in it, which is invariant 9 read one level up: what that invariant
+   * protects is not a state but the purchases the cascade would take away. So the
+   * question is about the purchases and not about the status, and a league started
+   * by mistake and never bid on stays removable whatever state it is in.
+   */
+  'league.delete': {
+    input: z.object({ id: z.number().int() }),
+    output: z.void(),
+  },
+
+  'team.create': {
+    input: z.object({
+      leagueId: z.number().int(),
+      name: TEAM_NAME,
+      manager: MANAGER,
+      color: COLOR.nullable(),
+      isMine: z.boolean(),
+    }),
+    output: leagueDetail,
+  },
+
+  /** Only what arrives is written. `isMine: true` moves it off whoever had it. */
+  'team.update': {
+    input: z.object({
+      id: z.number().int(),
+      name: TEAM_NAME.optional(),
+      manager: MANAGER.optional(),
+      color: COLOR.nullable().optional(),
+      isMine: z.boolean().optional(),
+    }),
+    output: leagueDetail,
+  },
+
+  'team.delete': {
+    input: z.object({ id: z.number().int() }),
+    output: leagueDetail,
+  },
+
+  /**
+   * The whole order, not a pair of indices.
+   *
+   * A move sends where every team ended up, so the service can check the list is
+   * exactly the league's teams before touching a row — and so two windows cannot
+   * apply "move 3 up" to different starting orders. The rewrite itself passes
+   * through negative indices inside the transaction: `UNIQUE (league_id,
+   * order_index)` is immediate, and CLAUDE.md says not to touch it.
+   */
+  'team.reorder': {
+    input: z.object({ leagueId: z.number().int(), teamIds: z.array(z.number().int()) }),
+    output: leagueDetail,
+  },
+
   'player.list': {
     input: z.object({ seasonId: z.string() }),
     output: z.object({

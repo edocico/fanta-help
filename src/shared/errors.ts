@@ -11,6 +11,8 @@
  * screen in front of ten people.
  */
 
+import { ROLE_LABELS, type CoherenceWarning } from './domain'
+
 export const errorMessages = {
   /* infrastructure — never carry parameters, always carry `details` */
   BAD_INPUT: () => 'Richiesta non valida',
@@ -30,6 +32,30 @@ export const errorMessages = {
   LEAGUE_FROZEN: () => 'Il resoconto è cristallizzato. Riaprilo per modificarlo.',
   RULES_LOCKED: () => 'Il regolamento si blocca quando parte l’asta.',
   DATASET_LOCKED: () => 'Non puoi aggiornare il listone durante un’asta.',
+
+  /* la lega e le squadre — T11, invarianti 8, 9 e 13 */
+  // Invariante 9. Il documento 3 §3 non la elenca perché la sua tabella traduce
+  // i casi limite del documento 2 §7, che parlano dell'asta: prima dell'asta il
+  // documento non prevedeva che si potesse sbagliare. Si può, e la cascata di
+  // fanta_team porterebbe via gli acquisti in silenzio.
+  TEAMS_LOCKED: () => 'Le squadre si aggiungono, si tolgono e si riordinano prima dell’asta.',
+  // Il vincolo UNIQUE (league_id, name) esiste nello schema: senza questo codice
+  // arriverebbe al renderer come UNKNOWN da dentro la transazione.
+  TEAM_NAME_TAKEN: (p: { name: string }) => `C’è già una squadra che si chiama ${p.name}`,
+  TOO_FEW_TEAMS: () => 'Servono almeno due squadre.',
+  // L'invariante 9 letta un piano sopra: quello che protegge non è lo stato, sono
+  // gli acquisti che la cascata porterebbe via.
+  LEAGUE_HAS_PURCHASES: (p: { n: number }) =>
+    p.n === 1
+      ? 'Questa lega ha un acquisto registrato: toglilo dalla revisione prima di cancellarla.'
+      : `Questa lega ha ${p.n} acquisti: toglili dalla revisione prima di cancellarla.`,
+  // Come sopra, per l'indice parziale idx_one_mine.
+  TOO_MANY_MINE: () => 'Una sola squadra può essere la tua.',
+  LEAGUE_SEASON_MISSING: (p: { seasonId: string }) =>
+    `La stagione ${p.seasonId} non è installata. Importa il listone prima di creare la lega.`,
+  // Una rotta rimasta aperta su qualcosa che nel frattempo è stato cancellato.
+  LEAGUE_MISSING: () => 'Questa lega non esiste più.',
+  TEAM_MISSING: () => 'Questa squadra non esiste più.',
 
   /* import of a dataset — document 4 §6 */
   DATASET_MANIFEST_UNREADABLE: () =>
@@ -74,6 +100,28 @@ export type ErrorCode = keyof typeof errorMessages
 
 /** The parameters the message for this code demands: `[]` or `[{...}]`. */
 export type ErrorParams<C extends ErrorCode> = Parameters<(typeof errorMessages)[C]>
+
+/**
+ * The sentences for the coherence warnings of document 2 §4.3, step 3.
+ *
+ * Not errors: they are computed by a pure function, they travel inside a
+ * successful answer and they never stop anything — "se qualcosa non torna lo dice
+ * subito, senza bloccare". They live here anyway, beside the refusals, for the
+ * reason CLAUDE.md gives for those: text that the interface writes is text that
+ * two screens end up wording differently.
+ *
+ * A `switch` over the union rather than a map keyed by code, so a warning added
+ * to `CoherenceWarning` without a sentence is a compile error here instead of an
+ * `undefined` on screen.
+ */
+export function warningMessage(warning: CoherenceWarning): string {
+  switch (warning.code) {
+    case 'NOT_ENOUGH_PLAYERS':
+      return `Servono ${warning.needed} ${ROLE_LABELS[warning.role]} e il listone ne ha ${warning.available}`
+    case 'BUDGET_BELOW_SLOTS':
+      return `Il budget di ${warning.budget} non basta: servono ${warning.needed} crediti per riempire la rosa alla puntata minima`
+  }
+}
 
 export type AppError = {
   code: ErrorCode

@@ -1,9 +1,21 @@
-import { eq } from 'drizzle-orm'
+import { count, eq, isNull } from 'drizzle-orm'
 import type { Channel, EventPayload, EventTopic, Input, Output } from '@shared/contracts'
+import type { ClassicRole } from '@shared/domain'
 import type { CellValue } from '@shared/sheet'
 import type { AppInstance, SeasonStats } from '@shared/types'
 import type { Db } from '../db/client'
 import { importDataset } from '../services/dataset-import'
+import {
+  createLeague,
+  createTeam,
+  deleteLeague,
+  deleteTeam,
+  listLeagues,
+  readLeague,
+  reorderTeams,
+  updateLeague,
+  updateTeam,
+} from '../services/league'
 import { importListone, previewListone } from '../services/listone-import'
 import { player, playerMantraRole, playerSeasonStat, season, serieATeam } from '../db/schema'
 
@@ -52,8 +64,26 @@ export type HandlerMap = { [C in Channel]: Handler<C> }
 export const handlers: HandlerMap = {
   'app.instance': (_input, ctx) => ctx.instance,
 
-  'dataset.list': (_input, ctx) =>
-    ctx.db
+  'dataset.list': (_input, ctx) => {
+    /**
+     * Players per role and per season, in one grouped query rather than one per
+     * season: the right-hand side of the first coherence check of document 2
+     * §4.3. Delisted players are left out — invariant 10 keeps them in the table
+     * and nobody can buy one.
+     */
+    const counts = new Map<string, Record<ClassicRole, number>>()
+    for (const row of ctx.db
+      .select({ seasonId: player.seasonId, role: player.roleClassic, n: count() })
+      .from(player)
+      .where(isNull(player.delistedAt))
+      .groupBy(player.seasonId, player.roleClassic)
+      .all()) {
+      const forSeason = counts.get(row.seasonId) ?? { P: 0, D: 0, C: 0, A: 0 }
+      forSeason[row.role as ClassicRole] = row.n
+      counts.set(row.seasonId, forSeason)
+    }
+
+    return ctx.db
       .select()
       .from(season)
       // By season, not by rowid. Callers take the last one as "the most recent"
@@ -69,7 +99,22 @@ export const handlers: HandlerMap = {
         source: s.source,
         hasFbref: s.hasFbref === 1,
         importedAt: s.importedAt,
-      })),
+        playersByRole: counts.get(s.id) ?? { P: 0, D: 0, C: 0, A: 0 },
+      }))
+  },
+
+  /* --------------------------------------------------------------- league */
+
+  'league.list': (_input, ctx) => listLeagues(ctx.db),
+  'league.get': (input, ctx) => readLeague(ctx.db, input.id),
+  'league.create': (input, ctx) => createLeague(input, ctx.db),
+  'league.update': (input, ctx) => updateLeague(input, ctx.db),
+  'league.delete': (input, ctx) => deleteLeague(input, ctx.db),
+
+  'team.create': (input, ctx) => createTeam(input, ctx.db),
+  'team.update': (input, ctx) => updateTeam(input, ctx.db),
+  'team.delete': (input, ctx) => deleteTeam(input, ctx.db),
+  'team.reorder': (input, ctx) => reorderTeams(input, ctx.db),
 
   'dataset.import': (input, ctx) =>
     importDataset(input, {
