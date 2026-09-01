@@ -68,3 +68,98 @@ export function backupsToPrune(names: readonly string[], keep: number): string[]
   const sorted = [...names].sort()
   return sorted.slice(0, Math.max(0, sorted.length - Math.max(0, keep)))
 }
+
+/**
+ * Serie A plays 38 matchdays. Document 1 §6 asks for it by name rather than as a
+ * number scattered through the code, because it is the denominator of
+ * `reliability` and a league that changed size would otherwise need finding in
+ * every file that divides by it.
+ */
+export const MATCHDAYS = 38
+
+/**
+ * The derived metrics of document 1 §6.
+ *
+ * Every one of them returns `null` rather than a number when it cannot be
+ * computed, and that is the whole design. The alternatives are worse in a way
+ * this project has already been bitten by: `0 / 0` is `NaN`, which formats as
+ * "NaN" on screen and sorts unpredictably, while substituting zero says
+ * something false — a goalkeeper with no rated match would show a malus rate of
+ * zero and sort above one who actually played cleanly. The pipeline already
+ * makes the same distinction for `Mv` with `Pv 0`: zero is not an average, it is
+ * how a file spells "no data".
+ *
+ * Callers render `null` as an em dash. They must not coalesce it to zero.
+ */
+
+/** `null` unless both parts are known and the denominator can divide. */
+function ratio(numerator: number | null, denominator: number | null): number | null {
+  if (numerator === null || denominator === null) return null
+  if (denominator === 0) return null
+  return numerator / denominator
+}
+
+/** `FM − MV`: how much a player brings beyond the vote itself. */
+export function bonusIndex(fantaAvg: number | null, avgVote: number | null): number | null {
+  if (fantaAvg === null || avgVote === null) return null
+  return fantaAvg - avgVote
+}
+
+/**
+ * `Pv / 38`: in how many matchdays he actually turned up with a vote.
+ *
+ * Document 1 §6 names its own limitation, and T10 has to show it: this punishes
+ * whoever arrived in January exactly as if he had been benched all autumn. The
+ * number is honest, the reading of it is not automatic.
+ */
+export function reliability(matchesRated: number | null): number | null {
+  return ratio(matchesRated, MATCHDAYS)
+}
+
+/** `(gialli + rossi×2 + autogol) / Pv`: how often he costs you rather than pays. */
+export function malusRate(
+  yellowCards: number | null,
+  redCards: number | null,
+  ownGoals: number | null,
+  matchesRated: number | null,
+): number | null {
+  if (yellowCards === null || redCards === null || ownGoals === null) return null
+  return ratio(yellowCards + redCards * 2 + ownGoals, matchesRated)
+}
+
+/** `Gs / Pv`: goalkeepers, and worth more with the defence modifier on. */
+export function concededPerMatch(
+  goalsConceded: number | null,
+  matchesRated: number | null,
+): number | null {
+  return ratio(goalsConceded, matchesRated)
+}
+
+/** `Starts / MP`: a starter or someone who comes on. Needs the FBref stage. */
+export function startShare(starts: number | null, matchesPlayed: number | null): number | null {
+  return ratio(starts, matchesPlayed)
+}
+
+/** `Min / MP`: how long he stays on when he plays. Needs the FBref stage. */
+export function minutesPerMatch(
+  minutes: number | null,
+  matchesPlayed: number | null,
+): number | null {
+  return ratio(minutes, matchesPlayed)
+}
+
+/** `CS / Starts`: goalkeepers. Needs the FBref stage. */
+export function cleanSheetRate(cleanSheets: number | null, starts: number | null): number | null {
+  return ratio(cleanSheets, starts)
+}
+
+/**
+ * `score / quotazione`, with the guard on zero document 1 §6 asks for by name.
+ *
+ * A quotazione of zero is not hypothetical: the listone carries it for players
+ * who left mid-season, and dividing by it would put them at the top of a column
+ * meant to say "good value".
+ */
+export function convenience(score: number | null, quotazione: number | null): number | null {
+  return ratio(score, quotazione)
+}

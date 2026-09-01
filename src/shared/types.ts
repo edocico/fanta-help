@@ -11,4 +11,7 @@ import type { Output } from './contracts'
 
 export type AppInstance = Output<'app.instance'>
 export type SeasonSummary = Output<'dataset.list'>[number]
-export type PlayerRow = Output<'player.list'>[number]
+export type PlayerList = Output<'player.list'>
+export type PlayerRow = PlayerList['players'][number]
+/** One season of a player's history. `PlayerRow['stats']` is these, keyed by season. */
+export type SeasonStats = PlayerRow['stats'][string]

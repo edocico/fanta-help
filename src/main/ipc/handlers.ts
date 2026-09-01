@@ -1,12 +1,11 @@
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import type { Channel, EventPayload, EventTopic, Input, Output } from '@shared/contracts'
-import { normalizeName } from '@shared/domain'
 import type { CellValue } from '@shared/sheet'
-import type { AppInstance } from '@shared/types'
+import type { AppInstance, SeasonStats } from '@shared/types'
 import type { Db } from '../db/client'
 import { importDataset } from '../services/dataset-import'
 import { importListone, previewListone } from '../services/listone-import'
-import { player, playerMantraRole, purchase, season, serieATeam } from '../db/schema'
+import { player, playerMantraRole, playerSeasonStat, season, serieATeam } from '../db/schema'
 
 /**
  * The channel → function map, and **nothing that imports `electron`**.
@@ -57,6 +56,11 @@ export const handlers: HandlerMap = {
     ctx.db
       .select()
       .from(season)
+      // By season, not by rowid. Callers take the last one as "the most recent"
+      // — document 2 §4.4 for the players view, the onboarding for its proposal
+      // — and insertion order would answer with whichever was imported last,
+      // which is 2023-24 for anyone who filled in a past season afterwards.
+      .orderBy(season.id)
       .all()
       .map((s) => ({
         id: s.id,
@@ -86,49 +90,103 @@ export const handlers: HandlerMap = {
     importListone(input, { db: ctx.db, readGrid: ctx.readGrid, backup: ctx.backup }),
 
   'player.list': (input, ctx) => {
-    const where = [eq(player.seasonId, input.seasonId)]
+    const info = ctx.db
+      .select({ hasFbref: season.hasFbref })
+      .from(season)
+      .where(eq(season.id, input.seasonId))
+      .get()
 
-    if (input.role) where.push(eq(player.roleClassic, input.role))
-    if (input.serieATeamId) where.push(eq(player.serieATeamId, input.serieATeamId))
-    if (input.search) {
-      // LIKE reads % and _ as wildcards. Unescaped, typing a single underscore
-      // returns the entire season. drizzle's like() has no ESCAPE clause.
-      const pattern = `%${normalizeName(input.search).replace(/[\\%_]/g, '\\$&')}%`
-      where.push(sql`${player.nameNormalized} like ${pattern} escape '\\'`)
-    }
-    if (input.mantraRole) {
-      where.push(
-        inArray(
-          player.id,
-          ctx.db
-            .select({ id: playerMantraRole.playerId })
-            .from(playerMantraRole)
-            .where(eq(playerMantraRole.roleCode, input.mantraRole)),
-        ),
-      )
-    }
-
-    // `leagueId` exists to mark the players already bought. With no league the
-    // join matches nothing and every row comes back unowned.
     const rows = ctx.db
       .select({
         id: player.id,
+        identityKey: player.identityKey,
         name: player.name,
         roleClassic: player.roleClassic,
         teamName: serieATeam.name,
+        teamCode: serieATeam.code,
         qtClassicCurrent: player.qtClassicCurrent,
+        qtClassicInitial: player.qtClassicInitial,
         fvmClassic: player.fvmClassic,
-        purchaseId: purchase.id,
+        penaltyTaker: player.penaltyTaker,
+        delistedAt: player.delistedAt,
       })
       .from(player)
       .innerJoin(serieATeam, eq(player.serieATeamId, serieATeam.id))
-      .leftJoin(
-        purchase,
-        and(eq(purchase.playerId, player.id), eq(purchase.leagueId, input.leagueId ?? -1)),
-      )
-      .where(and(...where))
+      .where(eq(player.seasonId, input.seasonId))
       .all()
 
-    return rows.map(({ purchaseId, ...row }) => ({ ...row, owned: purchaseId !== null }))
+    /**
+     * Every season of history, in one query, grouped by identity here.
+     *
+     * `player_season_stat` is keyed by `identity_key` and not by `player.id`,
+     * deliberately: it covers seasons that have no row in `season` at all, which
+     * is why it has no foreign key. So the join happens on the key, and a player
+     * carries the past of whoever the reconciliation decided he is.
+     */
+    const keys = new Set(rows.map((r) => r.identityKey))
+    const history = new Map<string, Record<string, SeasonStats>>()
+    const seasons = new Set<string>()
+
+    for (const stat of ctx.db.select().from(playerSeasonStat).all()) {
+      if (!keys.has(stat.identityKey)) continue
+      seasons.add(stat.seasonId)
+      const forPlayer: Record<string, SeasonStats> = history.get(stat.identityKey) ?? {}
+      forPlayer[stat.seasonId] = {
+        matchesRated: stat.matchesRated,
+        avgVote: stat.avgVote,
+        fantaAvg: stat.fantaAvg,
+        goalsConceded: stat.goalsConceded,
+        yellowCards: stat.yellowCards,
+        redCards: stat.redCards,
+        ownGoals: stat.ownGoals,
+        matchesPlayed: stat.matchesPlayed,
+        starts: stat.starts,
+        minutes: stat.minutes,
+        cleanSheets: stat.cleanSheets,
+      }
+      history.set(stat.identityKey, forPlayer)
+    }
+
+    const statsSeasons = [...seasons].sort()
+    // The last one strictly before the season being viewed. Falls back to the
+    // most recent there is, so a database holding only the current season still
+    // shows numbers rather than an empty table.
+    const completed = statsSeasons.filter((id) => id < input.seasonId)
+    const defaultStatsSeason = completed.at(-1) ?? statsSeasons.at(-1) ?? null
+
+    // One query for the badges rather than one per player, grouped here.
+    const mantra = new Map<number, string[]>()
+    for (const row of ctx.db
+      .select({ playerId: playerMantraRole.playerId, roleCode: playerMantraRole.roleCode })
+      .from(playerMantraRole)
+      .innerJoin(player, eq(player.id, playerMantraRole.playerId))
+      .where(eq(player.seasonId, input.seasonId))
+      .orderBy(playerMantraRole.position)
+      .all()) {
+      const roles = mantra.get(row.playerId)
+      if (roles) roles.push(row.roleCode)
+      else mantra.set(row.playerId, [row.roleCode])
+    }
+
+    return {
+      seasonId: input.seasonId,
+      hasFbref: info?.hasFbref === 1,
+      statsSeasons,
+      defaultStatsSeason,
+      players: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        roleClassic: row.roleClassic,
+        rolesMantra: mantra.get(row.id) ?? [],
+        teamName: row.teamName,
+        teamCode: row.teamCode,
+        qtClassicCurrent: row.qtClassicCurrent,
+        qtClassicInitial: row.qtClassicInitial,
+        fvmClassic: row.fvmClassic,
+        penaltyTaker: row.penaltyTaker === 1,
+        delisted: row.delistedAt !== null,
+        stats: history.get(row.identityKey) ?? {},
+      })),
+    }
   },
 }

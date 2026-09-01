@@ -54,7 +54,7 @@ Sono già costate tempo. Non riscoprirle.
 | `player_fts` contentless | `content=''` indicizza senza conservare i valori: un `MATCH` torna il rowid e colonne **vuote**. Non è rotta — si risale a `player` per rowid |
 | Migrazioni già applicate | Il migratore confronta solo il timestamp dell'**ultima** riga di `__drizzle_migrations`, e l'hash lo scrive senza mai rileggerlo. Modificare un `.sql` già applicato è un no-op silenzioso: funziona su un database nuovo e non su nessuno esistente. Ogni statement in più va in un file numerato nuovo |
 | Migrazioni Drizzle in produzione | Percorso relativo → finisce in `app.asar` e fallisce su `meta/_journal.json`. Usare percorso assoluto e spedire `drizzle/` in `extraResources` |
-| `devDependencies` e runtime | electron-builder **pota le devDependencies** dal pacchetto. Una libreria che il main importa a runtime e che sta fra le dev funziona in sviluppo, dove `node_modules` ha tutto, e nel pacchetto muore con un modulo non trovato. È successo con `exceljs`, che serviva sia alla pipeline sia all'import XLSX dell'app: se il main la importa, va in `dependencies` |
+| Dove va una dipendenza | Dipende da chi la importa, e le due metà sbagliano in direzioni opposte. **Main e preload** usano `externalizeDepsPlugin()`: non vengono impacchettate, quindi si caricano a runtime da `node_modules` e devono stare in `dependencies` — electron-builder **pota le devDependencies**, quindi da lì funzionerebbero in sviluppo e morirebbero nel pacchetto (successo con `exceljs`). **Il renderer** invece viene impacchettato da Vite: le sue librerie finiscono nel bundle e in `dependencies` verrebbero spedite due volte. Per questo `react` sta fra le dev, e con lui TanStack e uFuzzy |
 | better-sqlite3 | Modulo nativo. `asarUnpack` deve includere anche `bindings` e `file-uri-to-path`, o l'app parte in dev e crolla in produzione |
 | Verificare il modulo nativo | `require('better-sqlite3')` riesce **anche con l'ABI sbagliata**: `bindings` carica il `.node` solo al primo `new Database()`. Per provarlo, istanzia — e usa l'ABI di Electron: `ELECTRON_RUN_AS_NODE=1 node_modules/electron/dist/electron -e "new (require('better-sqlite3'))(':memory:')"` |
 | Cross-build fra piattaforme | `package:win` e `package:linux` ricompilano `better-sqlite3` per il target e ce lo lasciano. Dopo, `npm run dev` muore con `NODE_MODULE_VERSION mismatch`: rimettere a posto con `electron-builder install-app-deps` |
@@ -80,6 +80,8 @@ Sono già costate tempo. Non riscoprirle.
 **Errori.** Mai eccezioni attraverso il confine IPC. Sempre l'involucro `Result<T>` con un codice. Un servizio che rifiuta chiama `raise('CODICE', {…})` da `shared/errors.ts`: un `throw new Error` qualsiasi arriva al renderer come `UNKNOWN`, e il messaggio giusto sparisce senza che niente fallisca.
 
 **Scrittura.** Ogni scrittura che tocca più tabelle sta in una transazione.
+
+**Interazione.** Tutto ciò su cui si clicca ha il cursore a mano, e ciò che è disabilitato no. La regola sta una volta sola in `base.css` come selettore globale, non componente per componente: appiccicata a mano, il primo che se la dimentica produce un elemento che sembra inerte, e nessun test dell'interfaccia esiste per accorgersene.
 
 **Copy dell'interfaccia.** Un errore dice cosa è successo e cosa fare, non si scusa. Uno stato vuoto è un invito ad agire. Intestazioni di colonna e valori in minuscolo, titoli di vista e di sezione in sentence case, acronimi con le maiuscole. Mai maiuscolo spaziato.
 

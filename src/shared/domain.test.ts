@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { backupsToPrune, normalizeName } from './domain'
+import {
+  backupsToPrune,
+  bonusIndex,
+  cleanSheetRate,
+  concededPerMatch,
+  convenience,
+  malusRate,
+  MATCHDAYS,
+  minutesPerMatch,
+  normalizeName,
+  reliability,
+  startShare,
+} from './domain'
 
 /**
  * The four cases document 6 §7 assigns to T5, one per step of the pipeline
@@ -76,5 +88,56 @@ describe('backupsToPrune', () => {
   it('sorts by name instead of trusting the order it is given', () => {
     const shuffled = [name(3), name(0), name(2), name(1)]
     expect(backupsToPrune(shuffled, 2)).toEqual([name(0), name(1)])
+  })
+})
+
+/**
+ * The derived metrics of document 1 §6, and the one thing they all share: what
+ * they do when they cannot answer.
+ *
+ * Six of the eight divide by a statistic that is legitimately zero — a player
+ * with no rated match, a squad player with no start, a goalkeeper who never
+ * started. `0 / 0` is `NaN`, which renders as "NaN" and sorts wherever it likes;
+ * substituting zero is worse, because it is a *plausible* number that means the
+ * opposite of the truth: a striker who never played would show the best malus
+ * rate on the page and sort above everyone who actually played clean.
+ */
+describe('metriche derivate', () => {
+  it('computes the document\'s own example', () => {
+    // Lautaro in the mock of document 2 §4.4: FM 9,12 − MV 6,41 = +2,71
+    expect(bonusIndex(9.12, 6.41)).toBeCloseTo(2.71, 2)
+  })
+
+  it('divides reliability by the named constant, not a literal', () => {
+    expect(MATCHDAYS).toBe(38)
+    expect(reliability(19)).toBeCloseTo(0.5, 10)
+  })
+
+  it('weighs a red card twice, and counts own goals', () => {
+    // 2 gialli + 1 rosso×2 + 1 autogol = 5, su 10 partite a voto
+    expect(malusRate(2, 1, 1, 10)).toBeCloseTo(0.5, 10)
+  })
+
+  it.each([
+    ['bonusIndex senza FM', bonusIndex(null, 6.4)],
+    ['bonusIndex senza MV', bonusIndex(9.1, null)],
+    ['reliability senza Pv', reliability(null)],
+    ['malusRate su zero partite a voto', malusRate(2, 0, 0, 0)],
+    ['malusRate senza cartellini', malusRate(null, 0, 0, 10)],
+    ['concededPerMatch su zero partite', concededPerMatch(12, 0)],
+    ['startShare senza lo stadio FBref', startShare(null, null)],
+    ['startShare su zero presenze', startShare(0, 0)],
+    ['minutesPerMatch su zero presenze', minutesPerMatch(900, 0)],
+    ['cleanSheetRate per chi non ha mai iniziato', cleanSheetRate(3, 0)],
+    ['convenience su quotazione zero', convenience(80, 0)],
+    ['convenience senza punteggio', convenience(null, 20)],
+  ])('%s è null, non zero e non NaN', (_label, value) => {
+    expect(value).toBeNull()
+  })
+
+  it('still answers when the numerator is legitimately zero', () => {
+    // Nessun malus in dieci partite è un fatto, non un dato mancante.
+    expect(malusRate(0, 0, 0, 10)).toBe(0)
+    expect(cleanSheetRate(0, 12)).toBe(0)
   })
 })

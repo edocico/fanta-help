@@ -129,6 +129,8 @@ Tabella virtualizzata con TanStack Table + Virtual, filtri come chip, ricerca fu
 
 **Fatto quando:** la ricerca risponde mentre digiti senza attesa percepibile su seicento righe.
 
+Quello che il documento 2 §4.4 elenca e T9 **non** ha, perché ha bisogno di una lega: la fascia di colore della squadra che ha comprato e la riga attenuata (T13), la stella degli obiettivi (T12), il prezzo atteso e il punteggio sintetico (T11 per i pesi, T12 per le fasce), il pannello di dettaglio al click (T10). Non sono mostrati vuoti: vale la regola che il §4.4 si dà per le colonne FBref, «le nasconde invece di mostrare quindici trattini».
+
 ### T10 · Dettaglio giocatore
 **Documenti:** 2 (§4.5)
 

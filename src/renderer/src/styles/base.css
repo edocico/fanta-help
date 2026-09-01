@@ -131,3 +131,34 @@
   font-weight: 500;
   letter-spacing: 0;
 }
+
+/* Dove si può cliccare, si vede.
+   Regola globale e non per componente: messa addosso a ogni bottone a mano,
+   il primo che se ne dimentica produce un elemento che *sembra* inerte, e
+   nessun test dell'interfaccia esiste per accorgersene (documento 6 §4).
+   Un elemento disabilitato prende invece il cursore predefinito: dichiarare
+   cliccabile qualcosa che non lo è è peggio che non dichiararlo.
+
+   Dentro @layer base e non fuori da ogni layer: le utility di Tailwind stanno in
+   @layer utilities, che nella cascata batte base — così `cursor-wait` su un
+   bottone che sta lavorando funziona. Fuori dai layer questa regola vincerebbe su
+   qualunque utility, e il caso si scoprirebbe solo provandolo.
+
+   Un elemento cliccabile che non sia un bottone o una select — una riga di
+   tabella, per dire, che T10 aggiunge — non è coperto dal selettore: gli va messo
+   `role="button"`, che serve comunque a chi naviga da tastiera. */
+@layer base {
+  button:not(:disabled),
+  select:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  summary,
+  label:has(> input[type='checkbox']:not(:disabled)),
+  label:has(> input[type='radio']:not(:disabled)) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled {
+    cursor: default;
+  }
+}

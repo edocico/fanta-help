@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { HashRouter, Route, Routes } from 'react-router-dom'
+import { queryClient } from './lib/query'
 import Onboarding from './features/data/Onboarding'
-import Scaffold from './routes/Scaffold'
+import PlayersView from './features/players/PlayersView'
 import { call } from './lib/ipc'
 
 /**
@@ -10,11 +11,13 @@ import { call } from './lib/ipc'
  */
 export default function App(): JSX.Element {
   return (
-    <HashRouter>
-      <Routes>
-        <Route path="/" element={<Start />} />
-      </Routes>
-    </HashRouter>
+    <QueryClientProvider client={queryClient}>
+      <HashRouter>
+        <Routes>
+          <Route path="/" element={<Start />} />
+        </Routes>
+      </HashRouter>
+    </QueryClientProvider>
   )
 }
 
@@ -25,18 +28,14 @@ export default function App(): JSX.Element {
  * sitting on an empty players view with no way back to the import.
  */
 function Start(): JSX.Element | null {
-  const [seasons, setSeasons] = useState<number | null>(null)
+  // The same query the players view runs, on the same key: one call, one cache
+  // entry, one answer. Read twice through `useState` and `useEffect` the two
+  // would drift apart the day something reimports outside the onboarding.
+  const seasons = useQuery({ queryKey: ['dataset.list'], queryFn: () => call('dataset.list') })
 
-  const count = useCallback(() => {
-    call('dataset.list')
-      .then((list) => setSeasons(list.length))
-      // A failing channel is not "no seasons": showing onboarding here would
-      // invite an import that cannot work either. The scaffold reports it.
-      .catch(() => setSeasons(1))
-  }, [])
-
-  useEffect(count, [count])
-
-  if (seasons === null) return null
-  return seasons === 0 ? <Onboarding onDone={count} /> : <Scaffold />
+  if (seasons.isPending) return null
+  // A failing channel is not "no seasons": showing the onboarding here would
+  // invite an import that cannot work either. The players view reports it.
+  if (seasons.isError) return <PlayersView />
+  return seasons.data.length === 0 ? <Onboarding onDone={() => void seasons.refetch()} /> : <PlayersView />
 }

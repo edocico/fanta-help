@@ -36,18 +36,56 @@ const seasonSummary = z.object({
 })
 
 /**
- * Minimal row for the players view. T9 builds the real one from document 2 §4.4
- * with the derived metrics; this is what the schema can already answer with.
+ * One row of the players view of document 2 §4.4.
+ *
+ * The whole season arrives in one call and the renderer does the rest: document
+ * 2 §4.4 asks for fuzzy search "mentre digiti, senza pulsante e senza attesa"
+ * over a virtualised table, and a round trip per keystroke cannot answer that.
+ * Six hundred rows of this are a few hundred kilobytes.
+ *
+ * The derived metrics of document 1 §6 are **not** here. They are pure functions
+ * of these numbers, they live in shared/domain.ts, and sending them too would
+ * mean two places that could disagree about what `FM − MV` is.
  */
+const seasonStats = z.object({
+  matchesRated: z.number().int().nullable(),
+  avgVote: z.number().nullable(),
+  fantaAvg: z.number().nullable(),
+  goalsConceded: z.number().int().nullable(),
+  yellowCards: z.number().int().nullable(),
+  redCards: z.number().int().nullable(),
+  ownGoals: z.number().int().nullable(),
+  // The four FBref columns, null unless the optional stage ran.
+  matchesPlayed: z.number().int().nullable(),
+  starts: z.number().int().nullable(),
+  minutes: z.number().int().nullable(),
+  cleanSheets: z.number().int().nullable(),
+})
+
 const playerRow = z.object({
   id: z.number().int(),
   name: z.string(),
   roleClassic: ROLE,
+  /** Badges under the name, per document 2 §4.4: never a column of their own. */
+  rolesMantra: z.array(z.string()),
   teamName: z.string(),
+  teamCode: z.string().nullable(),
   qtClassicCurrent: z.number().nullable(),
+  qtClassicInitial: z.number().nullable(),
   fvmClassic: z.number().nullable(),
-  /** Already bought in the league passed as `leagueId`; false when none was. */
-  owned: z.boolean(),
+  penaltyTaker: z.boolean(),
+  /** Gone from the listone but still in the database — invariant 10. */
+  delisted: z.boolean(),
+  /**
+   * His whole history, keyed by season. Empty for a débutant, or for a player
+   * the reconciliation could not hang a past on.
+   *
+   * All of it travels, rather than the one season the table happens to show,
+   * so the season selector switches columns without a round trip — the same
+   * reason the whole listone arrives at once. It is 1400 rows for a full
+   * dataset, a few hundred kilobytes.
+   */
+  stats: z.record(z.string(), seasonStats),
 })
 
 /**
@@ -170,16 +208,33 @@ export const contracts = {
     output: listoneReport,
   },
 
+  /**
+   * The whole season, once. Filtering, sorting and the fuzzy search happen in the
+   * renderer — see `playerRow`.
+   *
+   * The T4 version took `role`, `search` and friends and filtered with SQL
+   * `LIKE`. Two reasons it could not stay. A round trip per keystroke cannot
+   * answer "senza attesa percepibile", and `LIKE` does not tolerate a typo:
+   * `%dimarko%` matches nothing, while the fuzzy search finds Dimarco. Keeping
+   * both would have meant two searches that disagree about the same listone.
+   */
   'player.list': {
-    input: z.object({
+    input: z.object({ seasonId: z.string() }),
+    output: z.object({
       seasonId: z.string(),
-      leagueId: z.number().int().optional(), // to mark the ones already bought
-      role: ROLE.optional(),
-      mantraRole: z.string().optional(),
-      serieATeamId: z.number().int().optional(),
-      search: z.string().optional(),
+      /** Drives the FBref columns, per document 2 §4.4 and document 1 §6. */
+      hasFbref: z.boolean(),
+      /** Seasons with statistics, oldest first: what the selector offers. */
+      statsSeasons: z.array(z.string()),
+      /**
+       * The last **completed** season, which is what the table shows until the
+       * reader picks another. An auction is prepared in August, when the season
+       * on screen has two matchdays in it: its FM and MV would say nothing, and
+       * the "Pv ≥ 25 su 38" chip of document 2 §4.4 would select nobody.
+       */
+      defaultStatsSeason: z.string().nullable(),
+      players: z.array(playerRow),
     }),
-    output: z.array(playerRow),
   },
 } as const satisfies ContractMap
 
