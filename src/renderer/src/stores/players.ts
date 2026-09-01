@@ -39,6 +39,12 @@ type PlayersStore = {
   query: string
   filters: Filters
   sorting: SortingState
+  /**
+   * The row whose panel is open, document 2 §4.5. An id and not the row itself:
+   * the rows are rebuilt on every keystroke of the search, and holding one would
+   * pin a stale copy of a player the next import could have repriced.
+   */
+  selectedPlayerId: number | null
 
   setSeasonId: (seasonId: string) => void
   setStatsSeason: (seasonId: string) => void
@@ -50,6 +56,7 @@ type PlayersStore = {
    * table decides to send an updater — which it does for every header click.
    */
   setSorting: OnChangeFn<SortingState>
+  select: (playerId: number | null) => void
   reset: () => void
 }
 
@@ -58,15 +65,17 @@ export const usePlayersStore = create<PlayersStore>((set) => ({
   statsSeason: null,
   query: '',
   filters: NO_FILTERS,
+  selectedPlayerId: null,
   // Document 2 §4.4: "l'ordinamento predefinito è per quotazione decrescente".
   sorting: [{ id: 'qt', desc: true }],
 
-  setSeasonId: (seasonId) => set({ seasonId, statsSeason: null }),
+  setSeasonId: (seasonId) => set({ seasonId, statsSeason: null, selectedPlayerId: null }),
   setStatsSeason: (statsSeason) => set({ statsSeason }),
   setQuery: (query) => set({ query }),
   patchFilters: (patch) => set((s) => ({ filters: { ...s.filters, ...patch } })),
   setSorting: (updater) =>
     set((s) => ({ sorting: typeof updater === 'function' ? updater(s.sorting) : updater })),
+  select: (selectedPlayerId) => set({ selectedPlayerId }),
   /** The "azzera" button: filters and search, not the season being looked at. */
   reset: () => set({ filters: NO_FILTERS, query: '' }),
 }))

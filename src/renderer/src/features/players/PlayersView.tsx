@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query'
 import { call, IpcError } from '@/lib/ipc'
 import { usePlayersStore, type Filters } from '@/stores/players'
 import { haystack, search as fuzzy } from './search'
+import PlayerDetail from './PlayerDetail'
 import {
   bonusIndex,
   CLASSIC_ROLES,
@@ -102,6 +103,8 @@ export default function PlayersView(): JSX.Element {
   const chosenStatsSeason = usePlayersStore((s) => s.statsSeason)
   const setSeasonId = usePlayersStore((s) => s.setSeasonId)
   const setStatsSeason = usePlayersStore((s) => s.setStatsSeason)
+  const selectedPlayerId = usePlayersStore((s) => s.selectedPlayerId)
+  const select = usePlayersStore((s) => s.select)
 
   const seasonsQuery = useQuery({
     queryKey: ['dataset.list'],
@@ -172,6 +175,17 @@ export default function PlayersView(): JSX.Element {
       statsSeason !== null &&
       (list?.players ?? []).some((p) => p.stats[statsSeason]?.matchesPlayed != null),
     [list, statsSeason],
+  )
+
+  /**
+   * Looked up in the whole listone rather than among the filtered rows: typing
+   * in the search box while a panel is open would otherwise close it the moment
+   * the name stops matching, which is the opposite of what the reader is doing —
+   * looking one player up while keeping another on screen.
+   */
+  const selected = useMemo(
+    () => (list?.players ?? []).find((p) => p.id === selectedPlayerId) ?? null,
+    [list, selectedPlayerId],
   )
 
   const columns = useMemo(() => buildColumns(showFbref), [showFbref])
@@ -353,6 +367,7 @@ export default function PlayersView(): JSX.Element {
         )}
       </header>
 
+      <div className="flex flex-1 overflow-hidden">
       <div ref={scroller} className="flex-1 overflow-auto">
         <table className="w-full border-collapse">
           <thead className="sticky top-0 z-10 bg-pitch-900">
@@ -388,7 +403,19 @@ export default function PlayersView(): JSX.Element {
                   key={row.id}
                   data-index={item.index}
                   ref={virtualizer.measureElement}
-                  className="border-b border-line/50"
+                  role="button"
+                  tabIndex={0}
+                  aria-current={row.original.id === selectedPlayerId}
+                  onClick={() => select(row.original.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      select(row.original.id)
+                    }
+                  }}
+                  className={`border-b border-line/50 ${
+                    row.original.id === selectedPlayerId ? 'bg-pitch-700' : 'hover:bg-pitch-800'
+                  }`}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
@@ -418,6 +445,17 @@ export default function PlayersView(): JSX.Element {
             Nessun giocatore con questi filtri. Togline uno per allargare la ricerca.
           </p>
         )}
+      </div>
+
+      {selected !== null && (
+        <PlayerDetail
+          player={selected}
+          statsSeason={statsSeason}
+          currentSeason={list?.seasonId ?? null}
+          hasFbref={list?.hasFbref ?? false}
+          onClose={() => select(null)}
+        />
+      )}
       </div>
     </Shell>
   )

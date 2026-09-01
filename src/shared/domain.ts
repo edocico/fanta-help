@@ -163,3 +163,79 @@ export function cleanSheetRate(cleanSheets: number | null, starts: number | null
 export function convenience(score: number | null, quotazione: number | null): number | null {
   return ratio(score, quotazione)
 }
+
+/**
+ * The window the empty history names, read from the seasons that are there.
+ *
+ * Document 2 §8 makes the absent history the one deliberate exception to "uno
+ * stato vuoto è un invito ad agire": there is nothing to invite, because he did
+ * not play. What the line owes the reader instead is the window it looked in —
+ * and the document asks for it to come from the seasons present in
+ * `player_season_stat` rather than written by hand, because a dataset that
+ * gains or loses a season would otherwise leave the sentence lying.
+ *
+ * Season ids sort lexicographically because they are `YYYY-YY`: '2023-24' <
+ * '2024-25' as strings and as years both.
+ */
+export function seasonWindow(seasons: readonly string[]): string | null {
+  if (seasons.length === 0) return null
+  const sorted = [...seasons].sort()
+  const first = sorted[0]
+  const last = sorted[sorted.length - 1]
+  return first === last ? first : `${first} → ${last}`
+}
+
+/** One season's numbers, structurally: enough for the two rules below. */
+type StatRow = Readonly<Record<string, number | null>>
+
+/**
+ * Whether there is a history at all — the boundary document 2 §9 draws between
+ * absence and scarcity: "Lo storico si nasconde solo quando non c'è, mai perché
+ * è poco."
+ *
+ * History means **past** seasons. The season the listone belongs to does not
+ * count, and that is not a reading of the prose but of the two numbers the
+ * documents give. §9 says the empty case is "108 giocatori su 524", and 108 is
+ * exactly the count of players with no row outside the listone's own season —
+ * every one of the 524 has a row for the current one, carrying zeroes rather
+ * than nulls. §8 names the window `(2023-24 → 2025-26)` and leaves the current
+ * season out of it. A guard that looked at every season would be true for all
+ * 524 and the empty state would never appear.
+ *
+ * That does not hide this season's form: document 4 §4 says "a un'asta di
+ * inizio settembre la forma attuale pesa quanto lo storico", so the current
+ * season is shown — it just is not what makes a player have a past.
+ *
+ * `currentSeason` null means "no listone season to exclude": then any row is a
+ * history, which is what a caller with nothing else to go on should assume.
+ */
+export function hasHistory(
+  stats: Readonly<Record<string, StatRow>>,
+  currentSeason: string | null,
+): boolean {
+  return Object.keys(stats).some((season) => season !== currentSeason)
+}
+
+/**
+ * The shared scale of the FM/MV chart, document 2 §4.5.
+ *
+ * One scale for both series, not one each. Independent axes would draw an MV of
+ * 5,9 and an FM of 9,1 at the same height, which is precisely the distance the
+ * reader opened the panel to see.
+ *
+ * Missing seasons are skipped rather than read as zero: a false zero drags the
+ * floor down and flattens both lines into the top of the box. And a player whose
+ * numbers never moved still gets an interval, because a zero-height range would
+ * divide by zero on every point.
+ */
+export function chartBounds(
+  series: readonly (readonly (number | null)[])[],
+): { min: number; max: number } | null {
+  const values = series.flat().filter((v): v is number => v !== null && Number.isFinite(v))
+  if (values.length === 0) return null
+  const low = Math.min(...values)
+  const high = Math.max(...values)
+  if (low === high) return { min: low - 0.5, max: high + 0.5 }
+  const pad = (high - low) * 0.08
+  return { min: low - pad, max: high + pad }
+}

@@ -120,6 +120,8 @@ Cercare un ottavo migliore non serve: i candidati che massimizzano il margine to
 
 **Regola di ridondanza.** Il nome della squadra è sempre adiacente al suo colore, e nella board la posizione della colonna è fissa. Chi non distingue due tinte legge il nome e conta le colonne.
 
+**Un debito noto su `--team-10`.** È a ΔE 3,8 da `--chalk-400`, il colore del testo secondario — in visione normale, non sotto deficienza cromatica. La regola di canale lo difende a metà: separa i colori squadra dall'ambra, non dal grigio-verde delle etichette, quindi una barra `--team-10` accanto a intestazioni `--chalk-400` legge come cromatura dell'interfaccia invece che come identità. Tocca solo la decima squadra assegnata. Da risolvere quando la board esiste e si può guardare, non prima.
+
 ### Semantici
 
 I nomi che i componenti usano.

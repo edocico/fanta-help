@@ -138,6 +138,10 @@ Quello che il documento 2 §4.4 elenca e T9 **non** ha, perché ha bisogno di un
 
 Pannello laterale con anagrafica, storico in tabella, grafico FM/MV, indicatori derivati ognuno con una riga di spiegazione, blocco obiettivo.
 
+Il blocco obiettivo **non** si costruisce qui: ha bisogno della lega (T11) e degli obiettivi (T12), e vale la regola del §4.4 che T9 applica già a fascia, stella e prezzo atteso — si nasconde invece di mostrarsi vuoto. Arriva a T12.
+
+**Fatto quando:** il pannello si apre col click e si chiude con `Esc`, mostra lo storico completo di chi ce l'ha, e per chi non ha nessuna stagione passata mostra la constatazione del §8 al posto della tabella. Il confine è il numero che il §9 dà: **108 giocatori su 524** sul listone 2026-27, e va verificato contro il dataset, non a occhio — la stagione in corso ha una riga per tutti e 524, quindi una guardia che guardi «una riga qualsiasi» è vera sempre e lo stato vuoto non compare mai.
+
 ---
 
 ## Fase 4 — Lega
@@ -243,6 +247,10 @@ Primitivi e semantici in `:root`, blocco `@theme` con la mappatura shadcn **e co
 
 Con `Sigla` arriva anche il pannello di riferimento: `?` passa da elenco delle scorciatoie a due sezioni, scorciatoie e sigle.
 
+**Debito da recuperare, da T9 e T10.** `src/shared/glossario.ts` non esiste ancora e le sigle sono scritte a mano in **due** file: `PlayersView.tsx` (intestazioni di colonna) e `PlayerDetail.tsx` (tabella storico e indicatori). Vanno raccolte da entrambi, e l'insieme reale è più largo delle sei voci d'esempio del §10: `Pv MV FM FVM qt. bon tit. min CS`, più i ruoli. Stessa cosa per i cinque `Intl.NumberFormat` e la funzione `show()`, ricopiati nei due file.
+
+**Decisione aperta, da sciogliere qui provandola sul codice.** Il §10 fa coincidere la chiave del glossario con la stringa disegnata, e le due grafie in circolazione non coincidono: il codice e il `CLAUDE.md` scrivono `MV`, `FM`, `qt.`, mentre lo schema (`src/main/db/schema.ts`) e i documenti 0, 1 e 4 scrivono `Mv`, `Fm`, `Qt` perché sono i nomi delle colonne della fonte. O la chiave è l'etichetta mostrata — e il glossario passa a `MV`/`FM`/`qt.` — oppure è il nome di colonna, e la voce prende un terzo campo per l'etichetta. La seconda strada tiene il tipo onesto verso i dati, la prima lo tiene onesto verso lo schermo.
+
 **Fatto quando:** nessun numero dell'applicazione è più scritto a mano dentro un `<span>`, e nessuna sigla compare fuori dal componente. Il tipo `Sigla = keyof typeof glossario` deve impedire che una sigla senza voce nel glossario compili.
 
 ### T24 · La board delle rose
@@ -256,6 +264,8 @@ Sostituisce il pannello a righe con una board a colonne: squadre in colonna, slo
 **Documenti:** 7 (§10, §14)
 
 Vista per vista, l'asta per prima. Poi la lista dei tic della sezione 14.
+
+**Debito da T10:** il pannello di dettaglio non ha l'ingresso da destra in 150ms che il documento 2 §2 gli assegna e che il §7 del documento 7 tiene in tabella. È una delle quattro animazioni ammesse, quindi entra qui e non si aggiunge senza toglierne un'altra.
 
 ---
 

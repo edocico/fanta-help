@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   backupsToPrune,
   bonusIndex,
+  chartBounds,
+  hasHistory,
+  seasonWindow,
   cleanSheetRate,
   concededPerMatch,
   convenience,
@@ -141,3 +144,110 @@ describe('metriche derivate', () => {
     expect(cleanSheetRate(0, 12)).toBe(0)
   })
 })
+
+/**
+ * Document 2 §8 and §9, the two rules the player panel of T10 rests on.
+ *
+ * They are here rather than in the component because both are arithmetic on
+ * data, and because the §8 rule is the one deliberate exception to "uno stato
+ * vuoto è un invito ad agire": it has to name the window it looked in, read
+ * from the seasons that are actually present rather than written by hand.
+ */
+describe('lo storico del giocatore, documento 2 §8 e §9', () => {
+  it('nomina la finestra leggendola dalle stagioni presenti', () => {
+    expect(seasonWindow(['2023-24', '2024-25', '2025-26'])).toBe('2023-24 → 2025-26')
+  })
+
+  it('ordina le stagioni, comunque arrivino', () => {
+    expect(seasonWindow(['2025-26', '2023-24', '2024-25'])).toBe('2023-24 → 2025-26')
+  })
+
+  it('non finge un intervallo quando la stagione è una sola', () => {
+    expect(seasonWindow(['2025-26'])).toBe('2025-26')
+  })
+
+  it('senza stagioni non ha finestra da nominare', () => {
+    expect(seasonWindow([])).toBeNull()
+  })
+
+  /**
+   * §9: «Lo storico si nasconde solo quando non c'è, mai perché è poco», e «il
+   * caso davvero vuoto riguarda 108 giocatori su 524».
+   *
+   * Quel numero è la specifica, ed è quello che dice dove passa il confine: 108
+   * è il conteggio di chi non ha **nessuna stagione passata**, non di chi non ha
+   * nessuna riga. Una riga per la stagione in corso ce l'hanno tutti e 524 —
+   * verificato sul dataset costruito — quindi una guardia che guardasse «una
+   * riga qualsiasi» sarebbe vera sempre e lo stato vuoto del §8 non comparirebbe
+   * mai. La finestra che il §8 nomina, `(2023-24 → 2025-26)`, dice la stessa
+   * cosa per un'altra via: lascia fuori la stagione del listone.
+   *
+   * La forma dei dati qui sotto è quella vera, presa dal dataset: la riga della
+   * stagione in corso porta zeri, non null.
+   */
+  const CORRENTE = '2026-27'
+  const rigaVuota = { matchesRated: 0, avgVote: null, fantaAvg: null, ownGoals: 0 }
+
+  it('una stagione passata è storico', () => {
+    expect(hasHistory({ '2024-25': { matchesRated: 4, avgVote: 6.8 } }, CORRENTE)).toBe(true)
+  })
+
+  it('quattro presenze sono storico, non "poco"', () => {
+    expect(hasHistory({ '2025-26': { matchesRated: 4, avgVote: 6.8 } }, CORRENTE)).toBe(true)
+  })
+
+  /**
+   * Il caso dei 108, nella forma in cui esiste davvero: la riga della stagione
+   * in corso c'è e porta zeri. Il test di prima passava `{}`, una forma che nel
+   * database non esiste per nessun giocatore — passava, e il caso reale le
+   * sfuggiva.
+   */
+  it('la sola stagione in corso non è storico: è il caso dei 108 su 524', () => {
+    expect(hasHistory({ [CORRENTE]: rigaVuota }, CORRENTE)).toBe(false)
+  })
+
+  it('nemmeno con qualche giornata già giocata quest\'anno', () => {
+    expect(hasHistory({ [CORRENTE]: { matchesRated: 2, avgVote: 6 } }, CORRENTE)).toBe(false)
+  })
+
+  it('nessuna riga non è storico', () => {
+    expect(hasHistory({}, CORRENTE)).toBe(false)
+  })
+
+  it('senza sapere qual è la stagione in corso, conta qualunque riga', () => {
+    expect(hasHistory({ '2024-25': { matchesRated: 4 } }, null)).toBe(true)
+  })
+})
+
+/**
+ * La scala del grafico FM/MV. Una sola per le due serie, altrimenti il grafico
+ * mente: due assi indipendenti fanno sembrare uguali una MV di 5,9 e una FM di
+ * 9,1, che è esattamente la differenza che il lettore sta cercando.
+ */
+describe('la scala del grafico, documento 2 §4.5', () => {
+  it('condivide una scala sola fra FM e MV', () => {
+    const b = chartBounds([
+      [6.0, 6.2],
+      [9.1, 4.8],
+    ])
+    expect(b).not.toBeNull()
+    expect(b!.min).toBeLessThanOrEqual(4.8)
+    expect(b!.max).toBeGreaterThanOrEqual(9.1)
+  })
+
+  it('ignora i buchi invece di trattarli come zeri', () => {
+    // Uno zero finto abbasserebbe il fondo della scala e schiaccerebbe le linee.
+    expect(chartBounds([[6.0, null, 6.4]])!.min).toBeGreaterThan(0)
+  })
+
+  it('dà comunque un intervallo a una serie piatta, invece di dividere per zero', () => {
+    const b = chartBounds([[6.5, 6.5, 6.5]])!
+    expect(b.max).toBeGreaterThan(b.min)
+  })
+
+  it('senza niente da disegnare non inventa una scala', () => {
+    expect(chartBounds([])).toBeNull()
+    expect(chartBounds([[null, null]])).toBeNull()
+  })
+})
+
