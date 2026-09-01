@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   bonusIndex,
   chartBounds,
@@ -7,12 +7,16 @@ import {
   hasHistory,
   malusRate,
   MATCHDAYS,
+  MAX_RATING,
   minutesPerMatch,
   reliability,
   seasonWindow,
   startShare,
+  TIERS,
 } from '@shared/domain'
-import type { PlayerRow, SeasonStats } from '@shared/types'
+import type { PlayerRow, SeasonStats, TargetRow } from '@shared/types'
+import PriceField from '@/components/PriceField'
+import type { Objectives } from '@/features/targets/objectives'
 
 /**
  * Dettaglio giocatore, document 2 §4.5: the panel the Giocatori view opens on a
@@ -24,10 +28,9 @@ import type { PlayerRow, SeasonStats } from '@shared/types'
  * spin. That is also why there is no `player.get` channel: adding one would
  * fetch a second copy of what arrived with the listone.
  *
- * The objective block §4.5 ends with is not here. It needs a league (T11) and
- * the objectives themselves (T12), and the rule the whole Giocatori view rests
- * on says what to do meanwhile: §4.4 hides what can only be empty rather than
- * "mostrare quindici trattini".
+ * The objective block §4.5 ends with is at the bottom, and only when a league is
+ * open: T12 brought it, and the rule the view rests on decides the other case —
+ * §4.4 hides what can only be empty rather than "mostrare quindici trattini".
  */
 export default function PlayerDetail({
   player,
@@ -35,6 +38,7 @@ export default function PlayerDetail({
   currentSeason,
   hasFbref,
   onClose,
+  objective,
 }: {
   player: PlayerRow
   /** The season the table is showing: the indicators speak about that one. */
@@ -46,6 +50,21 @@ export default function PlayerDetail({
   currentSeason: string | null
   hasFbref: boolean
   onClose: () => void
+  /**
+   * The objective block of §4.5, or null when no league is open.
+   *
+   * Null and not an empty block: §4.4's rule for a column that can only be empty
+   * — "le nasconde invece di mostrare quindici trattini" — applies to a whole
+   * section with more force. Whose objectives would it be?
+   */
+  objective: {
+    target: TargetRow | null
+    objectives: Objectives
+    /** For the share the maximum price is of it. Null if the query is still out. */
+    budget: number | null
+    /** Bumped on every refusal: it is the key that remounts the block. */
+    resync: number
+  } | null
 }): JSX.Element {
   const panel = useRef<HTMLDivElement>(null)
 
@@ -175,6 +194,22 @@ export default function PlayerDetail({
               </Section>
             )}
         </>
+      )}
+
+      {objective && (
+        <Objective
+          /**
+           * Rimontato a ogni rifiuto, come le righe squadra di T11 e le tessere
+           * della board: dopo un rifiuto il valore che arriva dall'alto e' quello
+           * di prima, quindi un campo che si risincronizza solo quando quel
+           * valore cambia resta a mostrare cio' che l'errore ha appena respinto.
+           */
+          key={`${player.id}-${objective.resync}`}
+          player={player}
+          target={objective.target}
+          objectives={objective.objectives}
+          budget={objective.budget}
+        />
       )}
     </aside>
   )
@@ -493,5 +528,142 @@ function Indicators({
         </p>
       )}
     </dl>
+  )
+}
+
+/**
+ * Il blocco obiettivo del §4.5: «fascia, prezzo massimo, rating, note. Si compila
+ * da qui senza aprire altro.»
+ *
+ * Sta in fondo al pannello perché è l'unica parte che scrive: sopra si legge chi
+ * è il giocatore, qui si decide cosa farne. Un giocatore che non è ancora un
+ * obiettivo mostra lo stesso i campi — compilarne uno lo aggiunge — perché la
+ * strada opposta, un bottone «aggiungi» seguito da quattro campi che compaiono,
+ * è un gesto in più per fare la stessa cosa.
+ */
+function Objective({
+  player,
+  target,
+  objectives,
+  budget,
+}: {
+  player: PlayerRow
+  target: TargetRow | null
+  objectives: Objectives
+  budget: number | null
+}): JSX.Element {
+  return (
+    <section className="border-t border-line px-5 py-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="label text-sm">obiettivo</h3>
+        {target && (
+          <button
+            className="text-sm text-chalk-dim hover:text-taken"
+            onClick={() => objectives.remove(player.id)}
+          >
+            togli
+          </button>
+        )}
+      </div>
+
+      <dl className="mt-3 grid grid-cols-[6rem_1fr] items-center gap-x-4 gap-y-3 text-sm">
+        <dt className="label text-chalk-dim">fascia</dt>
+        <dd>
+          <select
+            className="rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+            value={target?.tier ?? ''}
+            onChange={(e) =>
+              objectives.patch({
+                playerId: player.id,
+                tier: e.target.value === '' ? null : window.Number(e.target.value),
+              })
+            }
+          >
+            <option value="">senza fascia</option>
+            {TIERS.map((tier) => (
+              <option key={tier} value={tier}>
+                fascia {tier}
+              </option>
+            ))}
+          </select>
+        </dd>
+
+        <dt className="label text-chalk-dim">prezzo massimo</dt>
+        <dd className="flex items-baseline gap-2">
+          <PriceField
+            value={target?.maxPrice ?? null}
+            label={`prezzo massimo di ${player.name}`}
+            onCommit={(maxPrice) => objectives.patch({ playerId: player.id, maxPrice })}
+          />
+          {/* Quanto pesa sul budget: è il numero che la board somma per fascia,
+              e vederlo qui evita di scoprire solo là che le prime scelte non
+              stanno insieme. */}
+          {budget !== null && budget > 0 && target?.maxPrice != null && (
+            <span className="text-sm text-chalk-dim">
+              {Math.round((target.maxPrice / budget) * 100)}% del budget
+            </span>
+          )}
+        </dd>
+
+        <dt className="label text-chalk-dim">rating</dt>
+        <dd className="flex">
+          {Array.from({ length: MAX_RATING }, (_, i) => i + 1).map((star) => (
+            <button
+              key={star}
+              className={`px-0.5 leading-none ${
+                target?.rating != null && star <= target.rating
+                  ? 'text-target'
+                  : 'text-line hover:text-chalk-dim'
+              }`}
+              aria-label={`${star} su ${MAX_RATING} a ${player.name}`}
+              onClick={() =>
+                objectives.patch({
+                  playerId: player.id,
+                  rating: target?.rating === star ? null : star,
+                })
+              }
+            >
+              ★
+            </button>
+          ))}
+        </dd>
+
+        <dt className="label self-start pt-1 text-chalk-dim">note</dt>
+        <dd>
+          <Note
+            key={`${player.id}-${target?.note ?? ''}`}
+            value={target?.note ?? ''}
+            onCommit={(note) => objectives.patch({ playerId: player.id, note: note || null })}
+          />
+        </dd>
+      </dl>
+    </section>
+  )
+}
+
+/**
+ * Le note si consegnano al blur, e qui va bene: non c'è nessun bottone che
+ * dipenda dal loro valore, che è la metà della trappola del CLAUDE.md che morde.
+ * L'altra metà — il campo che resta a mostrare un valore respinto — la copre la
+ * `key` che il chiamante costruisce sul valore vero.
+ */
+function Note({
+  value,
+  onCommit,
+}: {
+  value: string
+  onCommit: (next: string) => void
+}): JSX.Element {
+  const [draft, setDraft] = useState(value)
+  return (
+    <textarea
+      rows={2}
+      maxLength={500}
+      className="w-full rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+      placeholder="Solo se scende sotto 40"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => draft !== value && onCommit(draft.trim())}
+    />
   )
 }

@@ -477,6 +477,8 @@ Regole che il livello dati deve garantire, non l'interfaccia. Implementate nei s
 16. `budget`, `min_bid`, `auction_format`, `mode`, `defense_modifier` e `league_slot` sono modificabili solo in `setup` e `pre_auction`. Da `auction` in poi sono di sola lettura, revisione compresa.
 17. L'import di un dataset è bloccato negli stati `auction`, `review` e `closed`.
 
+La 13 nomina tre tabelle e non ne sottintende altre: `target` e `plan` restano scrivibili anche a lega cristallizzata. Non è una svista — obiettivi e piani sono gli appunti di chi si preparava, non il risultato, e lo snapshot del §7 contiene soltanto `league`, `teams` e `purchases`, quindi modificarli non può contraddire nessun resoconto firmato.
+
 La 10 è quella che si dimentica sempre e che rompe il database a metà mercato. La 11 è quella che rende usabile la revisione: un'app che rifiuta la scrittura mentre stai correggendo un errore ti costringe a correggerlo altrove.
 
 ---

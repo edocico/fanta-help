@@ -405,6 +405,9 @@ Ogni riga è un comportamento da implementare, non un suggerimento.
 | Modifica su lega cristallizzata | Bloccata, con la via d'uscita | "Il resoconto è cristallizzato. Riaprilo per modificarlo." |
 | Riapertura di un resoconto | Permessa, con avviso | "La prossima cristallizzazione creerà la versione 2. La versione 1 resta consultabile." |
 | Modifica del regolamento a asta avviata | Bloccata | "Il regolamento si blocca quando parte l'asta." |
+| Obiettivo o casella di un piano su un giocatore di un'altra stagione | Bloccato | "Questo giocatore non è nel listone Serie A 2026/27 della lega" |
+| Stesso giocatore due volte nello stesso piano | Bloccato | "Svilar è già in questo piano" |
+| Casella di un piano in un ruolo con gli slot pieni | Bloccata | "Il piano ha già 8 difensori: liberane una casella o alza gli slot." |
 | Squadra con un nome già usato nella lega | Bloccata, il campo torna com'era | "C'è già una squadra che si chiama Bomber FC" |
 | Squadra aggiunta, tolta o riordinata a asta avviata | Bloccata | "Le squadre si aggiungono, si tolgono e si riordinano prima dell'asta." |
 | Lega creata con meno di due squadre | Bloccata | "Servono almeno due squadre." |

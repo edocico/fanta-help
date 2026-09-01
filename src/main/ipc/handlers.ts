@@ -17,6 +17,17 @@ import {
   updateTeam,
 } from '../services/league'
 import { importListone, previewListone } from '../services/listone-import'
+import {
+  addPlanItem,
+  createPlan,
+  deletePlan,
+  deleteTarget,
+  listPlans,
+  listTargets,
+  removePlanItem,
+  updatePlanItem,
+  upsertTarget,
+} from '../services/prep'
 import { player, playerMantraRole, playerSeasonStat, season, serieATeam } from '../db/schema'
 
 /**
@@ -133,6 +144,17 @@ export const handlers: HandlerMap = {
 
   'listone.import': (input, ctx) =>
     importListone(input, { db: ctx.db, readGrid: ctx.readGrid, backup: ctx.backup }),
+
+  'target.list': (input, ctx) => listTargets(ctx.db, input.leagueId),
+  'target.upsert': (input, ctx) => upsertTarget(input, ctx.db),
+  'target.delete': (input, ctx) => deleteTarget(input, ctx.db),
+
+  'plan.list': (input, ctx) => listPlans(ctx.db, input.leagueId),
+  'plan.create': (input, ctx) => createPlan(input, ctx.db),
+  'plan.delete': (input, ctx) => deletePlan(input, ctx.db),
+  'plan.addItem': (input, ctx) => addPlanItem(input, ctx.db),
+  'plan.updateItem': (input, ctx) => updatePlanItem(input, ctx.db),
+  'plan.removeItem': (input, ctx) => removePlanItem(input, ctx.db),
 
   'player.list': (input, ctx) => {
     const info = ctx.db

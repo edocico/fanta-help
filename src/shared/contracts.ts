@@ -260,6 +260,65 @@ const teamDraft = z.object({
   isMine: z.boolean(),
 })
 
+/* ------------------------------------------------- objectives and plans */
+
+const TIER = z.number().int().min(1).max(5)
+const RATING = z.number().int().min(1).max(5)
+const PRICE = z.number().int().min(0)
+
+/**
+ * One tile of the board of document 2 §4.6: "nome, squadra, prezzo massimo e
+ * rating".
+ *
+ * The player's own columns travel with the target rather than being looked up in
+ * the cached listone. The board belongs to a league and the listone to a season,
+ * and a screen that joined the two in the renderer would draw an empty tile for
+ * every target whose player has not been fetched yet — including the whole board
+ * on a cold start, where nobody has opened Giocatori at all.
+ */
+const targetRow = z.object({
+  playerId: z.number().int(),
+  name: z.string(),
+  teamName: z.string(),
+  teamCode: z.string().nullable(),
+  roleClassic: ROLE,
+  qtClassicCurrent: z.number().nullable(),
+  /** Null is the row of document 2 §4.6 that the star fills: marked, not placed. */
+  tier: TIER.nullable(),
+  maxPrice: PRICE.nullable(),
+  rating: RATING.nullable(),
+  note: z.string().nullable(),
+  /** Order inside a cell, in the order they were added. */
+  priority: z.number().int(),
+})
+
+/**
+ * One cell of the grid of document 2 §4.7.
+ *
+ * `slotRole` and nothing else: `plan_item` carries the role the slot belongs to,
+ * and the service sets it from the player's own `role_classic` rather than from
+ * the request — document 1 §3, "la composizione della rosa resta governata dai
+ * ruoli Classic". Sending the player's role alongside it would be two fields
+ * that must agree, which is one more than can be kept true.
+ */
+const planItemRow = z.object({
+  playerId: z.number().int(),
+  name: z.string(),
+  teamName: z.string(),
+  teamCode: z.string().nullable(),
+  slotRole: ROLE,
+  estPrice: PRICE,
+  qtClassicCurrent: z.number().nullable(),
+})
+
+const planDetail = z.object({
+  id: z.number().int(),
+  leagueId: z.number().int(),
+  name: z.string(),
+  createdAt: z.number().int(),
+  items: z.array(planItemRow),
+})
+
 const listoneReport = z.object({
   seasonId: z.string(),
   label: z.string(),
@@ -449,6 +508,98 @@ export const contracts = {
   'team.reorder': {
     input: z.object({ leagueId: z.number().int(), teamIds: z.array(z.number().int()) }),
     output: leagueDetail,
+  },
+
+  'target.list': {
+    input: z.object({ leagueId: z.number().int() }),
+    output: z.array(targetRow),
+  },
+
+  /**
+   * Creates or edits, which is what makes the star of document 2 §4.4 a single
+   * gesture: it does not have to know whether the player is already marked.
+   *
+   * Every editable field is `.nullable().optional()`, and the two are not the
+   * same answer. Absent means "leave it as it is" — the star sends nothing but
+   * the player and must not wipe the maximum price typed in the detail panel.
+   * Null means "clear it", which is the only way back from a tier once given.
+   */
+  'target.upsert': {
+    input: z.object({
+      leagueId: z.number().int(),
+      playerId: z.number().int(),
+      tier: TIER.nullable().optional(),
+      maxPrice: PRICE.nullable().optional(),
+      rating: RATING.nullable().optional(),
+      note: z.string().max(500).nullable().optional(),
+    }),
+    output: z.array(targetRow),
+  },
+
+  'target.delete': {
+    input: z.object({ leagueId: z.number().int(), playerId: z.number().int() }),
+    output: z.array(targetRow),
+  },
+
+  /**
+   * Every plan of the league, items included.
+   *
+   * Whole rather than by id because document 2 §4.7 ends with "due piani si
+   * possono affiancare per confronto": a comparison needs both at once, and a
+   * plan is at most one roster — twenty-five rows of five fields.
+   */
+  'plan.list': {
+    input: z.object({ leagueId: z.number().int() }),
+    output: z.array(planDetail),
+  },
+
+  'plan.create': {
+    input: z.object({ leagueId: z.number().int(), name: z.string().trim().min(1).max(60) }),
+    output: z.array(planDetail),
+  },
+
+  'plan.delete': {
+    input: z.object({ id: z.number().int() }),
+    output: z.array(planDetail),
+  },
+
+  /**
+   * `slotRole` is not an input: the service reads it from the player. A renderer
+   * that could choose which role a player occupies would be able to park a
+   * goalkeeper in a defender's cell, and no constraint in the schema says
+   * otherwise — `plan_item.slot_role` is a free column with a CHECK on its four
+   * letters and nothing tying it to the player it names.
+   */
+  'plan.addItem': {
+    input: z.object({
+      planId: z.number().int(),
+      playerId: z.number().int(),
+      estPrice: PRICE,
+    }),
+    output: z.array(planDetail),
+  },
+
+  /**
+   * The estimated price of a cell already filled.
+   *
+   * Not in the sketch of channels in document 3 §3, which lists `plan.addItem`
+   * and `plan.removeItem` and stops. It is added because without it the only way
+   * to answer "and if he goes for sixty?" — which is the entire point of a plan —
+   * is to empty the cell and fill it again, and a plan is re-priced far more
+   * often than it is re-populated.
+   */
+  'plan.updateItem': {
+    input: z.object({
+      planId: z.number().int(),
+      playerId: z.number().int(),
+      estPrice: PRICE,
+    }),
+    output: z.array(planDetail),
+  },
+
+  'plan.removeItem': {
+    input: z.object({ planId: z.number().int(), playerId: z.number().int() }),
+    output: z.array(planDetail),
   },
 
   'player.list': {

@@ -12,7 +12,11 @@ import {
   LEAGUE_TRANSITIONS,
   move,
   permutationOf,
+  planCells,
+  planTotals,
   rulesEditable,
+  targetTotals,
+  tierOneOverBudget,
   seasonWindow,
   cleanSheetRate,
   concededPerMatch,
@@ -499,4 +503,168 @@ describe('i controlli di coerenza del wizard, documento 2 §4.3 passo 3', () => 
     expect(warnings).toEqual([{ code: 'BUDGET_BELOW_SLOTS', budget: 20, needed: 25 }])
   })
 })
+
+/* T12. Gli obiettivi e i piani del documento 2 §4.6 e §4.7. */
+
+describe('le intestazioni della board obiettivi, documento 2 §4.6', () => {
+  const targets = [
+    { roleClassic: 'A' as const, tier: 1, maxPrice: 120 },
+    { roleClassic: 'A' as const, tier: 2, maxPrice: 60 },
+    { roleClassic: 'D' as const, tier: 1, maxPrice: 40 },
+    // Segnato con la stella e mai prezzato: esiste, e non aggiunge crediti.
+    { roleClassic: 'D' as const, tier: null, maxPrice: null },
+  ]
+
+  it('conta gli obiettivi di ogni ruolo, fascia o non fascia', () => {
+    const totals = targetTotals(targets, 500)
+    expect(totals.A.count).toBe(2)
+    expect(totals.D.count).toBe(2)
+    expect(totals.P.count).toBe(0)
+  })
+
+  it('somma i prezzi massimi che ci sono, e tratta i mancanti come mancanti', () => {
+    const totals = targetTotals(targets, 500)
+    expect(totals.A.maxPriceTotal).toBe(180)
+    // 40 e non 40 più qualcosa: l'obiettivo senza prezzo non ne inventa uno.
+    expect(totals.D.maxPriceTotal).toBe(40)
+  })
+
+  it('pesa la somma sul budget', () => {
+    expect(targetTotals(targets, 500).A.budgetShare).toBeCloseTo(0.36)
+  })
+
+  it('senza budget non finge una percentuale', () => {
+    expect(targetTotals(targets, 0).A.budgetShare).toBeNull()
+  })
+})
+
+/**
+ * «È esattamente l'errore che si fa preparando l'asta»: otto prime scelte sono
+ * sostenibili un reparto alla volta e insostenibili insieme. Per questo la somma
+ * attraversa i ruoli invece di fermarsi dentro ciascuno.
+ */
+describe('l’avviso sulla fascia 1, documento 2 §4.6', () => {
+  const budget = 500
+
+  it('somma la fascia 1 di tutti i ruoli, non di uno solo', () => {
+    const targets = [
+      { roleClassic: 'A' as const, tier: 1, maxPrice: 200 },
+      { roleClassic: 'C' as const, tier: 1, maxPrice: 200 },
+      { roleClassic: 'D' as const, tier: 1, maxPrice: 150 },
+    ]
+    expect(tierOneOverBudget(targets, budget)).toEqual({ total: 550, budget: 500 })
+  })
+
+  it('guarda solo la fascia 1', () => {
+    const targets = [
+      { roleClassic: 'A' as const, tier: 1, maxPrice: 300 },
+      { roleClassic: 'C' as const, tier: 2, maxPrice: 300 },
+      { roleClassic: 'D' as const, tier: null, maxPrice: 300 },
+    ]
+    expect(tierOneOverBudget(targets, budget)).toBeNull()
+  })
+
+  it('sul filo tace: spendere esattamente il budget non è sforare', () => {
+    const targets = [{ roleClassic: 'A' as const, tier: 1, maxPrice: 500 }]
+    expect(tierOneOverBudget(targets, budget)).toBeNull()
+  })
+
+  it('senza obiettivi non ha niente da dire', () => {
+    expect(tierOneOverBudget([], budget)).toBeNull()
+  })
+})
+
+describe('la barra del piano, documento 2 §4.7', () => {
+  const slots = { P: 1, D: 2, C: 2, A: 1 }
+
+  it('dice speso, residuo e media per slot rimanente', () => {
+    const totals = planTotals(
+      [
+        { slotRole: 'A' as const, estPrice: 200 },
+        { slotRole: 'D' as const, estPrice: 100 },
+      ],
+      slots,
+      500,
+    )
+    expect(totals.spent).toBe(300)
+    expect(totals.remaining).toBe(200)
+    expect(totals.slotsFilled).toBe(2)
+    expect(totals.slotsLeft).toBe(4)
+    expect(totals.perSlot).toBe(50)
+  })
+
+  /** La stessa guardia che l'invariante 5 mette sulla puntata massima. */
+  it('a rosa piena non divide per zero: la media non esiste', () => {
+    const full = [
+      { slotRole: 'P' as const, estPrice: 10 },
+      { slotRole: 'D' as const, estPrice: 10 },
+      { slotRole: 'D' as const, estPrice: 10 },
+      { slotRole: 'C' as const, estPrice: 10 },
+      { slotRole: 'C' as const, estPrice: 10 },
+      { slotRole: 'A' as const, estPrice: 10 },
+    ]
+    expect(planTotals(full, slots, 500).perSlot).toBeNull()
+  })
+
+  it('un piano vuoto ha tutto il budget su tutti gli slot', () => {
+    const totals = planTotals([], slots, 500)
+    expect(totals.slotsLeft).toBe(6)
+    expect(totals.perSlot).toBeCloseTo(500 / 6)
+  })
+
+  /**
+   * Il caso che nasce da solo: l'invariante 16 lascia modificare gli slot in
+   * `pre_auction`, quindi un piano da otto difensori sopravvive a chi porta i
+   * difensori a sei. I due di troppo non occupano nessuna casella, e non devono
+   * occuparne nemmeno nel conto — altrimenti la barra dichiara piena una rosa
+   * che la griglia non riesce a disegnare.
+   */
+  it('non conta come riempito chi è oltre gli slot del suo ruolo', () => {
+    const tooMany = [
+      { slotRole: 'D' as const, estPrice: 10 },
+      { slotRole: 'D' as const, estPrice: 10 },
+      { slotRole: 'D' as const, estPrice: 10 },
+    ]
+    const totals = planTotals(tooMany, slots, 500)
+    expect(totals.slotsFilled).toBe(2)
+    expect(totals.slotsLeft).toBe(4)
+    // Speso resta quello vero: i crediti del terzo difensore sono impegnati lo
+    // stesso, ed è proprio quello che rende il piano da sistemare.
+    expect(totals.spent).toBe(30)
+  })
+})
+
+describe('la griglia del piano, documento 2 §4.7', () => {
+  const slots = { P: 1, D: 2, C: 2, A: 1 }
+
+  it('riempie le caselle nell’ordine dato e conta quelle vuote', () => {
+    const cells = planCells([{ slotRole: 'D' as const, estPrice: 30 }], slots)
+    expect(cells.D.filled).toHaveLength(1)
+    expect(cells.D.empty).toBe(1)
+    expect(cells.P.empty).toBe(1)
+    expect(cells.A.overflow).toEqual([])
+  })
+
+  it('mette da parte chi non ha più una casella, invece di lasciarlo cadere', () => {
+    const cells = planCells(
+      [
+        { slotRole: 'D' as const, estPrice: 30 },
+        { slotRole: 'D' as const, estPrice: 20 },
+        { slotRole: 'D' as const, estPrice: 10 },
+      ],
+      slots,
+    )
+    expect(cells.D.filled).toHaveLength(2)
+    expect(cells.D.empty).toBe(0)
+    expect(cells.D.overflow).toEqual([{ slotRole: 'D', estPrice: 10 }])
+  })
+
+  it('con zero slot per un ruolo, tutto quel ruolo è di troppo', () => {
+    const cells = planCells([{ slotRole: 'P' as const, estPrice: 5 }], { ...slots, P: 0 })
+    expect(cells.P.filled).toEqual([])
+    expect(cells.P.empty).toBe(0)
+    expect(cells.P.overflow).toHaveLength(1)
+  })
+})
+
 

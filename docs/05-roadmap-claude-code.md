@@ -158,6 +158,19 @@ Wizard a tre passi, squadre con colori e ordine, slot per ruolo, controlli di co
 
 Obiettivi per fascia e ruolo, avviso se la somma dei prezzi massimi di fascia 1 supera il budget. Piani con griglia degli slot e media disponibile per slot rimanente.
 
+**Fatto quando:** dalla stella nasce un obiettivo nella lega attiva, la board lo mostra nella colonna del suo ruolo e lo si trascina fra le fasce; l'avviso sulla fascia 1 compare quando la somma dei prezzi massimi supera il budget; un piano mostra la media disponibile per slot rimanente e la ricalcola a ogni casella riempita.
+
+**Attenzione:** `target.tier` è nullable di proposito — la stella aggiunge in un gesto solo e un gesto solo non può anche chiedere la fascia. La board ha una riga «senza fascia» che è quella, non un cestino.
+
+### T12b · Punteggio sintetico e prezzo atteso — *emerso in T12*
+**Documenti:** 1 (§6), 2 (§4.4)
+
+Il documento 1 §6 descrive un punteggio configurabile per lega e un **prezzo atteso** che normalizza quel punteggio sulla distribuzione dei crediti per ruolo. La riga di T9 li attribuisce a «T11 per i pesi, T12 per le fasce», ma nessuna delle due righe li nominava e nessuno dei due task li ha costruiti: `league.scoring_weights` esiste nello schema, è nullo, e non ha ancora nessun lettore.
+
+Serve: i pesi predefiniti differenziati per ruolo, la formula come funzione pura in `shared/domain.ts`, la normalizzazione del prezzo atteso, e le due colonne che il §4.4 elenca e che la vista Giocatori oggi nasconde applicando la propria regola sulle colonne che sarebbero vuote.
+
+Non è un prerequisito dell'asta: T13 non lo legge. Resta da decidere se prima o dopo l'MVP.
+
 ---
 
 ## Fase 5 — Asta

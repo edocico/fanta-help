@@ -24,8 +24,8 @@ type Section = { path: string; label: string; ready: boolean }
 
 const SECTIONS: Section[] = [
   { path: '', label: 'Squadre', ready: true },
-  { path: 'obiettivi', label: 'Obiettivi', ready: false },
-  { path: 'piani', label: 'Piani', ready: false },
+  { path: 'obiettivi', label: 'Obiettivi', ready: true },
+  { path: 'piani', label: 'Piani', ready: true },
   { path: 'asta', label: 'Asta', ready: false },
   { path: 'revisione', label: 'Revisione', ready: false },
   { path: 'resoconto', label: 'Resoconto', ready: false },

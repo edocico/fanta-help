@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   createColumnHelper,
   flexRender,
@@ -9,12 +9,13 @@ import {
   type RowData,
 } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { call, IpcError } from '@/lib/ipc'
 import { useLeagueStore } from '@/stores/league'
 import { usePlayersStore, type Filters } from '@/stores/players'
 import { haystack, search as fuzzy } from './search'
 import PlayerDetail from './PlayerDetail'
+import type { Objectives } from '@/features/targets/objectives'
 import {
   bonusIndex,
   CLASSIC_ROLES,
@@ -22,11 +23,12 @@ import {
   cleanSheetRate,
   MANTRA_ROLES,
   MATCHDAYS,
+  MAX_RATING,
   minutesPerMatch,
   startShare,
 } from '@shared/domain'
 import { errorMessages } from '@shared/errors'
-import type { PlayerRow, SeasonStats } from '@shared/types'
+import type { PlayerRow, SeasonStats, TargetRow } from '@shared/types'
 
 /**
  * Giocatori, document 2 §4.4: the view the pre-auction phase is spent in.
@@ -127,6 +129,62 @@ export default function PlayersView(): JSX.Element {
   })
 
   /**
+   * The objectives of that league, which is what the star of document 2 §4.4
+   * writes into — "la stella aggiunge agli obiettivi della lega attiva".
+   *
+   * Same key as the board of T12, so marking a player here and opening Obiettivi
+   * costs no round trip and the two can never show different tiles.
+   */
+  const queryClient = useQueryClient()
+  const targetsQuery = useQuery({
+    queryKey: ['target.list', activeLeagueId],
+    queryFn: () => call('target.list', { leagueId: activeLeagueId as number }),
+    enabled: activeLeagueId !== null,
+  })
+
+  const [starRefusal, setStarRefusal] = useState<string | null>(null)
+  /** Rimonta stella e blocco obiettivo dopo un rifiuto: senza, il campo resta
+   *  a mostrare il valore appena respinto, che e' la seconda meta' della
+   *  trappola del CLAUDE.md. */
+  const [starResync, setStarResync] = useState(0)
+
+  /**
+   * The star and the objective block of §4.5 write through the same two calls.
+   *
+   * `null` when no league is open, and that is what hides the column rather than
+   * disabling it: §4.4's own rule for the FBref columns — "le nasconde invece di
+   * mostrare quindici trattini" — and a star that cannot add to anything is
+   * exactly such a column.
+   */
+  const objectives = useMemo(() => {
+    if (activeLeagueId === null) return null
+    const byPlayer = new Map((targetsQuery.data ?? []).map((t) => [t.playerId, t]))
+
+    async function write(run: () => Promise<TargetRow[]>): Promise<void> {
+      setStarRefusal(null)
+      try {
+        queryClient.setQueryData(['target.list', activeLeagueId], await run())
+      } catch (e) {
+        setStarRefusal(e instanceof IpcError ? e.message : errorMessages.IPC_UNAVAILABLE())
+        setStarResync((n) => n + 1)
+      }
+    }
+
+    return {
+      of: (playerId: number) => byPlayer.get(playerId) ?? null,
+      patch: (input: {
+        playerId: number
+        tier?: number | null
+        maxPrice?: number | null
+        rating?: number | null
+        note?: string | null
+      }) => void write(() => call('target.upsert', { leagueId: activeLeagueId, ...input })),
+      remove: (playerId: number) =>
+        void write(() => call('target.delete', { leagueId: activeLeagueId, playerId })),
+    }
+  }, [activeLeagueId, targetsQuery.data, queryClient])
+
+  /**
    * Derived, not stored: the store holds an override and null means "whatever
    * the data says". Writing the default back into the store on arrival would be
    * an effect that reacts to its own result, and the two would disagree for one
@@ -202,7 +260,7 @@ export default function PlayersView(): JSX.Element {
     [list, selectedPlayerId],
   )
 
-  const columns = useMemo(() => buildColumns(showFbref), [showFbref])
+  const columns = useMemo(() => buildColumns(showFbref, objectives), [showFbref, objectives])
 
   const table = useReactTable({
     data: rows,
@@ -276,6 +334,12 @@ export default function PlayersView(): JSX.Element {
               : `${sorted.length} di ${list.players.length}`}
           </span>
         </div>
+
+        {/* Un rifiuto della stella o del blocco obiettivo. Sta qui in alto e non
+            sulla riga: la riga può essere stata portata via da un filtro o dalla
+            ricerca nel frattempo, e un messaggio che scompare con essa non è
+            stato letto da nessuno. */}
+        {starRefusal && <p className="mt-2 text-sm text-taken">{starRefusal}</p>}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {CLASSIC_ROLES.map((role) => (
@@ -468,6 +532,16 @@ export default function PlayersView(): JSX.Element {
           currentSeason={list?.seasonId ?? null}
           hasFbref={list?.hasFbref ?? false}
           onClose={() => select(null)}
+          objective={
+            objectives === null
+              ? null
+              : {
+                  target: objectives.of(selected.id),
+                  objectives,
+                  budget: leagueQuery.data?.budget ?? null,
+                  resync: starResync,
+                }
+          }
         />
       )}
       </div>
@@ -481,7 +555,7 @@ export default function PlayersView(): JSX.Element {
  * make each accessor infer the widest one instead of its own.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildColumns(hasFbref: boolean): ColumnDef<Row, any>[] {
+function buildColumns(hasFbref: boolean, objectives: Objectives | null): ColumnDef<Row, any>[] {
   const base = [
     columnHelper.accessor('name', {
       id: 'name',
@@ -529,13 +603,112 @@ function buildColumns(hasFbref: boolean): ColumnDef<Row, any>[] {
     num('bon', 'bon', (r) => bonusIndex(r.season?.fantaAvg ?? null, r.season?.avgVote ?? null), signed),
   ]
 
-  if (!hasFbref) return base
+  const withFbref = hasFbref
+    ? [
+        ...base,
+        num('tit', 'tit.', (r) => startShare(r.season?.starts ?? null, r.season?.matchesPlayed ?? null), pct),
+        num('min', 'min', (r) => minutesPerMatch(r.season?.minutes ?? null, r.season?.matchesPlayed ?? null), dec1),
+        num('cs', 'CS', (r) => cleanSheetRate(r.season?.cleanSheets ?? null, r.season?.starts ?? null), pct),
+      ]
+    : base
+
+  if (objectives === null) return withFbref
+
+  /**
+   * The star of document 2 §4.4, last column as in its mock, and present only
+   * with a league open.
+   *
+   * A display column and not an accessor: it is a control, and an accessor would
+   * offer to sort six hundred rows by a boolean. Its clicks are stopped from
+   * reaching the row — marking a player and opening his card are two intentions
+   * on the same pixel, and the row already owns the second one.
+   */
   return [
-    ...base,
-    num('tit', 'tit.', (r) => startShare(r.season?.starts ?? null, r.season?.matchesPlayed ?? null), pct),
-    num('min', 'min', (r) => minutesPerMatch(r.season?.minutes ?? null, r.season?.matchesPlayed ?? null), dec1),
-    num('cs', 'CS', (r) => cleanSheetRate(r.season?.cleanSheets ?? null, r.season?.starts ?? null), pct),
+    ...withFbref,
+    columnHelper.display({
+      id: 'star',
+      header: '★',
+      cell: (c) => (
+        <Star
+          player={c.row.original}
+          target={objectives.of(c.row.original.id)}
+          objectives={objectives}
+        />
+      ),
+    }),
   ]
+}
+
+/**
+ * "La stella aggiunge agli obiettivi della lega attiva, con rating impostabile
+ * al passaggio del mouse."
+ *
+ * So the cell has two states. At rest it is the toggle: full and amber when he is
+ * an objective, hollow otherwise. Under the pointer — or the keyboard focus, for
+ * whoever is not using one — the five rating stars appear beside it, and clicking
+ * one of them both marks the player and rates him in a single act, which is the
+ * whole point of doing it from a table of six hundred rows.
+ *
+ * Amber here is not decoration: a rating is not money, but the star *is* the
+ * mark, and document 2 §2 reserves amber for credits. So the mark wears `target`
+ * teal — the colour §2 assigns to "è nella tua lista obiettivi" — and nothing in
+ * this cell is amber at all.
+ */
+function Star({
+  player,
+  target,
+  objectives,
+}: {
+  player: Row
+  target: TargetRow | null
+  objectives: Objectives
+}): JSX.Element {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div
+      className="flex items-center justify-end gap-0.5"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      {open &&
+        Array.from({ length: MAX_RATING }, (_, i) => i + 1).map((star) => (
+          <button
+            key={star}
+            className={`text-sm leading-none ${
+              target?.rating != null && star <= target.rating
+                ? 'text-target'
+                : 'text-line hover:text-chalk-dim'
+            }`}
+            aria-label={`${star} su ${MAX_RATING} a ${player.name}`}
+            title={`${star} su ${MAX_RATING}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              objectives.patch({
+                playerId: player.id,
+                rating: target?.rating === star ? null : star,
+              })
+            }}
+          >
+            ★
+          </button>
+        ))}
+      <button
+        className={`ml-0.5 text-sm leading-none ${target ? 'text-target' : 'text-chalk-dim'}`}
+        aria-label={target ? `togli ${player.name} dagli obiettivi` : `aggiungi ${player.name} agli obiettivi`}
+        title={target ? 'togli dagli obiettivi' : 'aggiungi agli obiettivi'}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (target) objectives.remove(player.id)
+          else objectives.patch({ playerId: player.id })
+        }}
+      >
+        {target ? '★' : '☆'}
+      </button>
+    </div>
+  )
 }
 
 /**

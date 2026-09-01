@@ -35,6 +35,20 @@ export const ROLE_LABELS: Readonly<Record<ClassicRole, string>> = {
 }
 
 /**
+ * The same four in the singular, for the sentences that can name exactly one.
+ *
+ * Not a nicety: a league with a single slot for a role produces "ha già 1
+ * attaccanti", and a message that cannot count to one reads like a machine wrote
+ * it — on the screen where someone is being told why the app said no.
+ */
+export const ROLE_LABELS_ONE: Readonly<Record<ClassicRole, string>> = {
+  P: 'portiere',
+  D: 'difensore',
+  C: 'centrocampista',
+  A: 'attaccante',
+}
+
+/**
  * The twelve Mantra roles, in the order Fantacalcio.it lists them: goalkeeper
  * first, then outwards from defence.
  *
@@ -445,4 +459,146 @@ export function coherenceWarnings(input: {
   }
 
   return warnings
+}
+
+/* ------------------------------------------------- objectives and plans */
+
+/**
+ * The five tiers of `target.tier`, which the schema constrains with a
+ * `CHECK (tier BETWEEN 1 AND 5)`.
+ *
+ * The column is nullable and the board of document 2 §4.6 has a row for that:
+ * the star of §4.4 adds an objective in one gesture, and one gesture cannot also
+ * ask which tier. `null` is "marked, not yet placed", and the drag between rows
+ * is what turns it into a number.
+ */
+export const TIERS = [1, 2, 3, 4, 5] as const
+export type Tier = (typeof TIERS)[number]
+
+/** The rating of a target, a `CHECK (rating BETWEEN 1 AND 5)` in the schema. */
+export const MAX_RATING = 5
+
+/** What the header of a role column says, per document 2 §4.6. */
+export type RoleTotals = {
+  count: number
+  /** Sum of the maximum prices that are set. A target without one adds nothing. */
+  maxPriceTotal: number
+  /** `maxPriceTotal / budget`, null when there is no budget to weigh against. */
+  budgetShare: number | null
+}
+
+type TargetLike = { roleClassic: ClassicRole; tier: number | null; maxPrice: number | null }
+
+export function targetTotals(
+  targets: readonly TargetLike[],
+  budget: number,
+): Record<ClassicRole, RoleTotals> {
+  const totals = {} as Record<ClassicRole, RoleTotals>
+  for (const role of CLASSIC_ROLES) {
+    const mine = targets.filter((t) => t.roleClassic === role)
+    const maxPriceTotal = mine.reduce((sum, t) => sum + (t.maxPrice ?? 0), 0)
+    totals[role] = {
+      count: mine.length,
+      maxPriceTotal,
+      budgetShare: budget > 0 ? maxPriceTotal / budget : null,
+    }
+  }
+  return totals
+}
+
+/**
+ * The warning document 2 §4.6 asks for by name: "se la somma dei prezzi massimi
+ * dei tuoi obiettivi di fascia 1 supera il budget, l'app lo dice, perché è
+ * esattamente l'errore che si fa preparando l'asta".
+ *
+ * Across every role and not per role, which is what makes it the error it
+ * describes: eight first-choice players are affordable one department at a time
+ * and unaffordable together. Null when there is nothing to say.
+ */
+export function tierOneOverBudget(
+  targets: readonly TargetLike[],
+  budget: number,
+): { total: number; budget: number } | null {
+  const total = targets
+    .filter((t) => t.tier === 1)
+    .reduce((sum, t) => sum + (t.maxPrice ?? 0), 0)
+  return total > budget ? { total, budget } : null
+}
+
+/** What the bar of document 2 §4.7 shows above a plan. */
+export type PlanTotals = {
+  spent: number
+  remaining: number
+  slotsTotal: number
+  slotsFilled: number
+  slotsLeft: number
+  /**
+   * `remaining / slotsLeft` — "media disponibile per slot rimanente, che è il
+   * numero che dice se il piano regge".
+   *
+   * Null on a full roster rather than zero, and the guard is the same one
+   * invariant 5 puts on the maximum bid: dividing by no slots at all is not a
+   * small average, it is a question with no meaning. Callers show an em dash.
+   */
+  perSlot: number | null
+}
+
+type PlanItemLike = { slotRole: ClassicRole; estPrice: number }
+
+export function planTotals(
+  items: readonly PlanItemLike[],
+  slots: Readonly<Record<ClassicRole, number>>,
+  budget: number,
+): PlanTotals {
+  const spent = items.reduce((sum, item) => sum + item.estPrice, 0)
+  const remaining = budget - spent
+  const slotsTotal = totalSlots(slots)
+  // Counted against the grid, not against the list: an item beyond its role's
+  // slots occupies no cell, so it must not consume one in the arithmetic either.
+  const cells = planCells(items, slots)
+  const slotsFilled = CLASSIC_ROLES.reduce((sum, role) => sum + cells[role].filled.length, 0)
+  const slotsLeft = slotsTotal - slotsFilled
+  return {
+    spent,
+    remaining,
+    slotsTotal,
+    slotsFilled,
+    slotsLeft,
+    perSlot: slotsLeft > 0 ? remaining / slotsLeft : null,
+  }
+}
+
+/**
+ * The grid of document 2 §4.7, role by role: which cells are filled, how many
+ * are empty, and who is left over.
+ *
+ * The overflow is not a defensive nicety. Invariant 16 lets the slots be edited
+ * for as long as the league is in `setup` or `pre_auction`, so a plan built on
+ * eight defenders survives the day someone sets defenders to six. Two items then
+ * belong to no cell, and the alternatives are both worse than showing them: the
+ * grid would drop two players without saying so, or `planTotals` would count a
+ * roster as fuller than the grid can draw.
+ *
+ * Order inside a role is the order given, which is `priority` as the database
+ * returns it — the plan reads the way it was built.
+ */
+export function planCells<T extends PlanItemLike>(
+  items: readonly T[],
+  slots: Readonly<Record<ClassicRole, number>>,
+): Record<ClassicRole, { filled: T[]; empty: number; overflow: T[] }> {
+  const cells = {} as Record<ClassicRole, { filled: T[]; empty: number; overflow: T[] }>
+  for (const role of CLASSIC_ROLES) {
+    const mine = items.filter((item) => item.slotRole === role)
+    const filled = mine.slice(0, slots[role])
+    cells[role] = {
+      filled,
+      // No guard against a negative: `filled` comes out of a slice on
+      // `slots[role]`, so it can never be longer than the cap and the difference
+      // never goes below zero. A `Math.max(0, …)` here would be a line no data
+      // can reach — and no test would notice it was never reached.
+      empty: slots[role] - filled.length,
+      overflow: mine.slice(slots[role]),
+    }
+  }
+  return cells
 }

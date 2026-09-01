@@ -28,3 +28,9 @@ export type FantaTeam = LeagueDetail['teams'][number]
 export type SlotsByRole = LeagueDetail['slots']
 /** A team the wizard is still collecting: no id, because nothing is written yet. */
 export type TeamDraft = Input<'league.create'>['teams'][number]
+
+/** One tile of the objectives board, document 2 §4.6. */
+export type TargetRow = Output<'target.list'>[number]
+/** A plan with its cells, document 2 §4.7. */
+export type PlanDetail = Output<'plan.list'>[number]
+export type PlanItemRow = PlanDetail['items'][number]

@@ -57,6 +57,31 @@ export const errorMessages = {
   LEAGUE_MISSING: () => 'Questa lega non esiste più.',
   TEAM_MISSING: () => 'Questa squadra non esiste più.',
 
+  /* obiettivi e piani — T12 */
+  // L'invariante 7 fuori dagli acquisti: né un obiettivo né una casella di un
+  // piano possono puntare a un giocatore di un'altra stagione. Nello schema
+  // niente lo impedisce — `target.player_id` e `plan_item.player_id` guardano
+  // `player`, non la stagione della lega — quindi lo impone il servizio.
+  PLAYER_WRONG_SEASON: (p: { season: string }) =>
+    `Questo giocatore non è nel listone ${p.season} della lega`,
+  // Chiave primaria (plan_id, player_id): senza questo codice il secondo
+  // inserimento arriverebbe come UNKNOWN.
+  PLAN_ITEM_EXISTS: (p: { name: string }) => `${p.name} è già in questo piano`,
+  // Le caselle della griglia sono `league_slot.slots`, e il piano non ne inventa
+  // una in più. Un piano può *trovarsi* con giocatori oltre gli slot — succede
+  // abbassando gli slot dopo averlo costruito, che l'invariante 16 permette in
+  // `pre_auction` — ma non può crearli.
+  PLAN_ROLE_FULL: (p: { n: number; one: string; many: string }) =>
+    // Tre rami perché il ruolo a zero slot esiste davvero: la lega può decidere
+    // di non averne, e «il piano ha già 0 portieri» non è una frase.
+    p.n === 0
+      ? `La lega non ha slot per i ${p.many}.`
+      : p.n === 1
+        ? `Il piano ha già un ${p.one}: libera la casella o alza gli slot.`
+        : `Il piano ha già ${p.n} ${p.many}: liberane una casella o alza gli slot.`,
+  PLAN_MISSING: () => 'Questo piano non esiste più.',
+  PLAN_ITEM_MISSING: () => 'Questa casella non è più nel piano.',
+
   /* import of a dataset — document 4 §6 */
   DATASET_MANIFEST_UNREADABLE: () =>
     'Il manifest del dataset non si legge. Controlla la cartella indicata.',

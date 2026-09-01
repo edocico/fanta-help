@@ -6,7 +6,9 @@ import Onboarding from './features/data/Onboarding'
 import Home from './features/leagues/Home'
 import LeagueView from './features/leagues/LeagueView'
 import Wizard from './features/leagues/Wizard'
+import PlansView from './features/plans/PlansView'
 import PlayersView from './features/players/PlayersView'
+import TargetsView from './features/targets/TargetsView'
 import { call } from './lib/ipc'
 
 /**
@@ -29,6 +31,8 @@ export default function App(): JSX.Element {
             {/* Before the parametric one for a reader; the router ranks it first anyway. */}
             <Route path="/lega/nuova" element={<Wizard />} />
             <Route path="/lega/:id" element={<LeagueView />} />
+            <Route path="/lega/:id/obiettivi" element={<TargetsView />} />
+            <Route path="/lega/:id/piani" element={<PlansView />} />
             <Route path="/giocatori" element={<PlayersView />} />
           </Route>
         </Routes>

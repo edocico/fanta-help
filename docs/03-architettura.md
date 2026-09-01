@@ -280,8 +280,8 @@ team.list             team.create           team.update            team.delete
 team.reorder
 player.list           player.get            player.stats
 target.list           target.upsert         target.delete
-plan.list             plan.get              plan.create            plan.delete
-plan.addItem          plan.removeItem
+plan.list             plan.create           plan.delete
+plan.addItem          plan.updateItem       plan.removeItem
 auction.start         auction.close         auction.state          auction.assign
 auction.undo          auction.setTurn       auction.history
 review.issues         review.updatePurchase review.deletePurchase  review.addPurchase
@@ -290,6 +290,8 @@ availability.list     availability.refresh  availability.status
 export.xlsx           export.json           export.importJson
 update.check          update.download       update.install
 ```
+
+**Due correzioni da T12.** `plan.get` non esiste: `plan.list` torna i piani interi con le loro caselle, perché il confronto affiancato del documento 2 §4.7 ne vuole due insieme e un piano è al massimo una rosa. `plan.updateItem` invece è stato aggiunto: ri-prezzare una casella è il gesto per cui un piano esiste — «e se va a sessanta?» — e senza quel canale l'unico modo sarebbe svuotarla e rifarla.
 
 **Le transizioni di stato hanno canali propri.** `auction.start` e `auction.close` non sono un `league.setStatus` generico, perché ognuna porta effetti collaterali diversi: la prima blocca il regolamento e il reimport del listone, la seconda calcola le anomalie e apre la revisione. Un canale generico li nasconderebbe dietro un aggiornamento di campo.
 
