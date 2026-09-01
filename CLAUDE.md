@@ -15,6 +15,8 @@ Le specifiche complete stanno in `docs/`, un file per documento. Leggi solo quel
 | 7 | `07-design-system.md` | Design system: token, tipografia, componenti. Si applica **dopo l'MVP**, in fase 8 |
 | 0 | `00-revisione.md` | Registro della revisione, chiusa |
 
+Il 7 è una **differenza** rispetto al 2, non un suo doppione: la sua intestazione e il suo §1 elencano cosa cambia. Dove i due dissentono su densità, tipografia, badge o board, ha ragione il 7 ed è voluto — non è un rilievo.
+
 ---
 
 ## Stack
@@ -68,10 +70,12 @@ Sono già costate tempo. Non riscoprirle.
 | `ELECTRON_RUN_AS_NODE` | VS Code lo esporta a `1` nei suoi terminali, su entrambe le macchine. Electron esegue il main come Node normale: `require('electron').app` è `undefined` e l'app muore con `Cannot read properties of undefined (reading 'isPackaged')`. Lanciarla con `env -u ELECTRON_RUN_AS_NODE` |
 | Finestra occlusa e protocollo DevTools | Quando il terminale prende il fuoco la finestra va in `visibilityState: hidden`: niente `requestAnimationFrame` e **niente eventi `scroll`**. Una lista virtualizzata sembra congelata sulle prime venti righe e si "scopre" un difetto che non c'è. Portarla davanti (`osascript -e 'tell application "Fanta Help" to activate'`) o emettere `dispatchEvent(new Event('scroll'))` a mano |
 | `@theme inline` di Tailwind | Elimina le variabili che nessuna utility usa. Una mappatura sbagliata **non compare** nel CSS costruito e sembra assente: si sveglia al primo componente che la tocca |
-| Raggi in Tailwind v4 | Vivono sotto `--radius-*`. Un `--radius` nudo non alimenta nessuna utility e viene scartato, e ogni `rounded-md` torna al default di 6px |
+| Spazi dei nomi di Tailwind v4 | Ogni famiglia di utility ne ha uno obbligatorio: `--color-*` per i colori, `--radius-*` per i raggi, `--text-*` per i corpi. Un nome fuori namespace in `@theme` **non genera niente e non dà errore**: un `--radius` nudo riporta ogni `rounded-md` a 6px, e un primitivo senza `--color-` spegne in silenzio ogni `bg-…`/`text-…` che lo usa. I documenti scrivono i token senza prefisso: `base.css` fa da ponte, e chi ne aggiunge uno deve estendere il ponte |
 | CLI di shadcn | Senza `paths` nel `tsconfig.json` di radice non fallisce: crea una cartella chiamata letteralmente `@` |
 | React Router su `file://` | `HashRouter`, mai `BrowserRouter` |
 | `F11` | È già lo schermo intero di sistema. Il modo proiezione usa `Ctrl/Cmd+P` |
+| Documento riscritto da una copia vecchia | Su un file lungo, modificarlo da una copia stantia invece che da `HEAD` non dà nessun conflitto: il diff mostra le perdite come se fossero cancellazioni decise. Si riconosce con `git diff --numstat <commit-lontano> HEAD -- <file>`: **0 rimozioni** contro una base di parecchi commit fa vuol dire che il file è quella base più le aggiunte, e tutto il lavoro in mezzo è sparito. Il rimedio è ricostruire il commit, non rattoppare i sintomi |
+| Comando Bash negato | Se il permesso viene negato, **non è stato eseguito niente**, nemmeno le parti prima della `&&`. Un `git add … && git commit …` negato lascia l'indice intatto, e il commit successivo prende quello vecchio: sembra riuscito e gli mancano i file. Tenere `add` e `commit` in due chiamate, e guardare `git status` dopo ogni negazione |
 
 ---
 
