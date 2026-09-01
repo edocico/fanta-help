@@ -85,7 +85,7 @@ export interface Tally {
   latestTotal: number
 }
 
-export type Level = 'source-id' | 'name-birthdate' | 'undecided'
+export type Level = 'source-id' | 'name-birthdate'
 
 export interface Verdict {
   level: Level
@@ -233,8 +233,10 @@ const TOLERATED_ALIAS_RATE = 0.01
  * Turns the counts into the decision T5 is waiting for: which level of document 4
  * §5 attaches past statistics to the key the current listone gives a player.
  *
- * One half is not a judgement call and is decided here. The other half is, and is
- * left to you — see the TODO.
+ * Two planes, and only one of them is a quantity. A recycled Id settles it on its
+ * own; the churn rate is weighed against TOLERATED_ALIAS_RATE, which is a
+ * judgement call and is meant to stay revisable — one named constant, and the
+ * reasoning behind the number in the README under "La soglia degli alias".
  */
 export function judge(tally: Tally): Verdict {
   if (tally.recycled.length > 0) {
@@ -355,7 +357,8 @@ async function main(): Promise<void> {
   const verdict = judge(tally)
   report(listoni, tally, verdict)
 
-  // Exit 1 on 'undecided' too: an unanswered question must not read as a green run.
+  // Exit 0 only on 'source-id'. 'name-birthdate' is not a failure — it is a strategy
+  // the pipeline does not implement, and a green run would hide that it is being asked for.
   process.exitCode = verdict.level === 'source-id' ? 0 : 1
 }
 

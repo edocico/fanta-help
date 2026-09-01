@@ -272,22 +272,42 @@ Per questo il rapporto chiude con la **copertura**: quanti giocatori del listone
 più recente la verifica ha davvero potuto giudicare. Il verdetto vale su quelli,
 non su tutti, e il numero va guardato prima della percentuale.
 
-## La decisione ancora aperta
+## La soglia degli alias
 
-`judge()` in `verify-ids.ts` decide metà della questione da sola: se anche un
-solo Id è riciclato, agganciare lo storico per Id è fuori discussione. Non è una
-quantità — un giocatore si ritroverebbe le statistiche di un altro, e sarebbe
-indistinguibile da un dato vero.
+`judge()` in `verify-ids.ts` decide su due piani, e solo uno dei due è una
+quantità.
 
-L'altra metà è un giudizio e non è ancora scritta. Nessun Id riciclato ma un tot
-di Id cambiati: quanti sono troppi? Gli `aliases` di `overrides.json` esistono
-apposta, ma ogni alias è una riga scritta a mano da rivedere ogni anno, e a un
-certo punto costa più che dipendere da FBref.
+**Il primo non lo è.** Se anche un solo Id è riciclato — due nomi senza niente in
+comune sotto lo stesso numero — agganciare lo storico per Id è fuori discussione:
+un giocatore si ritroverebbe le statistiche di un altro, e sarebbe
+indistinguibile da un dato vero. Un caso solo basta, e il verdetto scende a
+`name-birthdate`.
 
-Vale la pena guardare **dove** cade il movimento. Se è quasi tutto nei rientri,
-il livello 1 regge per chi resta e servono pochi alias, riconoscibili. Se invece
-cambiano Id anche i presenti di fila, la lista degli alias cresce ogni stagione
-senza mai chiudersi.
+**Il secondo sì**, ed è `TOLERATED_ALIAS_RATE`: l'1% dei nomi confrontabili.
+Nessun Id riciclato ma un tot di Id cambiati non rompe niente — ogni scarto si
+copre con un alias in `overrides.json`. Ma ogni alias è una riga scritta a mano da
+rivedere ogni anno, e la domanda è quante se ne sopportano. All'1% di seicento
+nomi confrontabili sono sei righe: una lista che si legge tutta. Al 5% sono
+trenta, e lì dipendere da FBref costa meno che tenere il passo a mano.
 
-Finché non è deciso, il verdetto è `undecided` e lo script esce con 1: una
-domanda senza risposta non deve sembrare una corsa andata bene.
+Il rapporto conta a parte gli Id cambiati **al rientro**, ed è il numero da
+guardare per primo il giorno che la soglia si avvicina. Se il movimento sta quasi
+tutto lì, il livello 1 regge per chi resta di fila e gli alias coprono pochi casi
+riconoscibili. Se invece cambiano Id anche i presenti continui, la lista cresce
+ogni stagione senza mai chiudersi, e la percentuale di oggi dice poco su quella
+dell'anno prossimo.
+
+Sui quattro listoni dal 2023-24 al 2026-27 il verdetto è `source-id`: **0 Id
+cambiati su 589 confrontabili**, 0 riciclati. Non è un margine stretto, è zero. È
+il motivo per cui la riconciliazione di T5 aggancia lo storico per `sourceId` e
+non per nome e data di nascita.
+
+Lo script esce 0 solo su `source-id`. `name-birthdate` non è un errore: è una
+strategia diversa, che la pipeline oggi non implementa. Uscire 0 la farebbe
+sembrare una corsa andata bene, mentre chiede di riscrivere la riconciliazione.
+
+**La soglia non è mai scattata.** Nessuna delle quattro stagioni la avvicina e non
+c'è un test che la eserciti: il ramo sopra l'1% è scritto e mai percorso. Se un
+giorno un listone lo imbocca, il primo sospetto non è la soglia — è che il listone
+abbia cambiato il modo di assegnare gli Id, e vada guardato a occhio prima di
+alzare la costante.

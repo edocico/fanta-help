@@ -229,7 +229,7 @@ L'ultima riga vale la pena ripeterla a ogni task.
 
 Tutte le decisioni sono chiuse. Nessun punto aperto nei quattro documenti.
 
-L'unica ipotesi non ancora verificata sul campo è la stabilità degli `Id` del listone tra stagioni, e va controllata prima del task T5.
+L'unica ipotesi che restava da verificare sul campo — la stabilità degli `Id` del listone tra stagioni — è caduta dalla parte buona in T5: su quattro listoni, 0 Id cambiati su 589 nomi confrontabili e 0 riciclati. Lo storico si aggancia per `sourceId`. Si rilancia con `npm run dataset:verify-ids`, e il ragionamento sulla soglia sta in `tools/dataset/README.md`.
 
 | Documento | Contenuto |
 |---|---|
