@@ -41,6 +41,17 @@ Per misurare la reattività, un `MutationObserver` sull'elemento che cambia dà 
 latenza vera; due `requestAnimationFrame` di attesa aggiungono 33 ms di
 pavimento e li fanno sembrare il costo del lavoro.
 
+**Per guidarla, usa gli strumenti `mcp__electron-devtools__*`** — `click`,
+`fill`, `evaluate_script`, `take_snapshot` — invece di riscrivere il protocollo a
+mano. Il server è configurato in `.mcp.json` e punta alla stessa porta 9222 che
+questo script apre, quindi si attacca all'app che hai appena lanciato: prima
+`run.sh`, poi gli strumenti. In T12 e T13 il protocollo è stato riscritto a mano
+una decina di volte, e ogni volta ha ripresentato la trappola del `focusout` che
+la tabella del `CLAUDE.md` descrive.
+
+Il protocollo grezzo resta la via per ciò che gli strumenti non fanno: invocare
+un canale IPC, leggere un colore calcolato, misurare una latenza.
+
 ## Cosa verifica un'esecuzione riuscita
 
 - Il modulo nativo `better-sqlite3` si carica sotto l'ABI di Electron.

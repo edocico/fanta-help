@@ -130,7 +130,7 @@ Quattro modi in cui quella prova mente, incontrati tutti:
 
 Il progetto si sviluppa su **Fedora x64** e su **macOS arm64**, sempre dalla stessa persona e mai in parallelo. Quello che ne segue:
 
-- **Niente piattaforma cablata negli strumenti.** L'architettura si ricava da `uname -m`, il binario di Electron da `node_modules/electron/dist/path.txt`. Un percorso scritto a mano funziona su una macchina e sull'altra muore con un `No such file or directory` che sembra un'installazione rotta.
+- **Niente piattaforma cablata negli strumenti.** L'architettura si ricava da `uname -m`, il binario di Electron da `node_modules/electron/path.txt`, che contiene il nome del file dentro `dist/`. Un percorso scritto a mano funziona su una macchina e sull'altra muore con un `No such file or directory` che sembra un'installazione rotta.
 - **Il database non viaggia.** `userData` sta in posti diversi su dischi diversi: una lega preparata di qua non si trova di là. Per spostare una sessione serve l'export/import JSON di T18, non una copia di file.
 - **Un `pull` non porta `node_modules`.** Tirando giù il lavoro fatto sull'altra macchina, l'albero è aggiornato e le dipendenze sono ferme a prima: mancano esattamente quelle aggiunte nei task nel frattempo. Il sintomo è un comando che non esiste o un import che non risolve, e sembra un'installazione rotta. `npm ci` e poi `electron-builder install-app-deps`.
 - **`.claude.local.md` esiste su una macchina sola**, perché è ignorato da git. Se una cosa vale su entrambe va qui, non lì.
