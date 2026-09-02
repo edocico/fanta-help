@@ -8,6 +8,13 @@ import {
   chartBounds,
   checkPurchase,
   freeSlots,
+  CLASSIC_ROLES,
+  expectedPrices,
+  pastWindow,
+  playerScore,
+  DEFAULT_WEIGHTS,
+  weightsFor,
+  expectedFantaAvg,
   maxBid,
   coherenceWarnings,
   DEFAULT_SLOTS,
@@ -23,6 +30,7 @@ import {
   targetTotals,
   tierOneOverBudget,
   seasonWindow,
+  shareOut,
   cleanSheetRate,
   concededPerMatch,
   convenience,
@@ -37,6 +45,7 @@ import {
   teamListEditable,
   totalSlots,
   type ClassicRole,
+  type PricedPlayer,
   type RosterAnomaly,
   type RosterState,
   type Violation,
@@ -515,6 +524,394 @@ describe('i controlli di coerenza del wizard, documento 2 §4.3 passo 3', () => 
 })
 
 /* T12. Gli obiettivi e i piani del documento 2 §4.6 e §4.7. */
+
+describe('la fantamedia attesa, documento 1 §6', () => {
+  const seasons = (fm: Record<string, [number, number] | null>) =>
+    Object.fromEntries(
+      Object.entries(fm).map(([id, v]) => [
+        id,
+        v === null
+          ? { matchesRated: 0, fantaAvg: 0 }
+          : { matchesRated: v[0], fantaAvg: v[1] },
+      ]),
+    )
+
+  it('pesa le stagioni passate, la più recente di più', () => {
+    const s = seasons({ '2023-24': [30, 5], '2024-25': [30, 6], '2025-26': [30, 7] })
+    // (3·7 + 2·6 + 1·5) / 6
+    expect(expectedFantaAvg(s, '2026-27')).toBeCloseTo(38 / 6, 10)
+  })
+
+  /**
+   * Normalizzata sui pesi usati, non sul loro totale: con una stagione sola
+   * esce quella stagione, non un terzo di essa.
+   */
+  it('con una stagione sola dà quella stagione', () => {
+    expect(expectedFantaAvg(seasons({ '2025-26': [30, 7] }), '2026-27')).toBe(7)
+  })
+
+  /**
+   * La riga della stagione in corso ce l'hanno **tutti** e porta zeri, non
+   * null: senza l'esclusione tirerebbe giù la media di ogni giocatore del
+   * listone, e il difetto sarebbe uniforme — cioè invisibile confrontando due
+   * righe fra loro.
+   */
+  it('non conta la stagione in corso, che porta zeri', () => {
+    const conZeri = seasons({ '2025-26': [30, 7], '2026-27': [0, 0] })
+    expect(expectedFantaAvg(conZeri, '2026-27')).toBe(7)
+  })
+
+  it('e non la conta nemmeno quando è già cominciata', () => {
+    const iniziata = seasons({ '2025-26': [30, 7], '2026-27': [3, 9] })
+    expect(expectedFantaAvg(iniziata, '2026-27')).toBe(7)
+  })
+
+  it('salta una stagione non giocata', () => {
+    const s = seasons({ '2024-25': [30, 6], '2025-26': [0, 0] })
+    expect(expectedFantaAvg(s, '2026-27')).toBe(6)
+  })
+
+  it('senza storico non c’è attesa', () => {
+    expect(expectedFantaAvg(seasons({ '2026-27': [0, 0] }), '2026-27')).toBeNull()
+    expect(expectedFantaAvg({}, '2026-27')).toBeNull()
+  })
+
+  it('guarda al massimo tre stagioni indietro', () => {
+    const quattro = seasons({
+      '2022-23': [30, 1],
+      '2023-24': [30, 5],
+      '2024-25': [30, 6],
+      '2025-26': [30, 7],
+    })
+    const tre = seasons({ '2023-24': [30, 5], '2024-25': [30, 6], '2025-26': [30, 7] })
+    expect(expectedFantaAvg(quattro, '2026-27')).toBe(expectedFantaAvg(tre, '2026-27'))
+  })
+})
+
+describe('la finestra sul passato recente, documento 1 §6', () => {
+  /**
+   * Il caso che ha prodotto il difetto, coi numeri veri del listone 2026-27:
+   * la riga della stagione in corso **non è vuota e non è di zeri**, porta le
+   * prime due giornate — 328 giocatori su 524 ne hanno almeno una. Un attaccante
+   * con tre gol nella sua unica presenza aveva `bonus_index` 9, e col peso degli
+   * attaccanti diventava il miglior giocatore d'Italia per un fattore due.
+   */
+  it('non guarda la stagione in corso, nemmeno quando ha già delle partite', () => {
+    const w = pastWindow(
+      {
+        '2025-26': { matchesRated: 30, fantaAvg: 7, avgVote: 6.2 },
+        '2026-27': { matchesRated: 1, fantaAvg: 17.5, avgVote: 8.5 },
+      },
+      '2026-27',
+    )
+    expect(w?.fantaAvg).toBe(7)
+    expect(w?.avgVote).toBe(6.2)
+  })
+
+  it('media i contatori con i pesi della recenza', () => {
+    const w = pastWindow(
+      {
+        '2024-25': { matchesRated: 10, fantaAvg: 6, yellowCards: 6 },
+        '2025-26': { matchesRated: 30, fantaAvg: 7, yellowCards: 2 },
+      },
+      '2026-27',
+    )
+    // (3·30 + 2·10) / 5 e (3·2 + 2·6) / 5
+    expect(w?.matchesRated).toBeCloseTo(110 / 5, 10)
+    expect(w?.yellowCards).toBeCloseTo(18 / 5, 10)
+  })
+
+  /**
+   * Ogni campo si media sulle stagioni che **ce l'hanno**. Le quattro colonne di
+   * FBref non esistono per gli anni in cui lo stadio non era stato eseguito, e
+   * contarle come zero direbbe «non è mai partito titolare» di chi lo era.
+   */
+  it('un campo assente in una stagione non tira giù le altre', () => {
+    const w = pastWindow(
+      {
+        '2024-25': { matchesRated: 30, fantaAvg: 6, starts: null },
+        '2025-26': { matchesRated: 30, fantaAvg: 7, starts: 28 },
+      },
+      '2026-27',
+    )
+    expect(w?.starts).toBe(28)
+  })
+
+  /**
+   * Una stagione **più recente** di quella scelta non è passato.
+   *
+   * Il caso arriva dal selettore di stagione del §4.4: con due listoni
+   * importati si può guardare il 2025-26, e allora il 2026-27 è un futuro che
+   * l'ordinamento decrescente metterebbe al peso massimo. Escludere «tutto
+   * tranne quella scelta» non basta: bisogna guardare solo indietro.
+   */
+  it('non guarda le stagioni più recenti di quella scelta', () => {
+    const w = pastWindow(
+      {
+        '2024-25': { matchesRated: 30, fantaAvg: 6 },
+        '2025-26': { matchesRated: 30, fantaAvg: 7 },
+        '2026-27': { matchesRated: 2, fantaAvg: 15 },
+      },
+      '2025-26',
+    )
+    expect(w?.fantaAvg).toBe(6)
+  })
+
+  it('salta una stagione senza partite, e senza nessuna torna null', () => {
+    expect(pastWindow({ '2025-26': { matchesRated: 0, fantaAvg: null } }, '2026-27')).toBeNull()
+    expect(pastWindow({}, '2026-27')).toBeNull()
+  })
+
+  it('la fantamedia attesa è la finestra letta su un campo solo', () => {
+    const stats = { '2024-25': { matchesRated: 30, fantaAvg: 6 }, '2025-26': { matchesRated: 30, fantaAvg: 7 } }
+    expect(expectedFantaAvg(stats, '2026-27')).toBe(pastWindow(stats, '2026-27')?.fantaAvg)
+  })
+})
+
+describe('i pesi del punteggio, documento 1 §6', () => {
+  it('senza modificatore di difesa i gol subiti non pesano', () => {
+    expect(weightsFor('P', false).conceded).toBe(0)
+    expect(weightsFor('P', true).conceded).toBeGreaterThan(0)
+  })
+
+  it('e non pesano mai per gli altri ruoli, modificatore o no', () => {
+    for (const role of ['D', 'C', 'A'] as ClassicRole[]) {
+      expect(weightsFor(role, true).conceded).toBe(0)
+    }
+  })
+
+  /**
+   * «Per i portieri conta la MV pura», e si prova sulla formula invece che sul
+   * peso: `FM − (FM − MV)` è la MV.
+   *
+   * Il peso ovvio — zero — è sbagliato, e sbagliato in un modo che si vede: la
+   * fantamedia di un portiere contiene già i gol subiti, quindi col
+   * modificatore acceso il sesto termine li toglieva una seconda volta, e in
+   * cima alla colonna finivano le riserve che non ne avevano presi perché non
+   * avevano giocato.
+   */
+  it('per i portieri il punteggio parte dalla MV, non dalla FM', () => {
+    const portiere = {
+      expectedFantaAvg: 5.4,
+      reliability: null,
+      bonusIndex: 5.4 - 6.3,
+      startShare: null,
+      malusRate: null,
+      concededPerMatch: null,
+    }
+    expect(playerScore(portiere, weightsFor('P', false))).toBeCloseTo(6.3, 10)
+  })
+
+  it('e per gli attaccanti il bonus pesa più che per i difensori', () => {
+    expect(weightsFor('A', false).bonus).toBeGreaterThan(weightsFor('D', false).bonus)
+  })
+
+  it('una lega può cambiare un ruolo solo e tenere gli altri', () => {
+    const w = weightsFor('A', false, { A: { bonus: 9 } })
+    expect(w.bonus).toBe(9)
+    expect(w.reliability).toBe(DEFAULT_WEIGHTS.A.reliability)
+    expect(weightsFor('D', false, { A: { bonus: 9 } })).toEqual({
+      ...DEFAULT_WEIGHTS.D,
+      conceded: 0,
+    })
+  })
+})
+
+describe('il punteggio sintetico, documento 1 §6', () => {
+  const pieno = {
+    expectedFantaAvg: 7,
+    reliability: 0.5,
+    bonusIndex: 2,
+    startShare: 0.8,
+    malusRate: 0.1,
+    concededPerMatch: 1.2,
+  }
+
+  it('somma i termini con i loro segni', () => {
+    const w = { fantaAvg: 1, reliability: 2, bonus: 1, starts: 1, malus: 1, conceded: 1 }
+    // 7 + 1 + 2 + 0.8 − 0.1 − 1.2
+    expect(playerScore(pieno, w)).toBeCloseTo(9.5, 10)
+  })
+
+  it('senza fantamedia attesa non c’è punteggio', () => {
+    expect(playerScore({ ...pieno, expectedFantaAvg: null }, DEFAULT_WEIGHTS.A)).toBeNull()
+  })
+
+  /**
+   * Un termine che manca vale zero e non riscala il resto: riscalando, il
+   * punteggio di chi ha i dati FBref e di chi non li ha starebbero su due
+   * scale diverse dentro la stessa colonna ordinabile.
+   */
+  it('un termine che manca vale zero, non riscala gli altri', () => {
+    const senzaFbref = { ...pieno, startShare: null }
+    const w = weightsFor('C', false)
+    expect(playerScore(senzaFbref, w)).toBeCloseTo(
+      (playerScore(pieno, w) as number) - 0.8 * w.starts,
+      10,
+    )
+  })
+
+  it('resta sulla scala di una fantamedia', () => {
+    const forte = playerScore(pieno, weightsFor('A', false)) as number
+    expect(forte).toBeGreaterThan(5)
+    expect(forte).toBeLessThan(14)
+  })
+})
+
+describe('la ripartizione a resti maggiori', () => {
+  it('somma sempre al totale, qualunque siano i pesi', () => {
+    for (const total of [0, 1, 7, 100, 4000]) {
+      for (const weights of [[1], [1, 1, 1], [3, 1], [10, 3, 3, 3], [1, 2, 3, 4, 5]]) {
+        expect(shareOut(total, weights).reduce((n, v) => n + v, 0)).toBe(total)
+      }
+    }
+  })
+
+  it('divide in proporzione', () => {
+    expect(shareOut(100, [3, 1])).toEqual([75, 25])
+  })
+
+  /** I resti vanno a chi ha perso di più arrotondando, non al primo che capita. */
+  it('il credito che avanza va a chi ci ha rimesso di più', () => {
+    // 10 diviso [1,1,1] è 3.33 a testa: due ne prendono 3, uno 4.
+    expect(shareOut(10, [1, 1, 1])).toEqual([4, 3, 3])
+    // 7 diviso [5,2]: 5 e 2 esatti, nessun resto da assegnare.
+    expect(shareOut(7, [5, 2])).toEqual([5, 2])
+  })
+
+  /**
+   * Resti **diversi**, che è il caso che decide il verso dell'ordinamento.
+   *
+   * Con pesi uguali i resti sono uguali e l'ordine non conta: la mutazione che
+   * dà l'avanzo a chi ha perso meno sopravviveva a tutti i fissati di sopra,
+   * perché nessuno le dava un resto da confrontare.
+   *
+   * 10 diviso [1, 2, 4] fa 1,43 · 2,86 · 5,71: interi 1 · 2 · 5, ne avanzano 2,
+   * e vanno ai resti più grossi — 0,86 e 0,71, cioè il secondo e il terzo.
+   */
+  it('l’avanzo va ai resti più grossi, non ai più piccoli', () => {
+    expect(shareOut(10, [1, 2, 4])).toEqual([1, 3, 6])
+  })
+
+  it('a parità di resto sceglie sempre lo stesso, non «il primo che capita»', () => {
+    expect(shareOut(10, [1, 1, 1])).toEqual(shareOut(10, [1, 1, 1]))
+    expect(shareOut(5, [1, 1])).toEqual([3, 2])
+  })
+
+  it('senza pesi non distribuisce niente', () => {
+    expect(shareOut(100, [0, 0, 0])).toEqual([0, 0, 0])
+    expect(shareOut(100, [])).toEqual([])
+  })
+})
+
+describe('il prezzo atteso, documento 1 §6', () => {
+  const mercato = { budget: 500, teams: 8, slots: { P: 3, D: 8, C: 8, A: 6 }, minBid: 1 }
+
+  /** Tanti giocatori quanti ne servono a riempire ogni ruolo, più una coda. */
+  const listone = (): PricedPlayer[] => {
+    const out: PricedPlayer[] = []
+    let id = 0
+    for (const [role, quota] of [
+      ['P', 10],
+      ['D', 30],
+      ['C', 30],
+      ['A', 25],
+    ] as [ClassicRole, number][]) {
+      for (let i = 0; i < quota + 40; i++) {
+        id += 1
+        out.push({ id, role, score: 10 - i * 0.1, quotazione: Math.max(1, quota - i) })
+      }
+    }
+    return out
+  }
+
+  const dentroGliSlot = (players: PricedPlayer[]) =>
+    CLASSIC_ROLES.flatMap((role) =>
+      players
+        .filter((p) => p.role === role)
+        .sort((a, b) => (b.score as number) - (a.score as number))
+        .slice(0, mercato.slots[role] * mercato.teams),
+    )
+
+  /**
+   * Il criterio del task: la somma dei prezzi attesi sui giocatori che stanno
+   * negli slot **è** i crediti della lega. Esatta, non vicina.
+   *
+   * La prima versione arrotondava ogni quota per conto suo e chiedeva uno
+   * scarto «entro un credito a giocatore»: su duecento slot vuol dire il 5% del
+   * monte, e gonfiando i crediti del 4% il test passava lo stesso. Lo scarto
+   * vero era 1, ma era 1 per quella configurazione — a tre squadre faceva 1499
+   * su 1500 e a dodici 6004 su 6000. Con la ripartizione a resti maggiori non è
+   * più una coincidenza da tollerare.
+   */
+  it('la somma dei prezzi è i crediti della lega, esatti', () => {
+    const players = listone()
+    const prezzi = expectedPrices(players, mercato)
+    const somma = dentroGliSlot(players).reduce((n, p) => n + (prezzi.get(p.id) as number), 0)
+    expect(somma).toBe(mercato.budget * mercato.teams)
+  })
+
+  /** E per una lega qualunque, non per quella su cui il fissato è stato scritto. */
+  it('con qualunque numero di squadre e qualunque budget', () => {
+    const players = listone()
+    for (const teams of [2, 3, 4, 8, 12]) {
+      for (const budget of [200, 500, 1000]) {
+        const suo = { ...mercato, teams, budget }
+        const prezzi = expectedPrices(players, suo)
+        const dentro = CLASSIC_ROLES.flatMap((role) =>
+          players
+            .filter((p) => p.role === role)
+            .sort((a, b) => (b.score as number) - (a.score as number))
+            .slice(0, suo.slots[role] * suo.teams),
+        )
+        const somma = dentro.reduce((n, p) => n + (prezzi.get(p.id) as number), 0)
+        expect({ teams, budget, somma }).toEqual({ teams, budget, somma: budget * teams })
+      }
+    }
+  })
+
+  it('la fetta di un ruolo segue le quotazioni del listone, non una percentuale scritta', () => {
+    const players = listone()
+    const magri = players.map((p) => (p.role === 'P' ? { ...p, quotazione: 1 } : p))
+    const conPortieriCari = expectedPrices(players, mercato)
+    const conPortieriMagri = expectedPrices(magri, mercato)
+    const primoPortiere = players.find((p) => p.role === 'P') as PricedPlayer
+    expect(conPortieriMagri.get(primoPortiere.id)).toBeLessThan(
+      conPortieriCari.get(primoPortiere.id) as number,
+    )
+  })
+
+  it('chi sta sotto il taglio vale la puntata minima', () => {
+    const players = listone()
+    const prezzi = expectedPrices(players, mercato)
+    const fuori = players
+      .filter((p) => p.role === 'P')
+      .sort((a, b) => (b.score as number) - (a.score as number))
+      .at(-1) as PricedPlayer
+    expect(prezzi.get(fuori.id)).toBe(mercato.minBid)
+  })
+
+  /**
+   * Chi non ha punteggio non ha prezzo: il prezzo si ricava dal punteggio, e un
+   * «1» sicuro accanto a una colonna vuota sarebbe la riga che afferma di
+   * sapere una cosa che ha appena detto di non sapere.
+   */
+  it('ma chi non ha punteggio non ha nemmeno un prezzo', () => {
+    const senza: PricedPlayer[] = [{ id: 99, role: 'A', score: null, quotazione: 200 }]
+    expect(expectedPrices(senza, mercato).has(99)).toBe(false)
+  })
+
+  it('un prezzo non scende mai sotto la puntata minima', () => {
+    const prezzi = expectedPrices(listone(), { ...mercato, minBid: 3 })
+    for (const prezzo of prezzi.values()) expect(prezzo).toBeGreaterThanOrEqual(3)
+  })
+
+  it('senza quotazioni non c’è distribuzione, e vale tutto la minima', () => {
+    const players = listone().map((p) => ({ ...p, quotazione: 0 }))
+    const prezzi = expectedPrices(players, mercato)
+    expect([...prezzi.values()].every((v) => v === mercato.minBid)).toBe(true)
+  })
+})
 
 describe('le intestazioni della board obiettivi, documento 2 §4.6', () => {
   const targets = [

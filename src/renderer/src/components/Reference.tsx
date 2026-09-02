@@ -164,6 +164,11 @@ const GLOSSARY: ReadonlyArray<readonly [string, string]> = [
   ['MV', 'media voto: la media senza bonus né malus'],
   ['Pv', 'partite con voto: quante volte ha preso un voto'],
   ['bon', 'quanto la fantamedia supera la media voto: il peso dei bonus'],
+  ['pt.', 'punteggio: quanto vale nel complesso, sulla scala di una fantamedia'],
+  [
+    'pr.',
+    'prezzo atteso: quanto dovrebbe costare, dividendo i crediti della lega fra i giocatori che entrano in rosa',
+  ],
   ['tit.', 'titolarità: quota di partite giocate dall’inizio'],
   ['min', 'minuti giocati per partita'],
   ['CS', 'clean sheet: quota di partite da titolare senza subire gol'],

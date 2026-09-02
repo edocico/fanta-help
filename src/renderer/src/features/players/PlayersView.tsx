@@ -19,6 +19,7 @@ import PlayerDetail from './PlayerDetail'
 import type { Objectives } from '@/features/targets/objectives'
 import {
   bonusIndex,
+  concededPerMatch,
   CLASSIC_ROLES,
   normalizeName,
   cleanSheetRate,
@@ -26,7 +27,15 @@ import {
   MATCHDAYS,
   MAX_RATING,
   minutesPerMatch,
+  expectedPrices,
+  malusRate,
+  pastWindow,
+  playerScore,
+  reliability,
   startShare,
+  weightsFor,
+  type ClassicRole,
+  type PricedPlayer,
 } from '@shared/domain'
 import { errorMessages } from '@shared/errors'
 import type { PlayerRow, SeasonStats, TargetRow } from '@shared/types'
@@ -236,6 +245,77 @@ export default function PlayersView(): JSX.Element {
 
   const index = useMemo(() => haystack(list?.players ?? []), [list])
 
+  /**
+   * The score and the expected price of document 1 §6.
+   *
+   * Over the **whole listone**, not the filtered rows: an expected price is a
+   * share of a market, and filtering by role takes credits away from nobody —
+   * computed on the filter, a defender would inherit the attack's budget the
+   * moment attackers left the view. Recomputed only when the listone or the
+   * league changes, not on every keystroke of the search.
+   *
+   * Every term reads the **recent past**, not the season chosen in the picker:
+   * that one is a view, this is a judgement, and in September the season being
+   * auctioned carries two matchdays.
+   */
+  const evaluation = useMemo(() => {
+    const players = list?.players
+    const season = list?.seasonId
+    if (!players || !season) return null
+
+    const league = leagueQuery.data ?? null
+    const scores = new Map<number, number | null>()
+    const priced: PricedPlayer[] = []
+
+    for (const player of players) {
+      const past = pastWindow(player.stats, season)
+      const role = player.roleClassic as ClassicRole
+      const score = playerScore(
+        {
+          expectedFantaAvg: past?.fantaAvg ?? null,
+          reliability: reliability(past?.matchesRated ?? null),
+          bonusIndex: bonusIndex(past?.fantaAvg ?? null, past?.avgVote ?? null),
+          startShare: startShare(past?.starts ?? null, past?.matchesPlayed ?? null),
+          malusRate: malusRate(
+            past?.yellowCards ?? null,
+            past?.redCards ?? null,
+            past?.ownGoals ?? null,
+            past?.matchesRated ?? null,
+          ),
+          concededPerMatch: concededPerMatch(past?.goalsConceded ?? null, past?.matchesRated ?? null),
+        },
+        weightsFor(role, league?.defenseModifier ?? false),
+      )
+      scores.set(player.id, score)
+      priced.push({ id: player.id, role, score, quotazione: player.qtClassicCurrent })
+    }
+
+    return {
+      scores,
+      /**
+       * Whether anybody has a score at all.
+       *
+       * False on a database seeded from the XLSX alone, which carries the
+       * quotazioni and no statistics: there the column would be empty for all
+       * 524, which is the column §4.4 says to hide rather than print six hundred
+       * dashes. Not a hypothetical — it is how the app looks when it is first
+       * installed, before the dataset arrives.
+       */
+      hasScores: [...scores.values()].some((v) => v !== null),
+      // With no league there is no market to normalise on: no budget, no teams,
+      // no slots. The column goes, the way FBref's do when the optional stage
+      // never ran.
+      prices: league
+        ? expectedPrices(priced, {
+            budget: league.budget,
+            teams: league.teamCount,
+            slots: league.slots,
+            minBid: league.minBid,
+          })
+        : null,
+    }
+  }, [list, leagueQuery.data])
+
   const rows = useMemo<Row[]>(() => {
     const found = fuzzy(index, query)
     return found
@@ -288,7 +368,10 @@ export default function PlayersView(): JSX.Element {
     [list, selectedPlayerId],
   )
 
-  const columns = useMemo(() => buildColumns(showFbref, objectives), [showFbref, objectives])
+  const columns = useMemo(
+    () => buildColumns(showFbref, objectives, evaluation),
+    [showFbref, objectives, evaluation],
+  )
 
   const table = useReactTable({
     data: rows,
@@ -583,8 +666,19 @@ export default function PlayersView(): JSX.Element {
  * every column reads a different type out of the row, and a single union would
  * make each accessor infer the widest one instead of its own.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildColumns(hasFbref: boolean, objectives: Objectives | null): ColumnDef<Row, any>[] {
+function buildColumns(
+  hasFbref: boolean,
+  objectives: Objectives | null,
+  evaluation: {
+    scores: Map<number, number | null>
+    hasScores: boolean
+    prices: Map<number, number> | null
+  } | null,
+  // The signature went multi-line with T12b, so the directive has to sit on the
+  // line that actually holds the `any`: above the function it covered nothing,
+  // and eslint reported both the `any` and the useless directive.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): ColumnDef<Row, any>[] {
   const base = [
     columnHelper.accessor('name', {
       id: 'name',
@@ -631,6 +725,33 @@ function buildColumns(hasFbref: boolean, objectives: Objectives | null): ColumnD
     num('pv', 'Pv', (r) => r.season?.matchesRated, whole),
     num('bon', 'bon', (r) => bonusIndex(r.season?.fantaAvg ?? null, r.season?.avgVote ?? null), signed),
   ]
+
+  /**
+   * The score of §6, `pt.` — not `punt.`, which in an auction app reads as
+   * "puntata": the word is on screen five times over, from the minimum bid to
+   * the maximum, and the column beside this one is a price in credits.
+   *
+   * Empty for whoever has no history — 132 players out of 524 in 2026-27 — and
+   * empty shows: a player with no past does not have a low score, he has none.
+   * The whole column goes only when nobody has one.
+   */
+  if (evaluation?.hasScores) {
+    base.push(num('pt', 'pt.', (r) => evaluation.scores.get(r.id) ?? null, dec2))
+  }
+
+  /**
+   * The expected price, `Pr.` in the mock of §4.4.
+   *
+   * Only with a league open — without budget, teams and slots there is no market
+   * to normalise on — and only when somebody has a score, because the price is
+   * derived from it. Both conditions are the rule of §4.4: hide what would be
+   * empty instead of printing six hundred dashes. Without the second one, an
+   * XLSX-only database with a league showed 524 rows of "1".
+   */
+  const prices = evaluation?.prices ?? null
+  if (evaluation?.hasScores && prices) {
+    base.push(num('pr', 'pr.', (r) => prices.get(r.id) ?? null, whole))
+  }
 
   const withFbref = hasFbref
     ? [

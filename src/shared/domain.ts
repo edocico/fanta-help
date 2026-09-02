@@ -694,6 +694,362 @@ export function canStartAuction(input: {
   return input.teams >= 2 && totalSlots(input.slots) > 0
 }
 
+/* --------------------------------------- the score, document 1 §6 */
+
+/**
+ * How much each past season counts, most recent first.
+ *
+ * Three because the dataset carries three, and decreasing because a fantamedia
+ * from two summers ago describes a different player. Normalised by the weights
+ * actually used, not by their total: somebody with one past season gets that
+ * season's average, not a third of it.
+ */
+export const RECENCY_WEIGHTS = [3, 2, 1] as const
+
+/**
+ * The counters a season of history carries, as the score reads them.
+ *
+ * A subset of `player_season_stat` written as nullable everywhere: FBref's four
+ * columns are absent when the optional stage never ran, and Fantacalcio's own
+ * are absent for a season the player did not play.
+ */
+export type SeasonCounters = {
+  matchesRated: number | null
+  avgVote: number | null
+  fantaAvg: number | null
+  yellowCards: number | null
+  redCards: number | null
+  ownGoals: number | null
+  goalsConceded: number | null
+  matchesPlayed: number | null
+  starts: number | null
+  minutes: number | null
+  cleanSheets: number | null
+}
+
+const COUNTERS = [
+  'matchesRated',
+  'avgVote',
+  'fantaAvg',
+  'yellowCards',
+  'redCards',
+  'ownGoals',
+  'goalsConceded',
+  'matchesPlayed',
+  'starts',
+  'minutes',
+  'cleanSheets',
+] as const
+
+/**
+ * The recent past of a player, as one season.
+ *
+ * **Every term of the score reads this**, not the season being auctioned, and
+ * the reason is a number: on the 2026-27 listone the current season's row is
+ * not empty and is not zeros — it carries the **first two matchdays**, for 328
+ * players out of 524. Scoring on it made a striker who had scored three goals in
+ * his single appearance the best player in Italy by a factor of two, because his
+ * `bonus_index` for those ninety minutes was 9.
+ *
+ * So the window is the same one `FM_attesa` uses: up to three past seasons,
+ * weighted towards the recent, a season not played skipped. Averaging the
+ * counters and then taking the ratios — rather than averaging the ratios —
+ * keeps a season of two appearances from weighing as much as a season of
+ * thirty-eight inside the same window.
+ *
+ * Each field is averaged over the seasons that **have** it, so FBref's columns
+ * do not drag towards zero the years before the stage was ever run.
+ */
+export function pastWindow(
+  stats: Readonly<Record<string, Partial<SeasonCounters>>>,
+  currentSeasonId: string,
+): SeasonCounters | null {
+  const past = Object.entries(stats)
+    .filter(
+      ([id, s]) =>
+        // `<` e non `!==`: una stagione **più recente** di quella scelta non è
+        // passato. Con due listoni importati il selettore del §4.4 lascia
+        // guardare il 2025-26, e `!==` dava alle due giornate del 2026-27 il
+        // peso massimo — cioè il difetto appena chiuso, rientrato dalla porta
+        // del selettore.
+        id < currentSeasonId && (s.matchesRated ?? 0) > 0 && (s.fantaAvg ?? null) !== null,
+    )
+    // Season ids sort as strings the way they sort as years: '2025-26' > '2024-25'.
+    .sort(([a], [b]) => (a < b ? 1 : a > b ? -1 : 0))
+    .slice(0, RECENCY_WEIGHTS.length)
+
+  if (past.length === 0) return null
+
+  const window = {} as SeasonCounters
+  for (const field of COUNTERS) {
+    let weighted = 0
+    let total = 0
+    past.forEach(([, season], i) => {
+      const value = season[field]
+      if (value === null || value === undefined) return
+      weighted += RECENCY_WEIGHTS[i] * value
+      total += RECENCY_WEIGHTS[i]
+    })
+    window[field] = total === 0 ? null : weighted / total
+  }
+  return window
+}
+
+/**
+ * `FM_attesa`, the first term of §6's formula — which §6 names and does not
+ * define.
+ *
+ * There is no projection model and there will not be one: document 1 §2 puts
+ * "previsioni con modelli statistici" outside the v1. So the expectation is the
+ * past, weighted towards the recent, and a season the player did not play does
+ * not count: `matchesRated` at zero is not a bad average, it is no average.
+ *
+ * The window `pastWindow` builds, read on one field. What that window excludes
+ * and why is written there.
+ */
+export function expectedFantaAvg(
+  stats: Readonly<Record<string, Partial<SeasonCounters>>>,
+  currentSeasonId: string,
+): number | null {
+  return pastWindow(stats, currentSeasonId)?.fantaAvg ?? null
+}
+
+/**
+ * The six weights of §6's formula, one set per role.
+ *
+ * Six and not five: §6 writes the formula with five terms and then says that for
+ * goalkeepers, with the defence modifier on, `conceded_per_match` counts. It has
+ * to enter somewhere, and a term whose weight is zero on every other role
+ * changes nothing for them.
+ */
+export type ScoringWeights = {
+  fantaAvg: number
+  reliability: number
+  bonus: number
+  starts: number
+  malus: number
+  conceded: number
+}
+
+/**
+ * The defaults, differentiated by role as §6 asks.
+ *
+ * `fantaAvg` is 1 everywhere on purpose: the score stays **on the scale of a
+ * fantamedia**, roughly 5 to 11, so a number in that column can be read against
+ * the FM beside it instead of being an index out of nowhere. Everything else
+ * adjusts it by at most a couple of points.
+ *
+ * For goalkeepers the bonus weight is **minus one**, and that is §6's "conta la
+ * MV pura" read literally: `FM − (FM − MV)` is the MV. The obvious-looking zero
+ * is wrong, and wrong in a way that shows: a goalkeeper's fantamedia already
+ * carries the goals he conceded — measured on this dataset, `FM − MV` averages
+ * −1.05 across the 34 goalkeepers with a window and tracks `−Gs/Pv` almost
+ * exactly — so with the defence modifier on, the sixth term subtracted them a
+ * second time. The penalty hit whoever actually played twice and whoever never
+ * left the bench not at all, and the column put the reserves on top: a third
+ * keeper with one appearance and a quotazione of 1 came out as the most
+ * expensive goalkeeper in the listone.
+ *
+ * Attackers weight the bonus most, which is the other half of §6's line.
+ * `conceded` is non-zero only for goalkeepers, and `weightsFor` silences it
+ * unless the league plays with the defence modifier.
+ *
+ * Goalkeepers also weight continuity at twice everyone else's rate, and the
+ * number is measured rather than felt. Their scores live in a narrow band —
+ * every keeper's fantamedia sits between 5 and 7 — so at 1.5 a good afternoon
+ * outweighed a whole season: a third-choice keeper with one appearance, a
+ * quotazione of 1 and a clean sheet came third in the listone. At 3 the top of
+ * the column is Svilar, Carnesecchi, Maignan, Falcone, De Gea, which is five
+ * starters; at 4 nothing improves further. For an outfielder a small sample is
+ * a gamble, for a reserve keeper it is nothing at all.
+ */
+export const DEFAULT_WEIGHTS: Readonly<Record<ClassicRole, ScoringWeights>> = {
+  P: { fantaAvg: 1, reliability: 3, bonus: -1, starts: 0.5, malus: 0.5, conceded: 1 },
+  D: { fantaAvg: 1, reliability: 1.5, bonus: 0.8, starts: 0.5, malus: 1, conceded: 0 },
+  C: { fantaAvg: 1, reliability: 1.5, bonus: 1, starts: 0.5, malus: 0.8, conceded: 0 },
+  A: { fantaAvg: 1, reliability: 1.5, bonus: 1.5, starts: 0.5, malus: 0.5, conceded: 0 },
+}
+
+/**
+ * The weights a league actually uses: its own if it has any, the defaults
+ * otherwise, with `conceded` silenced unless the defence modifier is on.
+ *
+ * A league that overrides one role keeps the defaults for the other three,
+ * because a partial override is the normal kind: whoever changes the attackers'
+ * bonus weight has no opinion about goalkeepers.
+ *
+ * `custom` has no caller yet, and that is the deferral T12b's roadmap line
+ * makes: its "Serve:" list asks for the defaults, and `league.scoring_weights`
+ * — a JSON column that has existed since T11 with nothing reading it — stays
+ * unread until something can edit it. The seam is here so that the day it can,
+ * the formula does not move.
+ */
+export function weightsFor(
+  role: ClassicRole,
+  defenseModifier: boolean,
+  custom?: Partial<Record<ClassicRole, Partial<ScoringWeights>>> | null,
+): ScoringWeights {
+  const base = { ...DEFAULT_WEIGHTS[role], ...(custom?.[role] ?? {}) }
+  return defenseModifier ? base : { ...base, conceded: 0 }
+}
+
+export type ScoreInput = {
+  expectedFantaAvg: number | null
+  reliability: number | null
+  bonusIndex: number | null
+  startShare: number | null
+  malusRate: number | null
+  concededPerMatch: number | null
+}
+
+/**
+ * §6's formula, with the sixth term.
+ *
+ * No expected fantamedia, no score: a player with nothing behind him has nothing
+ * to be scored on, and a zero would put him below everyone instead of outside
+ * the ranking. The column says so by being empty.
+ *
+ * Measured on 2026-27: 132 of the 524 have no score. Not 108, which is the
+ * number of players with no past row at all — the other 24 have rows for seasons
+ * they never played, and a season with no appearances is not a bad average, it
+ * is no average.
+ *
+ * The other five terms contribute zero when they are missing rather than being
+ * renormalised away. Renormalising would change the *scale* between a player
+ * with FBref data and one without, and the two would stop being comparable in a
+ * column sorted by that very number. FBref is all-or-nothing per season, so in
+ * practice either everybody has those terms or nobody does.
+ */
+export function playerScore(input: ScoreInput, w: ScoringWeights): number | null {
+  if (input.expectedFantaAvg === null) return null
+  const term = (value: number | null, weight: number): number => (value === null ? 0 : value * weight)
+  return (
+    input.expectedFantaAvg * w.fantaAvg +
+    term(input.reliability, w.reliability) +
+    term(input.bonusIndex, w.bonus) +
+    term(input.startShare, w.starts) -
+    term(input.malusRate, w.malus) -
+    term(input.concededPerMatch, w.conceded)
+  )
+}
+
+export type PricedPlayer = {
+  id: number
+  role: ClassicRole
+  score: number | null
+  quotazione: number | null
+}
+
+export type PriceMarket = {
+  budget: number
+  teams: number
+  slots: Readonly<Record<ClassicRole, number>>
+  minBid: number
+}
+
+/**
+ * `total` split across `weights` as whole numbers that still add up to `total`.
+ *
+ * Largest remainder: floor everything, then hand the leftovers to whoever lost
+ * the most in the flooring. Rounding each share on its own loses or invents
+ * credits — on this dataset the drift ran from −5 to +4 depending on how many
+ * teams the league has — and a total that only sometimes adds up is worse than
+ * one that never does, because it looks right until somebody checks.
+ *
+ * Ties go to the earlier index, so the same league split twice gives the same
+ * numbers. Order is the caller's, and both callers here order by score.
+ */
+export function shareOut(total: number, weights: readonly number[]): number[] {
+  const sum = weights.reduce((n, w) => n + w, 0)
+  if (sum <= 0) return weights.map(() => 0)
+
+  const exact = weights.map((w) => (total * w) / sum)
+  const out = exact.map((v) => Math.floor(v))
+  let left = total - out.reduce((n, v) => n + v, 0)
+
+  /**
+   * A parità di resto vince l'indice più basso — e senza doverlo dire: l'array
+   * è costruito in ordine di indice e `sort` in JavaScript è stabile per
+   * specifica. Lo spareggio esplicito `|| a.i - b.i` c'era ed è passato dal
+   * giro delle mutazioni senza che un test se ne accorgesse.
+   */
+  const byRemainder = exact
+    .map((v, i) => ({ rest: v - Math.floor(v), i }))
+    .sort((a, b) => b.rest - a.rest)
+
+  for (const { i } of byRemainder) {
+    if (left <= 0) break
+    out[i] += 1
+    left -= 1
+  }
+  return out
+}
+
+/**
+ * The expected price of §6: the score normalised on the credits available per
+ * role. «Non è una previsione, è un riferimento per costruire le fasce.»
+ *
+ * Three steps, and only the first is a decision. The credits in play are
+ * `budget × squadre`. **How they split between roles is the listone's own
+ * opinion**, not a table written here: the quotazioni already are what the
+ * market thinks a role is worth, summed over the players who will actually be
+ * bought — `slot × squadre` of them. A league with eight defenders and one
+ * goalkeeper gets a different split from one with three goalkeepers, without
+ * anybody choosing percentages.
+ *
+ * Inside a role, each player takes the share of the pool his score is worth.
+ * Below the cut everyone is worth the minimum bid, which is true: those are the
+ * players nobody raises for. Whoever has **no score** has no price either — the
+ * price is derived from the score, and a confident `1` beside an empty column
+ * would be the row claiming to know something it just said it does not.
+ *
+ * The credits are conserved, and by construction rather than by luck: both
+ * splits go through `shareOut`. The only way out is the minimum bid lifting
+ * somebody the arithmetic put below it, which adds credits that are not there —
+ * rare, and visible, because the sum then exceeds the budget instead of missing
+ * it.
+ */
+export function expectedPrices(
+  players: readonly PricedPlayer[],
+  market: PriceMarket,
+): Map<number, number> {
+  const prices = new Map<number, number>()
+  const ranked = new Map<ClassicRole, PricedPlayer[]>()
+  const quota = new Map<ClassicRole, number>()
+
+  for (const role of CLASSIC_ROLES) {
+    const inside = players
+      .filter((p) => p.role === role && p.score !== null)
+      .sort((a, b) => (b.score as number) - (a.score as number))
+      .slice(0, market.slots[role] * market.teams)
+    ranked.set(role, inside)
+    quota.set(
+      role,
+      inside.reduce((n, p) => n + (p.quotazione ?? 0), 0),
+    )
+  }
+
+  for (const player of players) {
+    if (player.score !== null) prices.set(player.id, market.minBid)
+  }
+
+  const pools = shareOut(
+    market.budget * market.teams,
+    CLASSIC_ROLES.map((role) => quota.get(role) as number),
+  )
+
+  CLASSIC_ROLES.forEach((role, i) => {
+    const inside = ranked.get(role) as PricedPlayer[]
+    const shares = shareOut(
+      pools[i],
+      inside.map((p) => Math.max(0, p.score as number)),
+    )
+    inside.forEach((p, j) => prices.set(p.id, Math.max(market.minBid, shares[j])))
+  })
+
+  return prices
+}
+
 /* ------------------------------------------------- objectives and plans */
 
 /**
