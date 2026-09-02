@@ -533,7 +533,7 @@ Il contratto che dovrà reggere la riconciliazione futura.
   "snapshot": {
     "uuid": "4b81…",
     "version": 1,
-    "createdAt": 1725100000,
+    "createdAt": 1725100000000,
     "contentHash": "sha256:a91f…"
   },
   "league": {
@@ -565,6 +565,8 @@ Il contratto che dovrà reggere la riconciliazione futura.
 ```
 
 **Il nome del giocatore è denormalizzato apposta.** `playerIdentityKey` basterebbe per un'app con lo stesso dataset, ma il file deve restare leggibile da chi lo apre senza avere il listone, e reggere se il listone nel frattempo è cambiato.
+
+**`createdAt` è in millisecondi**, come ogni `created_at` e `updated_at` dello schema. L'unità va detta perché il file la congela: `formatVersion` non cambia per un'aggiunta, ma un lettore che la sbaglia di mille legge il 1970 e non se ne accorge, perché una data assurda in un campo che nessuno guarda non rompe niente. Un secondo formato di tempo solo qui sarebbe la conversione che si ricorda scrivendo e si dimentica leggendo.
 
 **Niente id numerici, solo UUID.** Un id locale in un file di scambio sembra funzionare finché non si importa su una macchina dove quel numero è già occupato.
 
