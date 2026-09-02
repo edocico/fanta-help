@@ -479,6 +479,8 @@ Regole che il livello dati deve garantire, non l'interfaccia. Implementate nei s
 
 La 13 nomina tre tabelle e non ne sottintende altre: `target` e `plan` restano scrivibili anche a lega cristallizzata. Non è una svista — obiettivi e piani sono gli appunti di chi si preparava, non il risultato, e lo snapshot del §7 contiene soltanto `league`, `teams` e `purchases`, quindi modificarli non può contraddire nessun resoconto firmato.
 
+**L'import di una sessione è l'eccezione dichiarata alla 13 e alla 14.** Riprendere una sessione da un file sostituisce la lega con lo stesso `uuid`: la cancella intera — acquisti, squadre e snapshot locali — e ne riscrive una identica al file, già `closed`, con la versione e l'impronta che il file porta. Non è una scrittura *dentro* una lega cristallizzata, è quella lega che smette di esserci. Le due invarianti proteggono un resoconto firmato dal cambiare sotto gli occhi di chi lo sta leggendo; un import è un gesto che nomina per esteso cosa toglie e fa un backup del database prima di toglierlo.
+
 La 10 è quella che si dimentica sempre e che rompe il database a metà mercato. La 11 è quella che rende usabile la revisione: un'app che rifiuta la scrittura mentre stai correggendo un errore ti costringe a correggerlo altrove.
 
 ---

@@ -43,6 +43,14 @@ file vive fuori dal progetto e gli alias `@shared/…` non lo raggiungono.
 bash .claude/skills/prova-servizio/run.sh /tmp/…/scratchpad/h.ts
 ```
 
+**Un servizio asincrono non si aspetta al primo livello.** `run.sh` impacchetta
+l'harness in CJS con esbuild, e un `await` fuori da una funzione fallisce con
+«Top-level await is currently not supported with the "cjs" output format» — un
+errore del bundler, non del codice, che sembra un problema di configurazione. I
+servizi che aprono un dialogo o toccano il filesystem sono `async`: avvolgi le
+prove in `void (async () => { … })()` e fai che `prova()` aspetti quello che
+riceve. Gli `import` restano al primo livello, li issa esbuild.
+
 ## Cosa provare, che i test non provano
 
 Non ripetere qui l'aritmetica: quella sta nelle funzioni pure e ha già i suoi
