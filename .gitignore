@@ -24,6 +24,12 @@ release
 .claude.local.md
 .claude/settings.local.json
 
+# Scarti degli strumenti che guidano l'app: istantanee della pagina e log di
+# console, una coppia per ogni gesto. Si rigenerano da soli a ogni sessione di
+# `prova-pacchetto`, e non ignorarli significa vederli in `git status` per il
+# resto del progetto — cioè imparare a non guardare più `git status`.
+.playwright-mcp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
