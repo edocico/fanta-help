@@ -37,7 +37,7 @@ const SECTIONS: Section[] = [
   { path: 'piani', label: 'Piani', ready: true },
   { path: 'asta', label: 'Asta', ready: true },
   { path: 'revisione', label: 'Revisione', ready: true },
-  { path: 'resoconto', label: 'Resoconto', ready: false },
+  { path: 'resoconto', label: 'Resoconto', ready: true },
 ]
 
 export default function AppShell(): JSX.Element {

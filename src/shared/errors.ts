@@ -171,6 +171,12 @@ export const errorMessages = {
   // la stessa schermata elimina righe.
   PURCHASE_MISSING: () => 'Questo acquisto non esiste più.',
 
+  /* la cristallizzazione — T17, invarianti 13 e 14 */
+  // Ci si arriva da un'interfaccia rimasta indietro: il bottone vive solo nella
+  // revisione. La frase dice dov'è, non che la richiesta era invalida.
+  NOT_IN_REVIEW: () => 'Il resoconto si cristallizza dalla revisione.',
+  NOT_CRYSTALLISED: () => 'Questa lega non è cristallizzata: non c’è niente da riaprire.',
+
   /* import of a dataset — document 4 §6 */
   DATASET_MANIFEST_UNREADABLE: () =>
     'Il manifest del dataset non si legge. Controlla la cartella indicata.',
@@ -345,6 +351,21 @@ export const notices = {
   /** §7: «permesso, con avviso». La domanda, non un rifiuto. */
   CLOSE_WITH_FREE_SLOTS: (p: { n: number }) =>
     `${capitalize(teamsWithFreeSlots(p.n))}. Chiudere lo stesso?`,
+  /**
+   * La conferma della cristallizzazione, §4.10: «se ci sono anomalie il bottone
+   * chiede conferma elencandole, ma non le impone».
+   *
+   * Qui accanto e non in linea nel componente, che è il precedente di
+   * `CLOSE_WITH_FREE_SLOTS` due righe più giù: scritta nel componente, la
+   * concordanza a uno era stata dimenticata — «1 anomalia **aperte**» — perché
+   * il ramo singolare c'era per il sostantivo e non per l'aggettivo.
+   *
+   * Nessun ramo per lo zero: chi la chiama mostra la conferma solo quando c'è
+   * qualcosa da elencare, e un ramo che nessun dato può raggiungere è una riga
+   * che finge di esserci.
+   */
+  ANOMALIES_OPEN: (p: { n: number }) =>
+    p.n === 1 ? '1 anomalia aperta:' : `${p.n} anomalie aperte:`,
   /** Il campo squadra prima che ci sia scritto qualcosa. */
   PICK_A_TEAM: () => 'Scegli la squadra: le prime lettere, o il suo numero.',
   /**
@@ -353,8 +374,8 @@ export const notices = {
    * Non `LEAGUE_FROZEN`, che è il rifiuto di una scrittura tentata e finisce con
    * «Riaprilo per modificarlo»: un invito giusto in cima a un tentativo, e a
    * vuoto su una schermata che sta solo dicendo dove sei — il comando di
-   * riapertura vive nel resoconto, che non è ancora costruito. Due lettori, la
-   * scheda della lega e la revisione, e quindi una frase sola.
+   * riapertura vive nel resoconto, sotto un bottone suo. Due lettori, la scheda
+   * della lega e la revisione, e quindi una frase sola.
    */
   CRYSTALLISED: () => 'Il resoconto è cristallizzato. Riaprirlo riporta in revisione.',
 } as const

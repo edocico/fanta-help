@@ -16,6 +16,7 @@ import {
   updatePurchase,
 } from '../services/auction'
 import { importDataset } from '../services/dataset-import'
+import { crystallise, listSnapshots, readSnapshot, reopen } from '../services/snapshot'
 import {
   createLeague,
   createTeam,
@@ -178,6 +179,10 @@ export const handlers: HandlerMap = {
   'auction.history': (input, ctx) => auctionHistory(ctx.db, input.leagueId),
   'purchase.update': (input, ctx) => updatePurchase(input, ctx.db, ctx.instance.uuid),
   'purchase.delete': (input, ctx) => deletePurchase(input, ctx.db, ctx.instance.uuid),
+  'snapshot.list': (input, ctx) => listSnapshots(ctx.db, input.leagueId),
+  'snapshot.get': (input, ctx) => readSnapshot(ctx.db, input.leagueId, input.version),
+  'snapshot.create': (input, ctx) => crystallise(input, ctx.db, ctx.instance.uuid),
+  'snapshot.reopen': (input, ctx) => reopen(input, ctx.db, ctx.instance.uuid),
 
   'player.list': (input, ctx) => {
     const info = ctx.db

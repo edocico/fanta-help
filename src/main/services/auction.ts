@@ -16,6 +16,7 @@ import {
 import { DomainError, raise, violationMessage } from '@shared/errors'
 import type { AuctionLogEntry, AuctionState } from '@shared/types'
 import type { Db } from '../db/client'
+import { log } from './log'
 import {
   auctionLog,
   fantaTeam,
@@ -346,31 +347,6 @@ function refuse(violation: Violation, team: string, role: ClassicRole): never {
   })
 }
 
-function log(
-  on: Writer,
-  leagueId: number,
-  /**
-   * `auction_log.phase`, che fino a T16 era la costante `'auction'` perché non
-   * esisteva nessuna scrittura fuori dall'asta. Ora esiste, e la cronologia di
-   * una lega finita deve poter distinguere l'acquisto gridato al tavolo dalla
-   * correzione fatta dopo con calma.
-   */
-  phase: 'auction' | 'review',
-  action: string,
-  payload: unknown,
-  actorUuid: string,
-): void {
-  on.insert(auctionLog)
-    .values({
-      leagueId,
-      phase,
-      action,
-      payload: JSON.stringify(payload),
-      actorUuid,
-      createdAt: Date.now(),
-    })
-    .run()
-}
 
 /* --------------------------------------------------------------- writing */
 

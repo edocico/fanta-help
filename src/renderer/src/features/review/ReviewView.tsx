@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { call, IpcError } from '@/lib/ipc'
 import { useAuctionStore } from '@/stores/auction'
 import { useLeagueStore } from '@/stores/league'
 import { haystack } from '@/features/players/search'
 import AssignPanel, { type AssignInput } from '@/features/auction/AssignPanel'
 import { CLASSIC_ROLES, normalizeName, rosterAnomalies, type ClassicRole } from '@shared/domain'
-import { anomalies, errorMessages, notices, purchases } from '@shared/errors'
+import { anomalies, anomalyMessage, errorMessages, notices, purchases } from '@shared/errors'
 import type { AuctionState } from '@shared/types'
 import Controls, { type Focus } from './Controls'
 import Row, { type Line, type Patch } from './Row'
@@ -101,6 +101,7 @@ const TUTTI = 'tutti'
 
 function Table({ state }: { state: AuctionState }): JSX.Element {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const openDraft = useAuctionStore((s) => s.open)
 
   const players = useQuery({
@@ -171,19 +172,27 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
     return map
   }, [state.teams])
 
-  const anomalyCount = useMemo(
+  /**
+   * Le anomalie in fila, squadra per squadra.
+   *
+   * Una lista sola per due lettori: il conteggio dell'intestazione e la conferma
+   * della cristallizzazione, che secondo il §4.10 «chiede conferma elencandole».
+   * Il pannello a destra le raggruppa per conto suo — lì servono i gruppi, qui
+   * l'elenco — ma la funzione che le calcola è la stessa, e un secondo conteggio
+   * scritto a parte è il modo in cui l'intestazione direbbe quattro e la
+   * conferma ne elencherebbe tre.
+   */
+  const anomalyLines = useMemo(
     () =>
-      state.teams.reduce(
-        (n, t) =>
-          n +
-          rosterAnomalies(
-            { credits: t.credits, filled: t.filled, slots: state.slots },
-            state.league.minBid,
-          ).length,
-        0,
+      state.teams.flatMap((t) =>
+        rosterAnomalies(
+          { credits: t.credits, filled: t.filled, slots: state.slots },
+          state.league.minBid,
+        ).map((a) => `${t.name} · ${anomalyMessage(a)}`),
       ),
     [state.teams, state.slots, state.league.minBid],
   )
+  const anomalyCount = anomalyLines.length
 
   function absorb(next: AuctionState): void {
     queryClient.setQueryData(['auction.state', state.league.id], next)
@@ -219,6 +228,47 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
     } catch (e) {
       setAddRefusal(e instanceof IpcError ? e.message : errorMessages.IPC_UNAVAILABLE())
       return false
+    }
+  }
+
+  /**
+   * «Se ci sono anomalie il bottone chiede conferma elencandole, ma non le
+   * impone. Chi gioca sa se una rosa da 24 è un errore o un accordo tra
+   * amici.» §4.10.
+   *
+   * Quindi la conferma compare **solo** quando c'è qualcosa da elencare: senza
+   * anomalie non c'è niente da mostrare, e una domanda a vuoto sarebbe la
+   * finestra di conferma che il §1 non vuole. E cristallizzare non è
+   * irreversibile: «Riapri per modifiche» esiste, e la versione precedente
+   * resta.
+   */
+  const [confirming, setConfirming] = useState(false)
+
+  /**
+   * La conferma è aperta **e** c'è ancora qualcosa da confermare.
+   *
+   * Una derivata e non uno stato, perché la tabella resta modificabile mentre la
+   * striscia è aperta — non è una modale, il §1 non le vuole — e correggere
+   * l'ultima anomalia da lì lasciava la conferma a chiedere ragione di niente:
+   * «nessuna anomalia aperte:» sopra un elenco vuoto. Con la derivata quello
+   * stato non è rappresentabile.
+   */
+  const asking = confirming && anomalyCount > 0
+
+  async function crystallise(): Promise<void> {
+    if (anomalyCount > 0 && !asking) {
+      setConfirming(true)
+      return
+    }
+    setRefusal(null)
+    try {
+      const made = await call('snapshot.create', { leagueId: state.league.id })
+      await queryClient.invalidateQueries()
+      navigate(`/lega/${state.league.id}/resoconto`)
+      return void made
+    } catch (e) {
+      setConfirming(false)
+      setRefusal(e instanceof IpcError ? e.message : errorMessages.IPC_UNAVAILABLE())
     }
   }
 
@@ -363,6 +413,41 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
               onEdit={() => setAddRefusal(null)}
               onAssign={add}
             />
+          </div>
+
+          {/* Il piede del disegno del §4.10, sotto «Aggiungi un acquisto». */}
+          <div className="border-t border-line px-4 py-2">
+            {asking && (
+              <div className="pb-2">
+                <p className="pb-1 text-sm text-chalk-dim">
+                  {notices.ANOMALIES_OPEN({ n: anomalyCount })}
+                </p>
+                <ul className="max-h-24 overflow-y-auto text-sm text-taken">
+                  {anomalyLines.map((line, i) => (
+                    <li key={i}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="flex items-center gap-3">
+              {asking && (
+                // «Annulla» e non «Torna a sistemarle»: con una sola anomalia il
+                // clitico plurale mente, ed è l'etichetta che la conferma di
+                // chiusura asta usa già per il suo secondo bottone.
+                <button
+                  className="rounded-md border border-line px-3 py-1 text-sm text-chalk-dim hover:text-chalk"
+                  onClick={() => setConfirming(false)}
+                >
+                  Annulla
+                </button>
+              )}
+              <button
+                className="mx-auto rounded-md border border-line bg-pitch-700 px-4 py-1.5 text-sm"
+                onClick={() => void crystallise()}
+              >
+                {asking ? 'Cristallizza lo stesso' : 'Cristallizza il resoconto'}
+              </button>
+            </div>
           </div>
         </section>
 

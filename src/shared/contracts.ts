@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { snapshotFile } from './snapshot'
 import { CLASSIC_ROLES, LEAGUE_STATUSES } from './domain'
 
 /**
@@ -435,6 +436,26 @@ const listoneReport = z.object({
   statsUntouched: z.number().int(),
 })
 
+/**
+ * Una versione cristallizzata, senza il suo contenuto: quello che serve alla
+ * barra del §4.11 e al selettore delle versioni.
+ *
+ * `producedBy` è l'etichetta dell'istanza — «PC di Edoardo» — e non il suo
+ * uuid: la barra la scrive per esteso, «firmato da PC di Edoardo».
+ */
+const snapshotSummary = z.object({
+  uuid: z.string(),
+  version: z.number().int().positive(),
+  contentHash: z.string(),
+  producedBy: z.string(),
+  producedRole: INSTANCE_ROLE,
+  note: z.string().nullable(),
+  createdAt: z.number().int(),
+})
+
+/** La stessa, col file del documento 1 §7 dentro, già letto. */
+const snapshotDetail = snapshotSummary.extend({ file: snapshotFile })
+
 export const contracts = {
   'app.instance': {
     input: z.void(),
@@ -797,6 +818,45 @@ export const contracts = {
   'purchase.delete': {
     input: z.object({ leagueId: z.number().int(), purchaseId: z.number().int() }),
     output: auctionState,
+  },
+
+
+  /* la cristallizzazione — T17, invarianti 13, 14 e 15 */
+
+  'snapshot.list': {
+    input: z.object({ leagueId: z.number().int() }),
+    output: z.array(snapshotSummary),
+  },
+
+  /** Senza `version` risponde l'ultima. Null se non ce n'è ancora nessuna. */
+  'snapshot.get': {
+    input: z.object({
+      leagueId: z.number().int(),
+      version: z.number().int().positive().optional(),
+    }),
+    output: snapshotDetail.nullable(),
+  },
+
+  /**
+   * Cristallizza: produce lo snapshot, porta la lega in `closed`, apre il
+   * resoconto.
+   *
+   * Le anomalie non sono un ingresso e non sono un controllo: §4.10 le fa
+   * elencare dalla conferma dell'interfaccia e non le impone, perché «chi gioca
+   * sa se una rosa da 24 è un errore o un accordo tra amici».
+   */
+  'snapshot.create': {
+    input: z.object({
+      leagueId: z.number().int(),
+      note: z.string().trim().max(200).optional(),
+    }),
+    output: snapshotDetail,
+  },
+
+  /** «Riapri per modifiche», §4.11. L'unica transizione che l'invariante 13 lascia. */
+  'snapshot.reopen': {
+    input: z.object({ leagueId: z.number().int() }),
+    output: z.void(),
   },
 
   'player.list': {

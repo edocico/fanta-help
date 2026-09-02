@@ -39,3 +39,8 @@ export type PlanItemRow = PlanDetail['items'][number]
 export type AuctionState = NonNullable<Output<'auction.state'>>
 export type AuctionTeam = AuctionState['teams'][number]
 export type AuctionLogEntry = Output<'auction.history'>[number]
+
+/** Una versione cristallizzata nella barra del documento 2 §4.11. */
+export type SnapshotSummary = Output<'snapshot.list'>[number]
+/** La stessa col file dentro: `snapshot.get` risponde null per una lega che non ne ha. */
+export type SnapshotDetail = NonNullable<Output<'snapshot.get'>>
