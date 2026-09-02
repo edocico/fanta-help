@@ -126,21 +126,25 @@ const SHORTCUTS: ReadonlyArray<readonly [string, string]> = [
   ['Ctrl/Cmd+Z', 'annulla l’ultimo acquisto'],
   ['Ctrl/Cmd+H', 'cronologia delle operazioni'],
   ['Spazio', 'espandi la rosa della squadra selezionata'],
+  ['Ctrl/Cmd+P', 'modo proiezione, per un secondo schermo'],
   ['?', 'questo riferimento'],
 ]
 
 /*
- * Due righe della tabella §6 non sono qui, e la loro assenza è voluta.
+ * Una riga della tabella §6 non è qui, e la sua assenza è voluta.
  *
- * `Ctrl/Cmd+P` è il modo proiezione, che arriva con T15. `Ctrl/Cmd+F` «apre i
- * filtri» di una vista Giocatori dove i filtri sono chip sempre visibili
- * nell'intestazione: non c'è niente da aprire, nemmeno col mouse.
+ * `Ctrl/Cmd+F` «apre i filtri» di una vista Giocatori dove i filtri sono chip
+ * sempre visibili nell'intestazione: non c'è niente da aprire, nemmeno col
+ * mouse.
  *
- * Elencarle comunque sarebbe il peggiore dei due errori possibili. §6 dice che
+ * Elencarla comunque sarebbe il peggiore dei due errori possibili. §6 dice che
  * le scorciatoie «servono una volta sola, la prima sera, ma quella sera
  * servono»: chi apre questo pannello ci arriva perché nient'altro ha
  * funzionato, e una riga che promette un tasto morto lo manda a cercare il
- * guasto dalla parte sbagliata. Tornano quando tornano vere.
+ * guasto dalla parte sbagliata. Torna quando torna vera.
+ *
+ * `Ctrl/Cmd+P` era qui accanto fino a T15 per la stessa ragione, ed è tornato
+ * insieme al modo proiezione.
  */
 
 /**

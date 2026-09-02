@@ -153,6 +153,81 @@
   letter-spacing: 0;
 }
 
+/* Le taglie del modo proiezione, documento 2 §4.9: «ingrandisce la griglia rose».
+ *
+ * Variabili qui e utility con valore arbitrario nel componente
+ * (`text-[length:var(--proj-team)]`), invece di regole discendenti su un
+ * `.projection-scale`. Una regola discendente funzionerebbe ed è proprio il
+ * motivo per non scriverla: nel componente si leggerebbe `text-sm` e sullo
+ * schermo si vedrebbero 30px, senza niente nel file che lo dica.
+ *
+ * La scaletta è su `min-height` e non su `min-width` perché è l'altezza a
+ * decidere quante squadre si vedono, ed è l'unica cosa che questa modalità non
+ * può permettersi di perdere. Le due misure vere sono 620 — la finestra come si
+ * apre, `main/index.ts` — e 1080, il televisore. Nessun breakpoint di larghezza,
+ * e in particolare niente `lg:`, che parte da 1024 e alla dimensione predefinita
+ * non arriva mai.
+ *
+ * I valori sono **misurati sull'app in esecuzione**, non calcolati. Sommare a
+ * mano padding, corpo e interlinea dà numeri sbagliati di parecchio: la stima a
+ * tavolino diceva righe da 47px e undici visibili, la misura ne ha date 59 e
+ * otto. Il vincolo che le tiene è uno solo, e si verifica contando le righe
+ * nella finestra vera, non rileggendo questo blocco:
+ *
+ *   in proiezione entrano **almeno** tante squadre quante nella schermata
+ *   normale, e il carattere è più grande.
+ *
+ * Non è pignoleria: una proiezione che mostrasse meno squadre di quella normale
+ * direbbe il contrario di quello che dichiara, e lo direbbe alla sola misura che
+ * si prova tutti i giorni. La prima versione di questo blocco falliva
+ * dall'altro lato — righe da 44.5px contro 59, cioè più *fitte* di quelle
+ * normali — e nessuna lettura del codice l'aveva notato.
+ *
+ * Misure a 900×620, con la lista alta 484px:
+ *   normale     riga 59px    →  8 squadre
+ *   gradino 1   riga ~53px   →  9 squadre, corpo 18px invece di 14
+ * A 1040px di altezza il gradino 3 punta a righe da ~78px, cioè dodici squadre:
+ * la lega più grande che questo gruppo abbia mai avuto ci sta tutta. */
+.projection-scale {
+  --proj-team: 1.125rem;
+  --proj-small: 0.8125rem;
+  --proj-dots: 0.875rem;
+  --proj-credits: 1.125rem;
+  --proj-max: 1.75rem; /* la sola squadra di turno */
+  --proj-row-y: 0.4375rem;
+  --proj-bar-h: 2rem;
+  --proj-called: 1.75rem;
+}
+
+@media (min-height: 760px) {
+  .projection-scale {
+    --proj-team: 1.375rem;
+    --proj-small: 0.9375rem;
+    --proj-dots: 1.0625rem;
+    --proj-credits: 1.375rem;
+    --proj-max: 2.25rem;
+    --proj-row-y: 0.5625rem;
+    --proj-bar-h: 2.5rem;
+    --proj-called: 2.5rem;
+  }
+}
+
+@media (min-height: 1000px) {
+  .projection-scale {
+    --proj-team: 1.625rem;
+    --proj-small: 1.0625rem;
+    --proj-dots: 1.25rem;
+    --proj-credits: 1.625rem;
+    --proj-max: 2.75rem;
+    /* 0.625 e non 0.6875: con 11px per lato la riga misura 77.5px e a 1920×1080
+       la lista ne contiene 11,99 — dodici squadre mancate per mezzo pixel. Un
+       pixel per lato in meno non si vede e vale una squadra intera. */
+    --proj-row-y: 0.625rem;
+    --proj-bar-h: 3rem;
+    --proj-called: 3.25rem;
+  }
+}
+
 /* Dove si può cliccare, si vede.
    Regola globale e non per componente: messa addosso a ogni bottone a mano,
    il primo che se ne dimentica produce un elemento che *sembra* inerte, e

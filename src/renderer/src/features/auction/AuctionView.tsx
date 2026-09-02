@@ -2,15 +2,17 @@ import { useCallback, useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { call, IpcError } from '@/lib/ipc'
-import { isMod } from '@/lib/keys'
+import { isMod, isTypingTarget } from '@/lib/keys'
 import { useAuctionStore } from '@/stores/auction'
 import { useLeagueStore } from '@/stores/league'
+import { useProjectionStore } from '@/stores/projection'
 import Toast from '@/components/Toast'
 import { canStartAuction, canTransition } from '@shared/domain'
 import { credits, errorMessages, notices } from '@shared/errors'
 import type { AuctionState } from '@shared/types'
 import { FORMAT_LABELS, MODE_LABELS, STATUS_LABELS } from '@/features/leagues/labels'
 import AssignPanel, { type AssignInput } from './AssignPanel'
+import CalledPlayer from './CalledPlayer'
 import FreeTargets from './FreeTargets'
 import History from './History'
 import RosterGrid from './RosterGrid'
@@ -185,6 +187,33 @@ function Live({ state }: { state: AuctionState }): JSX.Element {
   const [focusToken, setFocusToken] = useState(0)
   const clearRefusal = useCallback(() => setRefusal(null), [])
 
+  const projected = useProjectionStore((s) => s.on)
+  const leaveProjection = useProjectionStore((s) => s.leave)
+  const toggleProjectionState = useProjectionStore((s) => s.toggle)
+
+  /**
+   * Document 2 §4.9, the button and `Ctrl/Cmd+P`.
+   *
+   * Entering closes the history: a 384px panel lying over the very grid §4.9
+   * says to enlarge is the one thing this mode cannot show. It does not come
+   * back on the way out either — a panel that reappears over the board three
+   * minutes later, while a name is being called, is worse than one to reopen
+   * with two keys.
+   */
+  const toggleProjection = useCallback((): void => {
+    setHistoryOpen(false)
+    toggleProjectionState()
+  }, [toggleProjectionState])
+
+  /**
+   * Leaving the auction leaves the mode.
+   *
+   * The store outlives this component on purpose — it is not the draft — so
+   * without this, coming back to the auction an hour later would open on a board
+   * with no search box, on the evening with no time to wonder why.
+   */
+  useEffect(() => leaveProjection, [leaveProjection])
+
   const absorb = useCallback(
     (next: AuctionState): void => {
       queryClient.setQueryData(['auction.state', state.league.id], next)
@@ -261,44 +290,119 @@ function Live({ state }: { state: AuctionState }): JSX.Element {
         setFocusToken((n) => n + 1)
         return
       }
+      /**
+       * `/` and `Ctrl/Cmd+K` are "vai alla ricerca" in §6, and in projection
+       * there is no search box to go to — the panel that owns that listener
+       * (`AssignPanel`) is unmounted, so both keys are simply dead. Here they
+       * mean "get me back to where I can type", which is the same intention one
+       * key earlier. Guarded by `projected` precisely because the panel's own
+       * listener is alive the rest of the time, and two handlers for one key
+       * would fight over the same field.
+       *
+       * The focus needs no help afterwards, and lands in two different places
+       * on purpose. The panel focuses the search box on mount; its later effect
+       * — declared after, so it wins — moves on to the price when a player is
+       * already chosen. So with an empty draft these keys mean what §6 says,
+       * "vai alla ricerca", and with a player called they land on the price,
+       * which is where the flow actually continues: you projected while the
+       * bidding ran, and the bidding is what just ended. Verified in the running
+       * app, not deduced. No `requestAnimationFrame` anywhere near it.
+       */
+      if (projected && e.key === '/' && !isTypingTarget(e.target)) {
+        e.preventDefault()
+        leaveProjection()
+        return
+      }
+
       if (!isMod(e)) return
       const key = e.key.toLowerCase()
+      if (key === 'p') {
+        e.preventDefault()
+        toggleProjection()
+      }
+      if (key === 'k' && projected) {
+        e.preventDefault()
+        leaveProjection()
+      }
       if (key === 'z') {
         e.preventDefault()
         void undo()
       }
       if (key === 'h') {
         e.preventDefault()
+        // The history is for correcting, and correcting needs the panel: from
+        // projection the key carries you where you can act instead of opening a
+        // column of timestamps over the board for the table to read.
+        if (projected) leaveProjection()
         setHistoryOpen((open) => !open)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [undo, historyOpen])
+  }, [undo, historyOpen, projected, leaveProjection, toggleProjection])
 
   return (
     <div className="flex h-screen min-h-0 flex-col">
-      <TopBar state={state} onAbsorb={absorb} onRefusal={setRefusal} onHistory={() => setHistoryOpen((o) => !o)} />
+      <TopBar
+        state={state}
+        projected={projected}
+        onAbsorb={absorb}
+        onRefusal={setRefusal}
+        onHistory={() => setHistoryOpen((o) => !o)}
+        onProjection={toggleProjection}
+      />
+
+      {/*
+        A refusal has exactly one reader — the assignment panel — and projection
+        unmounts it, so without this line `Ctrl/Cmd+Z` stays live, goes on being
+        refusable, and says nothing when it is refused: "Non c'è niente da
+        annullare." would land on a screen with nobody to print it, and a key
+        that answers with silence reads as a key that is broken. §6 scopes the
+        undo to "asta", not to the panel, so the answer had to follow it here
+        rather than the shortcut being switched off.
+
+        It clears itself: `undo()` blanks it before trying again, and leaving the
+        mode remounts the panel, whose mount effect calls `onEdit`.
+      */}
+      {projected && refusal !== null && (
+        <p className="shrink-0 border-b border-line px-3 py-2 text-sm text-taken">{refusal}</p>
+      )}
+
+      {/* Full width and above the row, so the name has the whole screen: it is
+          "in grande" of §4.9, and after it the grid has nothing beside it. */}
+      {projected && <CalledPlayer players={players.data?.players ?? []} />}
 
       <div className="relative flex min-h-0 flex-1">
-        <div className="flex w-80 min-w-0 shrink-0 flex-col border-r border-line bg-pitch-800">
-          <AssignPanel
-            state={state}
-            players={players.data?.players ?? []}
-            playersError={
-              players.isError
-                ? players.error instanceof IpcError
-                  ? players.error.message
-                  : errorMessages.IPC_UNAVAILABLE()
-                : null
-            }
-            refusal={refusal}
-            focusToken={focusToken}
-            onEdit={clearRefusal}
-            onAssign={assign}
-          />
-          <FreeTargets targets={state.targetsFree} />
-        </div>
+        {/*
+          Unmounted, not hidden — an input still in the tree, focused and off
+          screen, would go on swallowing the keys meant for the board. And
+          rendered *in its place* rather than around the grid: written as a
+          wrapper, every `Ctrl+P` would remount `RosterGrid` and empty the set of
+          expanded rosters somebody had just opened to check a price.
+
+          The draft it holds survives regardless, in the store — which is why
+          `stores/auction.ts` keeps it there and says so.
+        */}
+        {!projected && (
+          <div className="flex w-80 min-w-0 shrink-0 flex-col border-r border-line bg-pitch-800">
+            <AssignPanel
+              state={state}
+              players={players.data?.players ?? []}
+              playersError={
+                players.isError
+                  ? players.error instanceof IpcError
+                    ? players.error.message
+                    : errorMessages.IPC_UNAVAILABLE()
+                  : null
+              }
+              refusal={refusal}
+              focusToken={focusToken}
+              onEdit={clearRefusal}
+              onAssign={assign}
+            />
+            <FreeTargets targets={state.targetsFree} />
+          </div>
+        )}
 
         {/*
           The grid is the flex item itself, with no wrapper. A `<div flex-1>`
@@ -311,6 +415,7 @@ function Live({ state }: { state: AuctionState }): JSX.Element {
         <RosterGrid
           state={state}
           flash={last === null ? null : { teamId: last.teamId, token: last.purchaseId }}
+          projected={projected}
         />
 
         {/*
@@ -361,18 +466,33 @@ function Live({ state }: { state: AuctionState }): JSX.Element {
  */
 function TopBar({
   state,
+  projected,
   onAbsorb,
   onRefusal,
   onHistory,
+  onProjection,
 }: {
   state: AuctionState
+  projected: boolean
   onAbsorb: (next: AuctionState) => void
   onRefusal: (message: string | null) => void
   onHistory: () => void
+  onProjection: () => void
 }): JSX.Element {
   const [confirming, setConfirming] = useState(false)
   const turn = state.teams.find((t) => t.id === state.currentTurnTeamId) ?? null
   const incomplete = state.teams.filter((t) => !t.complete).length
+
+  /**
+   * The half-given consent does not wait behind the mode.
+   *
+   * Hiding the row alone would leave `confirming` true underneath, so a click on
+   * "Chiudi l'asta", a glance at the projector and a way back would land on a
+   * live `[Chiudi]` next to a question asked minutes ago and already forgotten.
+   */
+  useEffect(() => {
+    if (projected) setConfirming(false)
+  }, [projected])
 
   async function run(what: () => Promise<AuctionState>): Promise<void> {
     onRefusal(null)
@@ -440,25 +560,56 @@ function TopBar({
           {state.assigned}/{state.slotsTotal}
         </span>
 
+        {/* "Attivabile da un pulsante nella barra superiore o con Ctrl/Cmd+P",
+            §4.9. Both ways in, and the button is also the only way out that
+            needs nothing remembered — so it stays visible in projection, where
+            the two beside it do not. */}
         <button
           className="label shrink-0 rounded-md border border-line px-2 py-1 text-xs text-chalk-dim hover:text-chalk"
-          onClick={onHistory}
-          title="Ctrl/Cmd+H"
+          onClick={onProjection}
+          aria-pressed={projected}
+          title="Ctrl/Cmd+P"
         >
-          Cronologia
+          {projected ? 'Esci dalla proiezione' : 'Proiezione'}
         </button>
 
-        <button
-          className="label shrink-0 rounded-md border border-line px-2 py-1 text-xs text-chalk-dim hover:text-chalk"
-          onClick={() => {
-            // With every roster full there is nothing to warn about, so the
-            // first click closes: §7 attaches the warning to the free slots.
-            if (incomplete === 0) void run(() => call('auction.close', { leagueId: state.league.id }))
-            else setConfirming(true)
-          }}
-        >
-          Chiudi l’asta
-        </button>
+        {/*
+          Both gone in projection, and only the second one is a real decision.
+          The history is a column of timestamps for correcting later: on a
+          television it is noise to the table and useless to you.
+
+          "Chiudi l'asta" is the door that does not open again — `auction` →
+          `review` only goes forward — and two gestures reach it: click, then
+          `Ctrl+P`, and the room is looking at "3 squadre hanno slot liberi.
+          Chiudere lo stesso?" with a live [Chiudi] under the hand hunting for
+          the projection key. §4.9 does not authorise hiding anything but the two
+          zones, so this is a decision beyond the document rather than a reading
+          of it — taken because the alternative is unrecoverable.
+        */}
+        {!projected && (
+          <>
+            <button
+              className="label shrink-0 rounded-md border border-line px-2 py-1 text-xs text-chalk-dim hover:text-chalk"
+              onClick={onHistory}
+              title="Ctrl/Cmd+H"
+            >
+              Cronologia
+            </button>
+
+            <button
+              className="label shrink-0 rounded-md border border-line px-2 py-1 text-xs text-chalk-dim hover:text-chalk"
+              onClick={() => {
+                // With every roster full there is nothing to warn about, so the
+                // first click closes: §7 attaches the warning to the free slots.
+                if (incomplete === 0)
+                  void run(() => call('auction.close', { leagueId: state.league.id }))
+                else setConfirming(true)
+              }}
+            >
+              Chiudi l’asta
+            </button>
+          </>
+        )}
       </header>
 
       {/*
@@ -467,7 +618,10 @@ function TopBar({
         on its own row, because the sentence carries a number and the header has
         no room left to give it.
       */}
-      {confirming && (
+      {/* `!projected` as well as the effect above: an effect runs after the
+          commit, so the gate alone would flash the question onto the projector
+          for one frame on the way in. */}
+      {confirming && !projected && (
         <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-line px-3 py-2 text-xs">
           <span className="text-taken">{notices.CLOSE_WITH_FREE_SLOTS({ n: incomplete })}</span>
           <button

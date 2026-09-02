@@ -22,15 +22,77 @@ import type { AuctionState, AuctionTeam } from '@shared/types'
  * the "due implementazioni di un'invariante" document 6 warns about: they would
  * agree until the evening they did not.
  */
+/**
+ * The two sizes the grid comes in, side by side so `tsc` counts them.
+ *
+ * `normal` is today's classes character for character: the unprojected screen
+ * must not move by a pixel, and a copy sitting next to its variant is the only
+ * form in which that stays checkable. `projected` reads its figures from the
+ * custom properties `base.css` steps by window height — the sizes are declared
+ * there and *named* here, so nothing overrides the component invisibly.
+ *
+ * Class names are written out whole. `text-${n}xl` interpolated is not emitted
+ * by Tailwind at all and disappears in silence.
+ */
+type Band = {
+  team: string
+  /** Labels, and the rows of an expanded roster. */
+  small: string
+  /** Font size and the gap between role groups, which has to grow with it. */
+  dots: string
+  credits: string
+  max: string
+  maxOnTurn: string
+  rowY: string
+  bar: string
+  rosterRole: string
+  rosterPrice: string
+}
+
+const SIZES: Record<'normal' | 'projected', Band> = {
+  normal: {
+    team: 'text-sm',
+    small: 'text-xs',
+    dots: 'text-xs gap-x-3',
+    credits: 'text-sm',
+    max: 'text-sm',
+    maxOnTurn: 'text-2xl',
+    rowY: 'py-1.5',
+    bar: 'h-7',
+    rosterRole: 'w-4',
+    rosterPrice: 'w-8',
+  },
+  projected: {
+    team: 'text-[length:var(--proj-team)] leading-tight',
+    small: 'text-[length:var(--proj-small)]',
+    // `1em` of the dots' own size reproduces today's 12px at 12px and grows with
+    // them, which `gap-x-3` frozen at 12px would not.
+    dots: 'text-[length:var(--proj-dots)] gap-x-[1em]',
+    credits: 'text-[length:var(--proj-credits)] leading-tight',
+    max: 'text-[length:var(--proj-credits)] leading-tight',
+    maxOnTurn: 'text-[length:var(--proj-max)] leading-none',
+    rowY: 'py-[var(--proj-row-y)]',
+    bar: 'h-[var(--proj-bar-h)]',
+    // `ch` and not a fixed width: the columns of an expanded roster have to keep
+    // lining up when the figures in them are three times taller.
+    rosterRole: 'w-[2ch]',
+    rosterPrice: 'w-[4ch]',
+  },
+}
+
 export default function RosterGrid({
   state,
   flash,
+  projected,
 }: {
   state: AuctionState
   /** The team whose row flashes, and a token that changes on every purchase. */
   flash: { teamId: number; token: number } | null
+  /** Document 2 §4.9: "ingrandisce la griglia rose". */
+  projected: boolean
 }): JSX.Element {
   const [open, setOpen] = useState<ReadonlySet<number>>(new Set())
+  const band = SIZES[projected ? 'projected' : 'normal']
 
   function toggle(id: number): void {
     setOpen((was) => {
@@ -41,14 +103,28 @@ export default function RosterGrid({
   }
 
   return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <h2 className="label border-b border-line px-3 py-2 text-xs text-chalk-dim">Rose</h2>
+    <section
+      className={`flex min-h-0 min-w-0 flex-1 flex-col ${projected ? 'projection-scale' : ''}`}
+      /*
+        The title goes in projection, and its 33px are what pays for the banner
+        above: at 900×620 the projected grid shows the same eleven rows as the
+        normal one, which is the whole point of the first step of the scale. A
+        section heading on a screen that has one section is also the first thing
+        to cut for a reader three metres away — but the name still has to reach
+        anybody navigating by landmarks, so it moves onto the section itself.
+      */
+      aria-label={projected ? 'Rose' : undefined}
+    >
+      {!projected && (
+        <h2 className="label border-b border-line px-3 py-2 text-xs text-chalk-dim">Rose</h2>
+      )}
       <ul className="min-h-0 flex-1 overflow-auto">
         {state.teams.map((team) => (
           <Row
             key={team.id}
             team={team}
             slots={state.slots}
+            band={band}
             onTurn={team.id === state.currentTurnTeamId}
             expanded={open.has(team.id)}
             onToggle={() => toggle(team.id)}
@@ -63,6 +139,7 @@ export default function RosterGrid({
 function Row({
   team,
   slots,
+  band,
   onTurn,
   expanded,
   onToggle,
@@ -70,6 +147,7 @@ function Row({
 }: {
   team: AuctionTeam
   slots: AuctionState['slots']
+  band: Band
   onTurn: boolean
   expanded: boolean
   onToggle: () => void
@@ -102,38 +180,40 @@ function Row({
       <button
         type="button"
         aria-expanded={expanded}
-        className={`relative flex w-full items-center gap-2 px-3 py-1.5 text-left ${
+        className={`relative flex w-full items-center gap-2 px-3 ${band.rowY} text-left ${
           onTurn ? 'bg-pitch-700' : ''
         }`}
         onClick={onToggle}
       >
         <span
           aria-hidden="true"
-          className="h-7 w-1 shrink-0 rounded-sm"
+          className={`${band.bar} w-1 shrink-0 rounded-sm`}
           style={{ backgroundColor: team.color ?? 'var(--line)' }}
         />
 
         <span className="min-w-0 flex-1">
-          <span className={`block truncate text-sm ${team.isMine ? 'font-semibold' : ''}`}>
+          <span className={`block truncate ${band.team} ${team.isMine ? 'font-semibold' : ''}`}>
             {team.name}
-            {team.complete && <span className="label ml-2 text-xs text-chalk-dim">rosa completa</span>}
+            {team.complete && (
+              <span className={`label ml-2 ${band.small} text-chalk-dim`}>rosa completa</span>
+            )}
           </span>
-          <Dots slots={slots} filled={team.filled} />
+          <Dots slots={slots} filled={team.filled} band={band} />
         </span>
 
-        <span className="figures shrink-0 text-right text-sm text-credit">
-          {credits} <span className="label text-xs text-chalk-dim">cr</span>
+        <span className={`figures shrink-0 text-right ${band.credits} text-credit`}>
+          {credits} <span className={`label ${band.small} text-chalk-dim`}>cr</span>
         </span>
         <span
-          className={`figures shrink-0 text-right text-credit ${onTurn ? 'text-2xl' : 'text-sm'}`}
+          className={`figures shrink-0 text-right text-credit ${onTurn ? band.maxOnTurn : band.max}`}
           title="puntata massima"
         >
-          <span className="label align-middle text-xs text-chalk-dim">max </span>
+          <span className={`label align-middle ${band.small} text-chalk-dim`}>max </span>
           {max}
         </span>
       </button>
 
-      {expanded && <Roster team={team} />}
+      {expanded && <Roster team={team} band={band} />}
     </li>
   )
 }
@@ -153,12 +233,14 @@ function Row({
 function Dots({
   slots,
   filled,
+  band,
 }: {
   slots: Readonly<Record<ClassicRole, number>>
   filled: Readonly<Record<ClassicRole, number>>
+  band: Band
 }): JSX.Element {
   return (
-    <span className="flex flex-wrap items-center gap-x-3 pt-0.5 text-xs leading-none">
+    <span className={`flex flex-wrap items-center pt-0.5 leading-none ${band.dots}`}>
       {CLASSIC_ROLES.filter((role) => slots[role] > 0 || filled[role] > 0).map((role) => (
         <span key={role} className="flex items-center gap-1">
           <span className="label text-chalk-dim">{role}</span>
@@ -180,9 +262,9 @@ function Dots({
 }
 
 /** "Cliccare una squadra espande la sua rosa completa sotto la riga, con i nomi e i prezzi pagati." */
-function Roster({ team }: { team: AuctionTeam }): JSX.Element {
+function Roster({ team, band }: { team: AuctionTeam; band: Band }): JSX.Element {
   if (team.roster.length === 0) {
-    return <p className="px-3 pb-2 pl-6 text-xs text-chalk-dim">Nessun acquisto.</p>
+    return <p className={`px-3 pb-2 pl-6 ${band.small} text-chalk-dim`}>Nessun acquisto.</p>
   }
 
   return (
@@ -192,8 +274,10 @@ function Roster({ team }: { team: AuctionTeam }): JSX.Element {
         // front", not "in what order did he buy". Sequence is the history's job.
         .sort((a, b) => CLASSIC_ROLES.indexOf(a.slotRole) - CLASSIC_ROLES.indexOf(b.slotRole) || b.price - a.price)
         .map((bought) => (
-          <li key={bought.purchaseId} className="flex items-baseline gap-2 text-xs">
-            <span className="label w-4 shrink-0 text-chalk-dim">{bought.slotRole}</span>
+          <li key={bought.purchaseId} className={`flex items-baseline gap-2 ${band.small}`}>
+            <span className={`label ${band.rosterRole} shrink-0 text-chalk-dim`}>
+              {bought.slotRole}
+            </span>
             <span className="min-w-0 flex-1 truncate">{bought.name}</span>
             {/* "Resta in rosa, marcato", §7. The purchase stands; the listing does not. */}
             {bought.delisted && (
@@ -202,7 +286,9 @@ function Roster({ team }: { team: AuctionTeam }): JSX.Element {
               </span>
             )}
             <span className="label shrink-0 text-chalk-dim">{bought.teamCode}</span>
-            <span className="figures w-8 shrink-0 text-right text-credit">{bought.price}</span>
+            <span className={`figures ${band.rosterPrice} shrink-0 text-right text-credit`}>
+              {bought.price}
+            </span>
           </li>
         ))}
     </ul>
