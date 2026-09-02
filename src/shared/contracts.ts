@@ -768,6 +768,37 @@ export const contracts = {
     output: z.array(logEntry),
   },
 
+  /**
+   * La revisione del documento 2 §4.10: prezzo e squadra modificabili in linea,
+   * il giocatore sostituibile dalla cella.
+   *
+   * I tre campi sono facoltativi perché la tabella cambia una cella alla volta,
+   * e stanno nello stesso canale perché cambiano lo stesso acquisto: separarli
+   * darebbe tre transazioni dove l'invariante 12 ne vuole una — il giocatore
+   * nuovo decide `slot_role`, e per un istante fra due chiamate il ruolo sarebbe
+   * quello di prima.
+   *
+   * `slotRole` non è un ingresso, esattamente come in `auction.assign`: lo
+   * decide il ruolo del giocatore, e un campo in più qui sarebbe un modo di
+   * scriverci sopra.
+   */
+  'purchase.update': {
+    input: z.object({
+      leagueId: z.number().int(),
+      purchaseId: z.number().int(),
+      price: z.number().int().min(0).optional(),
+      fantaTeamId: z.number().int().optional(),
+      playerId: z.number().int().optional(),
+    }),
+    output: auctionState,
+  },
+
+  /** «Ogni riga ha un menu per eliminarla», §4.10. */
+  'purchase.delete': {
+    input: z.object({ leagueId: z.number().int(), purchaseId: z.number().int() }),
+    output: auctionState,
+  },
+
   'player.list': {
     input: z.object({ seasonId: z.string() }),
     output: z.object({

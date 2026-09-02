@@ -137,9 +137,31 @@ export default function AssignPanel({
       ? highlight
       : results.findIndex(selectable)
 
-  /** "Rosa completa → la squadra sparisce dal selettore", document 2 §7. */
-  const teams = useMemo(() => state.teams.filter((t) => !t.complete), [state.teams])
+  /**
+   * «Rosa completa → la squadra sparisce dal selettore», documento 2 §7 — ma in
+   * revisione no.
+   *
+   * L'invariante 11 declassa il tetto per ruolo ad avviso, e §4.10 chiede
+   * l'opposto del selettore d'asta: mentre si sistema un errore capita di
+   * dovere aggiungere una riga proprio alla squadra che ha già tutti gli slot
+   * pieni, ed è il pannello dei controlli a dirlo, non un elenco che la nasconde.
+   */
+  const teams = useMemo(
+    () =>
+      state.league.status === 'review' ? state.teams : state.teams.filter((t) => !t.complete),
+    [state.teams, state.league.status],
+  )
   const turn = teams.find((t) => t.id === state.currentTurnTeamId) ?? null
+
+  /**
+   * Lo stesso pannello, con un altro nome sopra.
+   *
+   * In asta si assegna un giocatore appena chiamato; in revisione si aggiunge
+   * una riga dimenticata, e il §4.10 quel controllo lo chiama «+ Aggiungi un
+   * acquisto». Ricavato dallo stato invece che passato come prop: la vista che
+   * lo rende non deve poter dire una cosa diversa dal database.
+   */
+  const aggiunta = state.league.status === 'review'
 
   const teamMatches = useMemo(() => {
     const needle = normalizeName(teamDraft)
@@ -211,6 +233,22 @@ export default function AssignPanel({
    * rows for a reason `checkPurchase` documents: printed together, the precise
    * one makes an eighty-credit problem look like a thirteen-credit one.
    */
+  /**
+   * La severità viene dallo stato, e in revisione **niente blocca**.
+   *
+   * `checkPurchase` porta la severità come parametro proprio per l'invariante
+   * 11, e in `advisory` nessuna violazione ha `blocking: true`: la `find` qui
+   * sotto torna `null`, la frase rossa non compare e il bottone resta acceso.
+   * Senza questa riga il servizio accettava e l'interfaccia no — il §4.10 chiede
+   * l'opposto: «mentre sposti un giocatore da una squadra all'altra la seconda è
+   * per forza sforata per un istante».
+   *
+   * E in revisione la frase non serve nemmeno come avviso: i crediti di una
+   * squadra sforata sono negativi, e `INSUFFICIENT_CREDITS` direbbe «Real Fanta
+   * ha -4 crediti», che in asta non era raggiungibile. Il pannello controlli lo
+   * dice meglio a due dita di distanza — «sforato di 4 crediti» — e si aggiorna
+   * da sé appena l'acquisto entra.
+   */
   const violation =
     chosen && team && priceValue !== null
       ? checkPurchase(
@@ -218,7 +256,7 @@ export default function AssignPanel({
           chosen.roleClassic as ClassicRole,
           priceValue,
           state.league.minBid,
-          'blocking',
+          state.league.status === 'review' ? 'advisory' : 'blocking',
         ).find((v) => v.blocking) ?? null
       : null
 
@@ -303,8 +341,14 @@ export default function AssignPanel({
      * legal in the call format, where `auction.setTurn` accepts null. Prefilling
      * a completed team would guarantee a refusal on a field the reader was
      * invited to accept with one Enter.
+     *
+     * E in revisione mai. Il turno non viene azzerato dalla chiusura dell'asta —
+     * `closeAuction` tocca solo lo stato — quindi qui dentro sarebbe quello
+     * rimasto dall'ultima chiamata, cioè una squadra scelta da un turno che non
+     * esiste più. Tre Invio e la riga dimenticata finisce a quella squadra. Il
+     * campo vuoto ha già il suo comportamento: `PICK_A_TEAM` chiede di nominarla.
      */
-    pick(player.id, turn?.name ?? '')
+    pick(player.id, state.league.status === 'review' ? '' : (turn?.name ?? ''))
   }
 
   async function submit(): Promise<void> {
@@ -321,7 +365,9 @@ export default function AssignPanel({
 
   return (
     <section className="flex min-h-0 shrink-0 flex-col gap-2 border-b border-line p-3">
-      <h2 className="label text-xs text-chalk-dim">Assegna</h2>
+      <h2 className="label text-xs text-chalk-dim">
+        {aggiunta ? 'Aggiungi un acquisto' : 'Assegna'}
+      </h2>
 
       <input
         ref={searchRef}
@@ -510,7 +556,7 @@ export default function AssignPanel({
         disabled={blocked}
         onClick={() => void submit()}
       >
-        Assegna <span className="text-chalk-dim">⏎</span>
+        {aggiunta ? 'Aggiungi' : 'Assegna'} <span className="text-chalk-dim">⏎</span>
       </button>
 
       {/*

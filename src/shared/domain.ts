@@ -597,6 +597,90 @@ export function checkPurchase(
 }
 
 /**
+ * The anomalies of a roster at rest, which the panel of document 2 §4.10 groups
+ * by team and shows in full.
+ *
+ * A sibling of `checkPurchase` rather than a reuse of it, because the two answer
+ * different questions on the same arithmetic. That one judges a purchase about
+ * to happen; this one judges the state revision *finds* a team in. A purchase
+ * that violates nothing can leave a team one goalkeeper short, and no violation
+ * would ever say so.
+ *
+ * This is the second half of invariant 11: computed and shown, never blocking.
+ * It is what makes the screen usable at all — §4.10, "mentre sposti un giocatore
+ * da una squadra all'altra la seconda è per forza sforata per un istante".
+ *
+ * Discriminated like `Violation`, and for the reason written there: on a
+ * `detail: Record<string, number>` every key reads as a `number` whether it is
+ * there or not, and the panel would say "sforato di undefined crediti" with the
+ * typecheck green.
+ */
+export type RosterAnomaly =
+  | { code: 'OVER_BUDGET'; detail: { n: number } }
+  | { code: 'NOT_COMPLETABLE'; detail: { credits: number; slots: number } }
+  | { code: 'ROLE_OVER'; role: ClassicRole; detail: { have: number; slots: number } }
+  | { code: 'ROLE_MISSING'; role: ClassicRole; detail: { n: number } }
+
+export function rosterAnomalies(r: RosterState, minBid: number): RosterAnomaly[] {
+  const anomalies: RosterAnomaly[] = []
+
+  /**
+   * Invariants 2 and 4, and only one of the two ever speaks — the same
+   * arrangement `checkPurchase` makes for the same overlap. A team past its
+   * budget cannot complete its roster either, and both lines together would put
+   * two sentences about one problem in a panel whose whole claim is that every
+   * line in it is worth reading.
+   */
+  if (r.credits < 0) {
+    anomalies.push({ code: 'OVER_BUDGET', detail: { n: -r.credits } })
+  } else {
+    /**
+     * Nessuna guardia su `free`, e non è una dimenticanza: qui i crediti sono
+     * per forza ≥ 0, quindi con zero slot liberi — o meno di zero, che in
+     * revisione capita a chi ha un ruolo di troppo — il confronto è già falso da
+     * sé. La versione con `free > 0 &&` davanti è passata dal giro delle
+     * mutazioni senza che un solo test se ne accorgesse: era una riga che
+     * nessun dato poteva raggiungere.
+     */
+    const free = freeSlots(r)
+    if (r.credits < free * minBid) {
+      anomalies.push({ code: 'NOT_COMPLETABLE', detail: { credits: r.credits, slots: free } })
+    }
+  }
+
+  /**
+   * Invariant 3 and its mirror, in two passes so that every role over its limit
+   * is listed before every role short of it — the order of the panel drawn in
+   * §4.10, where "9 difensori su 8" sits above "1 portiere mancante".
+   *
+   * A role short of its slots is not an invariant at all: nothing forbids it,
+   * and during the auction it is the normal state of every team. It is an
+   * anomaly *here* because the auction is over and nobody is going to fill it
+   * later, which is exactly the difference revision makes.
+   */
+  for (const role of CLASSIC_ROLES) {
+    if (r.filled[role] > r.slots[role]) {
+      anomalies.push({
+        code: 'ROLE_OVER',
+        role,
+        detail: { have: r.filled[role], slots: r.slots[role] },
+      })
+    }
+  }
+  for (const role of CLASSIC_ROLES) {
+    if (r.filled[role] < r.slots[role]) {
+      anomalies.push({
+        code: 'ROLE_MISSING',
+        role,
+        detail: { n: r.slots[role] - r.filled[role] },
+      })
+    }
+  }
+
+  return anomalies
+}
+
+/**
  * Invariant 8: an auction opens with at least two teams and the slots set.
  *
  * "Gli slot configurati" is read as at least one slot somewhere: a league whose

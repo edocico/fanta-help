@@ -14,7 +14,7 @@ import {
   teamListEditable,
   totalSlots,
 } from '@shared/domain'
-import { errorMessages, warningMessage } from '@shared/errors'
+import { errorMessages, notices, warningMessage } from '@shared/errors'
 import type { Input } from '@shared/contracts'
 import type { LeagueDetail } from '@shared/types'
 import TeamRows, { type TeamFields } from './TeamRows'
@@ -360,7 +360,7 @@ const NEXT_STEP: Record<LeagueDetail['status'], string> = {
   pre_auction: 'Il prossimo passo è l’asta: aprila dalla scheda Asta.',
   auction: 'L’asta è in corso: alla fine si passa alla revisione.',
   review: 'Dalla revisione si cristallizza il resoconto.',
-  closed: 'Il resoconto è cristallizzato. Riaprirlo riporta in revisione.',
+  closed: notices.CRYSTALLISED(),
 }
 
 /**

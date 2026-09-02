@@ -16,6 +16,7 @@ import {
   ROLE_LABELS_ONE,
   type ClassicRole,
   type CoherenceWarning,
+  type RosterAnomaly,
   type Violation,
 } from './domain'
 
@@ -47,6 +48,28 @@ export function credits(n: number): string {
  */
 export function teamsWithFreeSlots(n: number): string {
   return n === 1 ? 'una squadra ha slot liberi' : `${n} squadre hanno slot liberi`
+}
+
+/**
+ * I due conteggi dell'intestazione della revisione, documento 2 §4.10:
+ * «198 acquisti · 4 anomalie».
+ *
+ * Qui accanto a `credits` e non nel componente perché contano, ed è la famiglia
+ * di frasi che il CLAUDE.md dice essere già uscita sbagliata tre volte. Con una
+ * lega di prova a due squadre e un acquisto solo — cioè la sera che si prova
+ * l'app — l'intestazione direbbe «1 acquisti».
+ *
+ * Lo zero c'è in tutte e due. L'intestazione si stampa **prima** del ramo che
+ * decide di mostrare la tabella vuota, e `auction.close` non pretende nessun
+ * acquisto per passare in revisione: una lega chiusa a vuoto leggeva «0
+ * acquisti» accanto a un vicino di riga che lo zero lo sa dire a parole.
+ */
+export function purchases(n: number): string {
+  return n === 0 ? 'nessun acquisto' : n === 1 ? '1 acquisto' : `${n} acquisti`
+}
+
+export function anomalies(n: number): string {
+  return n === 0 ? 'nessuna anomalia' : n === 1 ? '1 anomalia' : `${n} anomalie`
 }
 
 export const errorMessages = {
@@ -141,6 +164,12 @@ export const errorMessages = {
   LEAGUE_SLOTS_EMPTY: () =>
     'La rosa non ha nessuno slot: configurala prima di aprire l’asta.',
   NOTHING_TO_UNDO: () => 'Non c’è niente da annullare.',
+
+  /* la revisione — T16, invarianti 11 e 12 */
+  // Come LEAGUE_MISSING e TEAM_MISSING: una tabella rimasta aperta su una riga
+  // che nel frattempo qualcuno ha eliminato. In revisione capita davvero, perché
+  // la stessa schermata elimina righe.
+  PURCHASE_MISSING: () => 'Questo acquisto non esiste più.',
 
   /* import of a dataset — document 4 §6 */
   DATASET_MANIFEST_UNREADABLE: () =>
@@ -245,6 +274,44 @@ export function violationMessage(v: Violation, team: string, role: ClassicRole):
 }
 
 /**
+ * La frase di una singola anomalia del pannello controlli, documento 2 §4.10.
+ *
+ * Accanto a `violationMessage` e per la stessa ragione, che qui vale doppio: il
+ * pannello raggruppa per squadra e **mostra tutte** le anomalie, quindi in una
+ * revisione vera queste righe sono decine sullo stesso schermo. Una che non sa
+ * contare fino a uno — «1 portieri mancante» — non passa inosservata come
+ * passerebbe in un rifiuto che compare per un secondo.
+ *
+ * Il ruolo viaggia dentro l'anomalia, al contrario che in una violazione: una
+ * violazione riguarda l'acquisto che sta arrivando e il ruolo lo sa chi chiama,
+ * una rosa ne nomina quattro in fila e nessun chiamante saprebbe quale.
+ *
+ * Nessuna di queste frasi comincia per maiuscola: il pannello le scrive sotto il
+ * nome della squadra, che è già il soggetto. «Real Fanta → 9 difensori su 8».
+ */
+export function anomalyMessage(a: RosterAnomaly): string {
+  switch (a.code) {
+    case 'OVER_BUDGET':
+      return `sforato di ${credits(a.detail.n)}`
+    /**
+     * Invariante 4 vista da ferma. Dice i due numeri invece del verdetto perché
+     * il verdetto da solo — «non può completare la rosa» — non fa capire di
+     * quanto, e in revisione la domanda successiva è sempre quella.
+     */
+    case 'NOT_COMPLETABLE':
+      return `${credits(a.detail.credits)} per ${a.detail.slots} slot da riempire`
+    case 'ROLE_OVER':
+      return a.detail.have === 1
+        ? `1 ${ROLE_LABELS_ONE[a.role]} su ${a.detail.slots}`
+        : `${a.detail.have} ${ROLE_LABELS[a.role]} su ${a.detail.slots}`
+    case 'ROLE_MISSING':
+      return a.detail.n === 1
+        ? `1 ${ROLE_LABELS_ONE[a.role]} mancante`
+        : `${a.detail.n} ${ROLE_LABELS[a.role]} mancanti`
+  }
+}
+
+/**
  * Le frasi della tabella del documento 2 §7 che **nessun servizio lancia**.
  *
  * Il CLAUDE.md è netto — «I messaggi d'errore stanno in `src/shared/errors.ts`
@@ -280,6 +347,16 @@ export const notices = {
     `${capitalize(teamsWithFreeSlots(p.n))}. Chiudere lo stesso?`,
   /** Il campo squadra prima che ci sia scritto qualcosa. */
   PICK_A_TEAM: () => 'Scegli la squadra: le prime lettere, o il suo numero.',
+  /**
+   * Lo stato di una lega cristallizzata, *descritto*.
+   *
+   * Non `LEAGUE_FROZEN`, che è il rifiuto di una scrittura tentata e finisce con
+   * «Riaprilo per modificarlo»: un invito giusto in cima a un tentativo, e a
+   * vuoto su una schermata che sta solo dicendo dove sei — il comando di
+   * riapertura vive nel resoconto, che non è ancora costruito. Due lettori, la
+   * scheda della lega e la revisione, e quindi una frase sola.
+   */
+  CRYSTALLISED: () => 'Il resoconto è cristallizzato. Riaprirlo riporta in revisione.',
 } as const
 
 function capitalize(sentence: string): string {

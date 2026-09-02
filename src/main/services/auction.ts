@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, ne, sql } from 'drizzle-orm'
 import type { Input } from '@shared/contracts'
 import {
   canStartAuction,
@@ -67,11 +67,25 @@ function rosterState(
   teamId: number,
   budget: number,
   slots: Record<ClassicRole, number>,
+  /**
+   * L'acquisto che si sta modificando, da non contare.
+   *
+   * Serve alla revisione e a nient'altro: alzare il prezzo di un acquisto da 10
+   * a 12 con la riga vecchia ancora nel conto misurerebbe la squadra come se
+   * pagasse ventidue, e la fascia alta di una rosa quasi piena verrebbe rifiutata
+   * — o segnalata — per crediti che nessuno ha speso. Il caso non esiste in
+   * asta, dove ogni acquisto è nuovo, e per questo il parametro non c'era.
+   */
+  except?: number,
 ): RosterState {
   const bought = on
     .select({ slotRole: purchase.slotRole, price: purchase.price })
     .from(purchase)
-    .where(eq(purchase.fantaTeamId, teamId))
+    .where(
+      except === undefined
+        ? eq(purchase.fantaTeamId, teamId)
+        : and(eq(purchase.fantaTeamId, teamId), ne(purchase.id, except)),
+    )
     .all()
 
   const filled: Record<ClassicRole, number> = { P: 0, D: 0, C: 0, A: 0 }
@@ -276,10 +290,30 @@ function requireLeague(on: Reader, id: number): LeagueRow {
   return row
 }
 
-/** An open auction is what assigning, undoing and passing the turn presume. */
+/** An open auction is what undoing and passing the turn presume. */
 function requireOpenAuction(row: LeagueRow): void {
   if (frozen(row.status)) raise('LEAGUE_FROZEN')
   if (row.status !== 'auction') raise('AUCTION_NOT_OPEN')
+}
+
+/**
+ * The two states in which purchases can be written, and which one is writing.
+ *
+ * Invariant 11 lives on the answer: during the auction the rules of merit
+ * refuse, in revision they are computed and shown. Both callers need to know
+ * *which* phase they are in anyway — the log column of document 1 §4 records it
+ * — so the phase is the return value and the severity is derived from it. Two
+ * separate answers to the same question is how a purchase would end up refused
+ * by an auction and written into the register as revision.
+ */
+function editablePhase(row: LeagueRow): 'auction' | 'review' {
+  if (frozen(row.status)) raise('LEAGUE_FROZEN')
+  if (row.status === 'auction' || row.status === 'review') return row.status
+  raise('AUCTION_NOT_OPEN')
+}
+
+function severityOf(phase: 'auction' | 'review'): 'blocking' | 'advisory' {
+  return phase === 'auction' ? 'blocking' : 'advisory'
 }
 
 function teamOf(on: Reader, leagueId: number, teamId: number): { id: number; name: string } {
@@ -315,6 +349,13 @@ function refuse(violation: Violation, team: string, role: ClassicRole): never {
 function log(
   on: Writer,
   leagueId: number,
+  /**
+   * `auction_log.phase`, che fino a T16 era la costante `'auction'` perché non
+   * esisteva nessuna scrittura fuori dall'asta. Ora esiste, e la cronologia di
+   * una lega finita deve poter distinguere l'acquisto gridato al tavolo dalla
+   * correzione fatta dopo con calma.
+   */
+  phase: 'auction' | 'review',
   action: string,
   payload: unknown,
   actorUuid: string,
@@ -322,7 +363,7 @@ function log(
   on.insert(auctionLog)
     .values({
       leagueId,
-      phase: 'auction',
+      phase,
       action,
       payload: JSON.stringify(payload),
       actorUuid,
@@ -370,7 +411,7 @@ export function startAuction(
       .where(eq(league.id, input.leagueId))
       .run()
 
-    log(tx, input.leagueId, 'auction.start', { teams: teams.length }, actorUuid)
+    log(tx, input.leagueId, 'auction', 'auction.start', { teams: teams.length }, actorUuid)
     return auctionState(tx, input.leagueId) as AuctionState
   })
 }
@@ -388,7 +429,14 @@ export function startAuction(
 export function assign(input: Input<'auction.assign'>, db: Db, actorUuid: string): AuctionState {
   return db.transaction((tx) => {
     const row = requireLeague(tx, input.leagueId)
-    requireOpenAuction(row)
+    /**
+     * Anche in revisione, ed è il «+ Aggiungi un acquisto» del documento 2
+     * §4.10: «stesso flusso di inserimento della schermata d'asta, senza
+     * fretta». Un secondo canale che inserisce un acquisto avrebbe due copie
+     * delle invarianti 1, 6 e 7 — e quella usata una sera l'anno sarebbe la
+     * copia sbagliata.
+     */
+    const phase = editablePhase(row)
 
     const team = teamOf(tx, input.leagueId, input.fantaTeamId)
 
@@ -420,7 +468,7 @@ export function assign(input: Input<'auction.assign'>, db: Db, actorUuid: string
     const slots = slotsOf(tx, input.leagueId)
     const state = rosterState(tx, team.id, row.budget, slots)
 
-    const violations = checkPurchase(state, role, input.price, row.minBid, 'blocking')
+    const violations = checkPurchase(state, role, input.price, row.minBid, severityOf(phase))
     const blocking = violations.find((v) => v.blocking)
     if (blocking) refuse(blocking, team.name, role)
 
@@ -449,6 +497,7 @@ export function assign(input: Input<'auction.assign'>, db: Db, actorUuid: string
     log(
       tx,
       input.leagueId,
+      phase,
       'purchase.create',
       { player: chosen.name, team: team.name, price: input.price, sequence: next },
       actorUuid,
@@ -456,7 +505,12 @@ export function assign(input: Input<'auction.assign'>, db: Db, actorUuid: string
 
     // "Nel draft a turni avanza automaticamente dopo ogni assegnazione",
     // document 2 §9. Not in the call format: there is an arrow, `auction.setTurn`.
-    if (row.auctionFormat === 'draft') stepTurn(tx, input.leagueId, row.currentTurnTeamId, 1)
+    //
+    // E non in revisione, dove il turno non esiste più: l'asta è finita, e una
+    // riga dimenticata che si aggiunge dopo non è il turno di nessuno.
+    if (phase === 'auction' && row.auctionFormat === 'draft') {
+      stepTurn(tx, input.leagueId, row.currentTurnTeamId, 1)
+    }
 
     tx.update(league).set({ updatedAt: now }).where(eq(league.id, input.leagueId)).run()
     return auctionState(tx, input.leagueId) as AuctionState
@@ -535,6 +589,7 @@ export function undo(input: Input<'auction.undo'>, db: Db, actorUuid: string): A
     log(
       tx,
       input.leagueId,
+      'auction',
       'purchase.undo',
       { player: name, team, price: last.price, sequence: last.sequence },
       actorUuid,
@@ -561,7 +616,177 @@ export function setTurn(input: Input<'auction.setTurn'>, db: Db, actorUuid: stri
       .where(eq(league.id, input.leagueId))
       .run()
 
-    log(tx, input.leagueId, 'turn.set', { fantaTeamId: input.fantaTeamId }, actorUuid)
+    log(tx, input.leagueId, 'auction', 'turn.set', { fantaTeamId: input.fantaTeamId }, actorUuid)
+    return auctionState(tx, input.leagueId) as AuctionState
+  })
+}
+
+/* ------------------------------------------------------------- revisione */
+
+/**
+ * The purchase being edited, or a refusal that says so.
+ *
+ * Scoped by league and not only by id: a route left open on another league would
+ * otherwise let its table write into this one, and the unique index that catches
+ * a duplicated player would not catch that.
+ */
+function purchaseOf(
+  on: Reader,
+  leagueId: number,
+  purchaseId: number,
+): { id: number; playerId: number; fantaTeamId: number; price: number } {
+  const row = on
+    .select({
+      id: purchase.id,
+      playerId: purchase.playerId,
+      fantaTeamId: purchase.fantaTeamId,
+      price: purchase.price,
+    })
+    .from(purchase)
+    .where(and(eq(purchase.id, purchaseId), eq(purchase.leagueId, leagueId)))
+    .get()
+  if (!row) raise('PURCHASE_MISSING')
+  return row
+}
+
+/**
+ * Price, team and player of a purchase already made — document 2 §4.10.
+ *
+ * The three arrive together and are applied together, which is invariant 12:
+ * "cambiare il giocatore di un acquisto in revisione ricalcola `slot_role` dal
+ * nuovo `role_classic`, nella stessa transazione. Non è compito
+ * dell'interfaccia." Here `slotRole` is not so much recalculated as rewritten
+ * from the player on every update, including the ones that only touch the price:
+ * the same line then repairs a row whose role disagrees with its player, and
+ * there is no path left on which the two can drift.
+ *
+ * What stays blocking in revision is invariants 1, 6 and 7 — the same player
+ * twice, the role that must match, the player from another season. Document 1 §5
+ * calls them structural, and the difference is visible in what they would do:
+ * a team over budget is a sentence in the right-hand panel, a player owned by
+ * two teams is a database that no longer describes any auction.
+ */
+export function updatePurchase(
+  input: Input<'purchase.update'>,
+  db: Db,
+  actorUuid: string,
+): AuctionState {
+  return db.transaction((tx) => {
+    const row = requireLeague(tx, input.leagueId)
+    const phase = editablePhase(row)
+    const current = purchaseOf(tx, input.leagueId, input.purchaseId)
+
+    const playerId = input.playerId ?? current.playerId
+    const fantaTeamId = input.fantaTeamId ?? current.fantaTeamId
+    const price = input.price ?? current.price
+
+    const team = teamOf(tx, input.leagueId, fantaTeamId)
+
+    // Invariant 7, as in `assign`: the player belongs to this league's listone.
+    const chosen = tx
+      .select({ id: player.id, name: player.name, roleClassic: player.roleClassic })
+      .from(player)
+      .where(and(eq(player.id, playerId), eq(player.seasonId, row.seasonId)))
+      .get()
+    if (!chosen) raise('PLAYER_WRONG_SEASON', { season: row.seasonId })
+
+    /**
+     * Invariant 1, with the row being edited left out of the question.
+     *
+     * Without `ne`, re-saving a purchase with its own player would find itself
+     * and refuse with "Già a Real Fanta per 47" — naming the team that is
+     * making the correction, about the purchase it is correcting.
+     */
+    const owned = tx
+      .select({ price: purchase.price, team: fantaTeam.name })
+      .from(purchase)
+      .innerJoin(fantaTeam, eq(purchase.fantaTeamId, fantaTeam.id))
+      .where(
+        and(
+          eq(purchase.leagueId, input.leagueId),
+          eq(purchase.playerId, playerId),
+          ne(purchase.id, current.id),
+        ),
+      )
+      .get()
+    if (owned) raise('PLAYER_ALREADY_OWNED', { team: owned.team, price: owned.price })
+
+    // Invariant 12: the new player's role, never the old `slot_role`.
+    const role = chosen.roleClassic as ClassicRole
+    const slots = slotsOf(tx, input.leagueId)
+    const state = rosterState(tx, team.id, row.budget, slots, current.id)
+
+    const violations = checkPurchase(state, role, price, row.minBid, severityOf(phase))
+    const blocking = violations.find((v) => v.blocking)
+    if (blocking) refuse(blocking, team.name, role)
+
+    tx.update(purchase)
+      .set({ playerId, fantaTeamId: team.id, price, slotRole: role, updatedAt: Date.now() })
+      .where(eq(purchase.id, current.id))
+      .run()
+
+    log(
+      tx,
+      input.leagueId,
+      phase,
+      'purchase.update',
+      {
+        player: chosen.name,
+        team: team.name,
+        price,
+        was: { playerId: current.playerId, fantaTeamId: current.fantaTeamId, price: current.price },
+      },
+      actorUuid,
+    )
+
+    tx.update(league).set({ updatedAt: Date.now() }).where(eq(league.id, input.leagueId)).run()
+    return auctionState(tx, input.leagueId) as AuctionState
+  })
+}
+
+/**
+ * One purchase removed — "ogni riga ha un menu per eliminarla", §4.10.
+ *
+ * Deleted for real, like the undo: a soft delete would keep the row under the
+ * unique index of document 1 §4 and the player could never be bought again,
+ * which in revision is precisely what somebody is trying to do when they delete
+ * the row — put him on the right team.
+ *
+ * The turn is not touched, and that is the difference from `undo`. Undo is the
+ * inverse of the last assignment and puts the arrow back; a row deleted in
+ * revision is not the last of anything, and in review the arrow means nothing at
+ * all.
+ */
+export function deletePurchase(
+  input: Input<'purchase.delete'>,
+  db: Db,
+  actorUuid: string,
+): AuctionState {
+  return db.transaction((tx) => {
+    const row = requireLeague(tx, input.leagueId)
+    const phase = editablePhase(row)
+    const current = purchaseOf(tx, input.leagueId, input.purchaseId)
+
+    const named = tx
+      .select({ player: player.name, team: fantaTeam.name })
+      .from(purchase)
+      .innerJoin(player, eq(purchase.playerId, player.id))
+      .innerJoin(fantaTeam, eq(purchase.fantaTeamId, fantaTeam.id))
+      .where(eq(purchase.id, current.id))
+      .get()
+
+    tx.delete(purchase).where(eq(purchase.id, current.id)).run()
+
+    log(
+      tx,
+      input.leagueId,
+      phase,
+      'purchase.delete',
+      { player: named?.player, team: named?.team, price: current.price },
+      actorUuid,
+    )
+
+    tx.update(league).set({ updatedAt: Date.now() }).where(eq(league.id, input.leagueId)).run()
     return auctionState(tx, input.leagueId) as AuctionState
   })
 }
@@ -599,7 +824,7 @@ export function closeAuction(
       .where(eq(league.id, input.leagueId))
       .run()
 
-    log(tx, input.leagueId, 'auction.close', { incomplete }, actorUuid)
+    log(tx, input.leagueId, 'auction', 'auction.close', { incomplete }, actorUuid)
     return auctionState(tx, input.leagueId) as AuctionState
   })
 }

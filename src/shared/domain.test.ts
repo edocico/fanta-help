@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { anomalyMessage } from './errors'
 import {
   backupsToPrune,
   bonusIndex,
@@ -30,11 +31,13 @@ import {
   minutesPerMatch,
   normalizeName,
   reliability,
+  rosterAnomalies,
   startShare,
   TEAM_COLORS,
   teamListEditable,
   totalSlots,
   type ClassicRole,
+  type RosterAnomaly,
   type RosterState,
   type Violation,
 } from './domain'
@@ -839,6 +842,115 @@ describe('il controllo di un acquisto, documento 6 §4', () => {
     expect(codes(checkPurchase(roster(500, { A: 6 }), 'A', 0, 1, 'blocking')).sort()).toEqual(
       ['BELOW_MIN_BID', 'ROLE_SLOTS_FULL'].sort(),
     )
+  })
+})
+
+describe('le anomalie di una rosa in revisione, documento 2 §4.10', () => {
+  const roster = (credits: number, filled: Partial<Record<ClassicRole, number>>): RosterState => ({
+    credits,
+    slots: DEFAULT_SLOTS,
+    filled: { P: 0, D: 0, C: 0, A: 0, ...filled },
+  })
+  const codes = (a: RosterAnomaly[]): string[] => a.map((x) => x.code)
+
+  it('una rosa completa e in pari non ha niente da segnalare', () => {
+    expect(rosterAnomalies(roster(0, DEFAULT_SLOTS), 1)).toEqual([])
+  })
+
+  it('dice di quanto una squadra ha sforato', () => {
+    const [anomaly] = rosterAnomalies(roster(-4, DEFAULT_SLOTS), 1)
+    expect(anomaly).toEqual({ code: 'OVER_BUDGET', detail: { n: 4 } })
+    expect(anomalyMessage(anomaly)).toBe('sforato di 4 crediti')
+  })
+
+  /**
+   * La stessa sovrapposizione che `checkPurchase` risolve fra la 2 e la 4: chi
+   * ha sforato non può nemmeno completare, e le due righe insieme farebbero
+   * sembrare due problemi quello che è uno.
+   */
+  it('chi ha sforato non si sente dire anche che non può completare', () => {
+    // Cinque slot liberi e crediti sotto zero: senza l'esclusione parlerebbero
+    // entrambe, perché a −4 crediti la rosa è incompletabile per definizione.
+    const r = roster(-4, { P: 3, D: 8, C: 8, A: 1 })
+    expect(freeSlots(r)).toBe(5)
+    expect(codes(rosterAnomalies(r, 1))).toEqual(['OVER_BUDGET', 'ROLE_MISSING'])
+  })
+
+  it('segnala la rosa che non si riempie più alla puntata minima', () => {
+    const r = roster(3, { P: 3, D: 8, C: 8, A: 1 })
+    expect(freeSlots(r)).toBe(5)
+    // Due righe e non una: i cinque slot liberi sono cinque attaccanti che
+    // mancano, e §4.10 le vuole entrambe — «tutte vengono mostrate».
+    expect(rosterAnomalies(r, 1)).toEqual([
+      { code: 'NOT_COMPLETABLE', detail: { credits: 3, slots: 5 } },
+      { code: 'ROLE_MISSING', role: 'A', detail: { n: 5 } },
+    ])
+  })
+
+  it('e non la segnala a chi ha esattamente i crediti che servono', () => {
+    // 5 crediti per 5 slot alla puntata minima di 1: sul filo, e il filo passa.
+    expect(codes(rosterAnomalies(roster(5, { P: 3, D: 8, C: 8, A: 1 }), 1))).toEqual([
+      'ROLE_MISSING',
+    ])
+    expect(codes(rosterAnomalies(roster(4, { P: 3, D: 8, C: 8, A: 1 }), 1))).toEqual([
+      'NOT_COMPLETABLE',
+      'ROLE_MISSING',
+    ])
+  })
+
+  /**
+   * Il pannello disegnato nel §4.10, parola per parola: «9 difensori su 8» e
+   * sotto «1 portiere mancante». Il fissato è costruito per dare esattamente
+   * quelle due righe in quell'ordine, che è il motivo per cui le due passate
+   * sono due e non una.
+   *
+   * Zero slot liberi in totale — il difensore di troppo pareggia il portiere che
+   * manca — quindi la completabilità tace, e resta un caso in cui l'unica cosa
+   * che parla è il conteggio per ruolo.
+   */
+  it('con le parole del pannello disegnato nel documento', () => {
+    const r = roster(0, { P: 2, D: 9, C: 8, A: 6 })
+    expect(freeSlots(r)).toBe(0)
+    expect(codes(rosterAnomalies(r, 1))).toEqual(['ROLE_OVER', 'ROLE_MISSING'])
+    expect(rosterAnomalies(r, 1).map(anomalyMessage)).toEqual([
+      '9 difensori su 8',
+      '1 portiere mancante',
+    ])
+  })
+
+  /**
+   * Il CLAUDE.md: «Un messaggio che conta sa contare fino a uno e a zero.»
+   * Quattro codici, quattro rami singolari, tutti su una schermata che ne mostra
+   * decine insieme.
+   */
+  it('sa contare fino a uno', () => {
+    expect(anomalyMessage({ code: 'OVER_BUDGET', detail: { n: 1 } })).toBe('sforato di 1 credito')
+    expect(anomalyMessage({ code: 'ROLE_MISSING', role: 'P', detail: { n: 1 } })).toBe(
+      '1 portiere mancante',
+    )
+    expect(anomalyMessage({ code: 'ROLE_MISSING', role: 'P', detail: { n: 2 } })).toBe(
+      '2 portieri mancanti',
+    )
+    expect(anomalyMessage({ code: 'ROLE_OVER', role: 'D', detail: { have: 1, slots: 0 } })).toBe(
+      '1 difensore su 0',
+    )
+    expect(anomalyMessage({ code: 'NOT_COMPLETABLE', detail: { credits: 1, slots: 2 } })).toBe(
+      '1 credito per 2 slot da riempire',
+    )
+  })
+
+  /** «Tutte vengono mostrate»: nessuna soglia, nessun troncamento. */
+  it('elenca insieme tutti i ruoli che non tornano', () => {
+    // 7 slot liberi in totale e 7 crediti: la completabilità tace e restano
+    // soltanto i quattro conteggi per ruolo.
+    const r = roster(7, { P: 0, D: 9, C: 9, A: 0 })
+    expect(freeSlots(r)).toBe(7)
+    expect(codes(rosterAnomalies(r, 1))).toEqual([
+      'ROLE_OVER',
+      'ROLE_OVER',
+      'ROLE_MISSING',
+      'ROLE_MISSING',
+    ])
   })
 })
 

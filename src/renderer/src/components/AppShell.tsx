@@ -36,7 +36,7 @@ const SECTIONS: Section[] = [
   { path: 'obiettivi', label: 'Obiettivi', ready: true },
   { path: 'piani', label: 'Piani', ready: true },
   { path: 'asta', label: 'Asta', ready: true },
-  { path: 'revisione', label: 'Revisione', ready: false },
+  { path: 'revisione', label: 'Revisione', ready: true },
   { path: 'resoconto', label: 'Resoconto', ready: false },
 ]
 
