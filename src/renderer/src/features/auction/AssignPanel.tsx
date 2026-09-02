@@ -519,12 +519,6 @@ export default function AssignPanel({
         same attempt; printed together they would disagree the moment the board
         moved between them, and §1 leaves no room for a paragraph.
       */}
-      {/*
-        One sentence at a time, and the live one first. A violation computed here
-        and a refusal that came back from the service are two accounts of the
-        same attempt; printed together they would disagree the moment the board
-        moved between them, and §1 leaves no room for a paragraph.
-      */}
       {violation !== null && chosen !== null && team !== null ? (
         <p className="text-xs text-taken">
           {violationMessage(violation, team.name, chosen.roleClassic as ClassicRole)}
