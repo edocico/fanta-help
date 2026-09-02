@@ -150,7 +150,11 @@ Un task per sessione. Alla fine di ogni fase, **produci un pacchetto installabil
 
 Per leggere cosa mostra davvero l'app: **`/prova-pacchetto`** (`dev` o `pack`) costruisce, lancia e stampa il DOM via DevTools. Le trappole d'avvio sono già dentro lo script: non riscoprirle.
 
-**Strumenti del progetto:** `/apri-task <n>` apre un task leggendo solo i documenti che indica · `/muta` rompe le guardie e verifica che i test se ne accorgano · `/prova-servizio` esegue un servizio contro un database vero sotto l'ABI di Electron · agenti `revisore-fase` e `deriva-documenti` · in `.claude/hooks/`, `boundaries` e `typecheck` **bloccano**, `palette` **avvisa e basta** — l'ambra sul denaro è corretta e frequente, e una guardia che la rifiutasse verrebbe aggirata dentro un task.
+**Strumenti del progetto.** Skill: `/apri-task <n>` apre un task leggendo solo i documenti che indica · `/chiudi-fase` è il rituale opposto, revisione e pacchetto e commit separati · `/muta` rompe le guardie e verifica che i test se ne accorgano · `/prova-servizio` esegue un servizio contro un database vero sotto l'ABI di Electron · `/misura-layout` misura le taglie vere nell'app in esecuzione, invece di calcolarle.
+
+Agenti: `revisore-fase`, `deriva-documenti`, e `revisore-copy` che guarda i soli testi italiani — la categoria che è sfuggita a tre task di fila.
+
+In `.claude/hooks/`, `boundaries` e `typecheck` **bloccano**; `palette`, `copy` e `untracked-guard` **avvisano e basta**. Non è pigrizia: l'ambra sul denaro è corretta e frequente, un titolo minuscolo può essere voluto, e un file non tracciato può essere una nota locale. Una guardia che rifiutasse un caso legittimo verrebbe aggirata dentro un task, ed è il modo in cui una guardia smette di esistere.
 
 **Mentre `revisore-fase` gira, non toccare i file.** Rivede un albero che si muove e deve riverificare da capo ogni citazione: è successo in T11 e in T12, e in entrambi i casi l'ha segnalato lui.
 
