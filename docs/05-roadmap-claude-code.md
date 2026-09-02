@@ -86,7 +86,7 @@ Stadio FBref da CSV: minuti, titolarità, presenze, clean sheet, date di nascita
 
 **Fatto quando:** il dataset esce con `hasFbref` e `hasExternalIds` corretti, e le corrispondenze mancanti finiscono nel rapporto senza bloccare.
 
-**Nota, emersa in T14.** FBref porta anche il **nome per esteso**, che il listone non ha. È una delle strade di T14b: chi esegue questo stadio guardi lì prima di decidere cosa portare nel dataset.
+**Nota, emersa in T14 e decisa dopo.** FBref porta anche il **nome per esteso**, che il listone non ha. Era una delle tre strade di T14b, ed è quella scelta: **questo task e T14b sono lo stesso lavoro** e si aprono insieme. Lo stadio resta «facoltativo» nel senso che non può far fallire lo stadio 1, ma non è più rimandabile — il nome per esteso non esiste da nessun'altra parte offline.
 
 ### T7 · Import nell'app
 **Documenti:** 4 (§6), 1 (§4, invariante 10)
@@ -208,9 +208,13 @@ Pannello di assegnazione col flusso a tre `Invio`, griglia rose, obiettivi liber
 2. **Sinonimi scritti a mano in `overrides.json`.** Poche voci, costruite offline come gli alias di identità. Poco codice, ma una lista che va tenuta viva ogni stagione e che si scopre vecchia solo fallendo in asta.
 3. **Niente.** Il cognome funziona, si impara la prima sera, e 89 nomi su 524 hanno comunque bisogno del cognome per essere distinti.
 
-**Da decidere:** quale delle tre, e se prima dell'asta di quest'anno o dopo. Se si sceglie la prima, T6 e questo task sono lo stesso lavoro e vanno fatti insieme.
+**Deciso: la prima.** Lo stadio FBref, che il §2 del documento 4 chiamava facoltativo e che qui smette di esserlo. Le altre due sono state scartate per quello che sono: la seconda è una lista che invecchia in silenzio e si scopre vecchia solo fallendo in asta, cioè nel momento che il §1 dice essere l'unico senza tempo; la terza è vera ma risolve il problema dichiarandolo non un problema.
 
-**Fatto quando:** digitare il nome con cui il giocatore viene chiamato al tavolo lo trova — oppure è scritto qui perché si è deciso che non serve.
+Ne seguono due cose. **T6 e T14b sono un lavoro solo** e vanno aperti insieme. E T6 cambia natura: non è più uno stadio che «non può far fallire lo stadio 1» e basta, è la sola fonte offline del nome per esteso. I CSV di FBref si scaricano a mano, come tutte le fonti: il `CLAUDE.md` non ammette scraper.
+
+Le colonne `tit.`, `min` e `CS` si accendono con lo stesso lavoro: oggi la vista Giocatori le nasconde applicando la propria regola sulle colonne che sarebbero vuote.
+
+**Fatto quando:** digitare il nome con cui il giocatore viene chiamato al tavolo lo trova. Il fissato si prende dal dataset costruito e non a memoria — `lauta` deve trovare `Martinez L.`, che è esattamente il caso da cui questo task è nato.
 
 ### T15 · Modo proiezione
 **Documenti:** 2 (§4.9)
