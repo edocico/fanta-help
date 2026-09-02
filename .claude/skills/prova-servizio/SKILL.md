@@ -51,6 +51,13 @@ servizi che aprono un dialogo o toccano il filesystem sono `async`: avvolgi le
 prove in `void (async () => { … })()` e fai che `prova()` aspetti quello che
 riceve. Gli `import` restano al primo livello, li issa esbuild.
 
+**Due macchine in un harness solo.** Un giro fra due installazioni — export di
+qua, import di là — si prova costruendo un secondo `new Database(':memory:')`
+nello stesso file, con le stesse migrazioni e gli stessi `identity_key` ma **id
+diversi**: è quella differenza a fare la prova, e con id uguali non prova niente.
+Così T18 ha verificato che ricristallizzando sull'altra macchina esce l'impronta
+di partenza.
+
 ## Cosa provare, che i test non provano
 
 Non ripetere qui l'aritmetica: quella sta nelle funzioni pure e ha già i suoi
