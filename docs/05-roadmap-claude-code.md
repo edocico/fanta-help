@@ -86,6 +86,8 @@ Stadio FBref da CSV: minuti, titolarità, presenze, clean sheet, date di nascita
 
 **Fatto quando:** il dataset esce con `hasFbref` e `hasExternalIds` corretti, e le corrispondenze mancanti finiscono nel rapporto senza bloccare.
 
+**Nota, emersa in T14.** FBref porta anche il **nome per esteso**, che il listone non ha. È una delle strade di T14b: chi esegue questo stadio guardi lì prima di decidere cosa portare nel dataset.
+
 ### T7 · Import nell'app
 **Documenti:** 4 (§6), 1 (§4, invariante 10)
 
@@ -190,6 +192,25 @@ Tutte le invarianti, in transazione, con la severità come parametro per la revi
 Pannello di assegnazione col flusso a tre `Invio`, griglia rose, obiettivi liberi, scorciatoie, toast con annulla, cronologia, avviso infortunio non bloccante.
 
 **Fatto quando:** un acquisto si registra senza toccare il mouse, e il fuoco torna alla ricerca vuota subito dopo.
+
+### T14b · Il nome che si grida non è il nome del listone — *emerso in T14*
+**Documenti:** 4 (§3, §4, §5), 2 (§4.8, §7)
+
+**Il fatto.** Il listone nomina **per cognome**, e aggiunge l'iniziale solo quando il cognome è ambiguo: nel 2026-27 succede a **89 nomi su 524**, perché ci sono due Martinez, due Thuram, due Pellegrini, due Stankovic. Lautaro Martinez è `Martinez L.`. Chi digita «lauta» in asta non trova niente e riceve «Nessun giocatore. Prova con meno lettere.», che è la riga giusta del §7 detta al momento sbagliato: il problema non è che ha scritto troppo, è che ha scritto un nome che il listone non usa.
+
+**Perché conta.** Il §1 mette l'asta al centro — «hai pochi secondi per registrare un acquisto mentre gli altri già chiamano il giocatore dopo» — e questo è l'unico punto in cui la ricerca sbaglia proprio nel momento in cui non c'è tempo. Chi bandisce grida il nome con cui il giocatore è conosciuto, non quello con cui Fantacalcio.it lo elenca.
+
+**Perché non è stato risolto in T14.** Il nome per esteso **non esiste da nessuna parte offline**: `has_fbref` è `0` perché lo stadio facoltativo di T6 non è mai stato eseguito, e `player_external_id` ha una sola riga. Risolverlo dentro il renderer vorrebbe dire indovinare a runtime, che è il divieto del `CLAUDE.md` letto nel suo spirito: l'identità dei nomi si risolve offline e viaggia nel dataset.
+
+**Le tre strade, per non riderivarle.**
+
+1. **Stadio FBref (T6).** Porta il nome per esteso. Il campo va aggiunto in modo **additivo** e il lettore lo tratta come opzionale, quindi `formatVersion` non si alza — §4 del documento 4. La ricerca guarderebbe entrambi i nomi. Risolve anche il caso simmetrico di chi conosce solo il nome di battesimo, e accende le colonne `tit.`, `min` e `CS`.
+2. **Sinonimi scritti a mano in `overrides.json`.** Poche voci, costruite offline come gli alias di identità. Poco codice, ma una lista che va tenuta viva ogni stagione e che si scopre vecchia solo fallendo in asta.
+3. **Niente.** Il cognome funziona, si impara la prima sera, e 89 nomi su 524 hanno comunque bisogno del cognome per essere distinti.
+
+**Da decidere:** quale delle tre, e se prima dell'asta di quest'anno o dopo. Se si sceglie la prima, T6 e questo task sono lo stesso lavoro e vanno fatti insieme.
+
+**Fatto quando:** digitare il nome con cui il giocatore viene chiamato al tavolo lo trova — oppure è scritto qui perché si è deciso che non serve.
 
 ### T15 · Modo proiezione
 **Documenti:** 2 (§4.9)
