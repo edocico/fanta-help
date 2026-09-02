@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { call, IpcError } from '@/lib/ipc'
-import { errorMessages } from '@shared/errors'
+import { errorMessages, teams } from '@shared/errors'
 import type { LeagueSummary } from '@shared/types'
 import { FORMAT_LABELS, MODE_LABELS, STATUS_LABELS } from './labels'
+import { useImportSession } from './ImportSession'
 
 /**
  * The home of document 2 §4.2: "elenco delle leghe come righe, non card".
@@ -17,18 +18,27 @@ import { FORMAT_LABELS, MODE_LABELS, STATUS_LABELS } from './labels'
 
 export default function Home(): JSX.Element {
   const leagues = useQuery({ queryKey: ['league.list'], queryFn: () => call('league.list') })
+  const importer = useImportSession()
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
-      <header className="flex items-baseline justify-between">
+      <header className="flex flex-wrap items-baseline justify-between gap-3">
         <h1 className="text-lg font-medium">Leghe</h1>
-        <Link
-          to="/lega/nuova"
-          className="rounded-md bg-pitch-700 px-3 py-1.5 text-sm text-chalk hover:bg-line"
-        >
-          Nuova lega
-        </Link>
+        <div className="flex items-center gap-3">
+          {/* L'import sta qui perché porta una lega: è l'altra metà di «Nuova
+              lega», non un'azione dentro una lega che esiste già. Il suo
+              pannello no: quello va sotto l'intestazione, fuori dalla riga. */}
+          {importer.button}
+          <Link
+            to="/lega/nuova"
+            className="rounded-md bg-pitch-700 px-3 py-1.5 text-sm text-chalk hover:bg-line"
+          >
+            Nuova lega
+          </Link>
+        </div>
       </header>
+
+      {importer.panel}
 
       {leagues.isError && (
         <p className="mt-6 text-sm text-taken">
@@ -68,7 +78,7 @@ function Row({ league }: { league: LeagueSummary }): JSX.Element {
         <span className="w-24 text-sm text-chalk-dim">{MODE_LABELS[league.mode]}</span>
         <span className="w-28 text-sm text-chalk-dim">{FORMAT_LABELS[league.auctionFormat]}</span>
         <span className="figures w-20 text-sm text-chalk-dim">
-          {league.teamCount} {league.teamCount === 1 ? 'squadra' : 'squadre'}
+          {teams(league.teamCount)}
         </span>
         <span className="ml-auto flex items-center gap-3">
           {league.status === 'auction' && <Progress league={league} />}

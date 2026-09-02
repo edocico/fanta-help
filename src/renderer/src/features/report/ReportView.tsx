@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { call, IpcError } from '@/lib/ipc'
 import { useLeagueStore } from '@/stores/league'
+import { shortHash, when } from '@/lib/format'
 import { CLASSIC_ROLES, ROLE_LABELS } from '@shared/domain'
 import { errorMessages } from '@shared/errors'
 import { snapshotReport, type SnapshotFile } from '@shared/snapshot'
@@ -138,26 +139,6 @@ function Frame({ children }: { children: React.ReactNode }): JSX.Element {
   return <div className="flex h-full flex-col p-4">{children}</div>
 }
 
-/**
- * «5 settembre, 23:41», la barra del §4.11 alla lettera.
- *
- * Due formattatori e non uno: chiedendo a `Intl` giorno, mese e ora insieme, in
- * italiano esce «2 settembre alle ore 22:06», che è corretto e non è quello che
- * il documento scrive. La virgola la mettiamo noi.
- */
-const day = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'long' })
-const time = new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit' })
-
-function when(at: number): string {
-  const d = new Date(at)
-  return `${day.format(d)}, ${time.format(d)}`
-}
-
-/** `sha256:a91f4c2…` → `a91f4c2`, che è quanto ne scrive la barra del §4.11. */
-function shortHash(hash: string): string {
-  return hash.replace(/^sha256:/, '').slice(0, 7)
-}
-
 function Report({
   leagueId,
   detail,
@@ -187,6 +168,34 @@ function Report({
     }
     return map
   }, [file])
+
+  const [saved, setSaved] = useState<string | null>(null)
+
+  /**
+   * Scarica la versione che si sta guardando.
+   *
+   * `detail.version` e non l'ultima: chi ha aperto la versione 1 dal selettore
+   * si aspetta quella, e scaricare silenziosamente la 3 produrrebbe un file che
+   * non corrisponde a quello che ha sullo schermo — con un'impronta diversa, che
+   * è precisamente ciò che qualcuno confronterà.
+   */
+  async function download(kind: 'json' | 'xlsx'): Promise<void> {
+    setBusy(true)
+    setRefusal(null)
+    setSaved(null)
+    try {
+      const done = await call(kind === 'json' ? 'snapshot.exportJson' : 'snapshot.exportXlsx', {
+        leagueId,
+        version: detail.version,
+      })
+      // Null è il dialogo annullato, che non è un errore e non merita una riga.
+      if (done) setSaved(done.path)
+    } catch (e) {
+      setRefusal(e instanceof IpcError ? e.message : errorMessages.IPC_UNAVAILABLE())
+    } finally {
+      setBusy(false)
+    }
+  }
 
   /** Riaprire è l'unica scrittura che l'invariante 13 lascia a lega chiusa. */
   async function reopen(): Promise<void> {
@@ -225,7 +234,14 @@ function Report({
           <select
             className="ml-auto rounded-md border border-line bg-pitch-800 px-2 py-0.5 text-sm"
             value={chosen ?? versions[0].version}
-            onChange={(e) => onChoose(window.Number(e.target.value))}
+            onChange={(e) => {
+              // La riga «Salvato in …» parla del file appena scaricato, che è
+              // quello di *quella* versione: lasciata sotto un'altra direbbe una
+              // cosa falsa, e `Report` non si rimonta quando la versione scelta
+              // è già in cache.
+              setSaved(null)
+              onChoose(window.Number(e.target.value))
+            }}
           >
             {/*
               Data e impronta anche nelle opzioni. Il §4.11 esclude il confronto
@@ -330,6 +346,26 @@ function Report({
       </div>
 
       <footer className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-2">
+        {/*
+          «Due bottoni di export, Scarica XLSX e Scarica JSON, e uno secondario,
+          Riapri per modifiche», §4.11. I due primari scaricano **la versione che
+          stai guardando**, non l'ultima: il selettore accanto serve a questo.
+        */}
+        <button
+          className="rounded-md border border-line bg-pitch-700 px-3 py-1 text-sm disabled:opacity-40"
+          disabled={busy}
+          onClick={() => void download('xlsx')}
+        >
+          Scarica XLSX
+        </button>
+        <button
+          className="rounded-md border border-line bg-pitch-700 px-3 py-1 text-sm disabled:opacity-40"
+          disabled={busy}
+          onClick={() => void download('json')}
+        >
+          Scarica JSON
+        </button>
+        {saved !== null && <p className="text-xs text-chalk-dim">Salvato in {saved}</p>}
         <p className="text-xs text-chalk-dim">
           La prossima cristallizzazione creerà la versione {versions[0].version + 1}.
         </p>

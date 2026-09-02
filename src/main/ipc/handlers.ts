@@ -16,7 +16,14 @@ import {
   updatePurchase,
 } from '../services/auction'
 import { importDataset } from '../services/dataset-import'
+import type { SnapshotIoContext } from '../services/snapshot-io'
 import { crystallise, listSnapshots, readSnapshot, reopen } from '../services/snapshot'
+import {
+  exportJson,
+  exportXlsx,
+  importSnapshot,
+  previewSnapshot,
+} from '../services/snapshot-io'
 import {
   createLeague,
   createTeam,
@@ -75,6 +82,30 @@ export type HandlerContext = {
    * way, one step further out.
    */
   readGrid: (file: string) => Promise<CellValue[][]>
+  /** Il dialogo di salvataggio, col nome proposto. Null se annullato. */
+  chooseSaveTo: (name: string) => Promise<string | null>
+  /** Il dialogo di apertura per un export JSON. Null se annullato. */
+  chooseSnapshot: () => Promise<string | null>
+  /** L'altra metà di `readGrid`, e iniettata per la stessa ragione: exceljs. */
+  writeGrid: (file: string, sheets: { name: string; rows: CellValue[][] }[]) => Promise<void>
+}
+
+/**
+ * Il sottoinsieme del contesto che l'export e l'import usano.
+ *
+ * Passare `ctx` intero funzionerebbe e direbbe meno: questi due non toccano né
+ * `emit` né `instance`, e un servizio che riceve tutto è un servizio di cui non
+ * si sa cosa fa senza leggerlo.
+ */
+function io(ctx: HandlerContext): SnapshotIoContext {
+  return {
+    db: ctx.db,
+    instanceUuid: ctx.instance.uuid,
+    backup: ctx.backup,
+    chooseSaveTo: ctx.chooseSaveTo,
+    chooseSnapshot: ctx.chooseSnapshot,
+    writeGrid: ctx.writeGrid,
+  }
 }
 
 type Handler<C extends Channel> = (
@@ -183,6 +214,14 @@ export const handlers: HandlerMap = {
   'snapshot.get': (input, ctx) => readSnapshot(ctx.db, input.leagueId, input.version),
   'snapshot.create': (input, ctx) => crystallise(input, ctx.db, ctx.instance.uuid),
   'snapshot.reopen': (input, ctx) => reopen(input, ctx.db, ctx.instance.uuid),
+  'snapshot.exportJson': (input, ctx) => exportJson(input, io(ctx)),
+  'snapshot.exportXlsx': (input, ctx) => exportXlsx(input, io(ctx)),
+  'snapshot.pick': async (_input, ctx) => {
+    const filePath = await ctx.chooseSnapshot()
+    return filePath === null ? null : { filePath }
+  },
+  'snapshot.preview': (input, ctx) => previewSnapshot(input, io(ctx)),
+  'snapshot.import': (input, ctx) => importSnapshot(input, io(ctx)),
 
   'player.list': (input, ctx) => {
     const info = ctx.db

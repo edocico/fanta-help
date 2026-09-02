@@ -10,6 +10,7 @@ import {
 } from './db/client'
 import { registerAll, registerUnavailable } from './ipc/register'
 import { readGrid } from './services/xlsx-reader'
+import { writeGrid } from './services/xlsx-writer'
 
 // main and preload are built as CommonJS, so __dirname exists. See the note in
 // package.json's missing `type: module`: the `electron` module is CJS with lazy
@@ -70,6 +71,37 @@ void app.whenReady().then(() => {
         })
         return chosen.canceled ? null : (chosen.filePaths[0] ?? null)
       },
+      /**
+       * Dove salvare un export, col nome proposto dal servizio.
+       *
+       * `showSaveDialog` non scrive niente: torna un percorso, e il file lo
+       * scrive chi ha i dati. Il filtro si ricava dall'estensione del nome
+       * proposto, così l'unico posto che decide come si chiama un export resta
+       * `fileNameFor`.
+       */
+      chooseSaveTo: async (name) => {
+        const extension = name.split('.').pop() ?? 'json'
+        const chosen = await dialog.showSaveDialog({
+          title: 'Salva il resoconto',
+          defaultPath: join(app.getPath('downloads'), name),
+          filters: [
+            {
+              name: extension === 'xlsx' ? 'Foglio di calcolo' : 'Resoconto Fanta Help',
+              extensions: [extension],
+            },
+          ],
+        })
+        return chosen.canceled ? null : (chosen.filePath ?? null)
+      },
+      chooseSnapshot: async () => {
+        const chosen = await dialog.showOpenDialog({
+          title: 'Scegli il resoconto da importare',
+          filters: [{ name: 'Resoconto Fanta Help', extensions: ['json'] }],
+          properties: ['openFile'],
+        })
+        return chosen.canceled ? null : (chosen.filePaths[0] ?? null)
+      },
+      writeGrid,
       // Every open window, rather than one remembered webContents: a window can
       // be closed and reopened on macOS, and a stale reference sends progress
       // into a destroyed renderer instead of the live one.

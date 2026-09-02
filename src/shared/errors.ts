@@ -68,6 +68,25 @@ export function purchases(n: number): string {
   return n === 0 ? 'nessun acquisto' : n === 1 ? '1 acquisto' : `${n} acquisti`
 }
 
+/**
+ * Le altre due cose che l'anteprima di un import conta, accanto agli acquisti.
+ *
+ * Una lega a due squadre e una sola cristallizzazione è il caso normale, non
+ * l'eccezione: l'anteprima le nomina tutte e tre nella stessa frase, e due su
+ * tre che sapessero contare sarebbero peggio di nessuna.
+ */
+export function teams(n: number): string {
+  return n === 1 ? '1 squadra' : `${n} squadre`
+}
+
+export function versions(n: number): string {
+  // Lo zero è raggiungibile, contro il primo sospetto: una lega con lo stesso
+  // uuid può non essere mai stata cristallizzata *qui* — un backup ripristinato,
+  // o una copia del database fatta prima della chiusura — e allora la frase
+  // della sostituzione elenca «0 versioni», che è vero e non è italiano.
+  return n === 0 ? 'nessuna versione' : n === 1 ? '1 versione' : `${n} versioni`
+}
+
 export function anomalies(n: number): string {
   return n === 0 ? 'nessuna anomalia' : n === 1 ? '1 anomalia' : `${n} anomalie`
 }
@@ -176,6 +195,48 @@ export const errorMessages = {
   // revisione. La frase dice dov'è, non che la richiesta era invalida.
   NOT_IN_REVIEW: () => 'Il resoconto si cristallizza dalla revisione.',
   NOT_CRYSTALLISED: () => 'Questa lega non è cristallizzata: non c’è niente da riaprire.',
+
+  /* export e import di una sessione — T18 */
+  // Una rotta rimasta aperta su una lega che non è mai stata cristallizzata, o
+  // su una versione che non c'è: come LEAGUE_MISSING, constata e basta.
+  SNAPSHOT_MISSING: () => 'Questo resoconto non esiste.',
+  SNAPSHOT_UNREADABLE: () => 'Il file non si apre. Deve essere un export JSON di Fanta Help.',
+  SNAPSHOT_INVALID: () => 'Questo file non ha la forma di un resoconto di Fanta Help.',
+  // Il formato è additivo e il lettore tratta i campi nuovi come facoltativi, ma
+  // un numero **più alto** di quello che conosciamo dice che qualcosa di
+  // obbligatorio è cambiato: l'unica risposta onesta è che serve l'app nuova.
+  SNAPSHOT_FORMAT_TOO_NEW: (p: { found: number; known: number }) =>
+    `Questo file è nella versione ${p.found} del formato e questa app arriva alla ${p.known}. Aggiorna Fanta Help.`,
+  SNAPSHOT_SEASON_MISSING: (p: { seasonId: string }) =>
+    `Il listone ${p.seasonId} non è installato: importalo prima di riprendere questa sessione.`,
+  // Conta, e conta fino a uno: un solo nome mancante è il caso probabile quando
+  // i due listoni differiscono di poco, che a settembre succede tre volte.
+  // «Il listone non ha 3 giocatori che il file nomina» si legge anche come «gliene
+  // mancano tre in tutto». Il soggetto è il file, non il listone. E la via
+  // d'uscita c'è, come in SNAPSHOT_SEASON_MISSING qui sopra: serve la versione
+  // del listone che quei giocatori li contiene.
+  SNAPSHOT_PLAYERS_MISSING: (p: { n: number; seasonId: string; names: string }) =>
+    p.n === 1
+      ? `Un giocatore del file non è nel listone ${p.seasonId}: ${p.names}. Importa la versione del listone che lo contiene.`
+      : `${p.n} giocatori del file non sono nel listone ${p.seasonId}: ${p.names}. Importa la versione del listone che li contiene.`,
+  // Il listone ha cambiato ruolo a qualcuno fra l'export e adesso. Tenere il
+  // ruolo del file romperebbe l'invariante 6, tenere quello del listone darebbe
+  // una lega che non corrisponde più all'impronta del file: nessuna delle due si
+  // può fare in silenzio.
+  SNAPSHOT_ROLE_CHANGED: (p: { n: number; seasonId: string; names: string }) =>
+    p.n === 1
+      ? `Nel listone ${p.seasonId} un giocatore ha un ruolo diverso da quello del file: ${p.names}. Importa la versione del listone da cui viene il file.`
+      : `Nel listone ${p.seasonId} ${p.n} giocatori hanno un ruolo diverso da quello del file: ${p.names}. Importa la versione del listone da cui viene il file.`,
+  // I vincoli UNIQUE che lo schema zod non sa esprimere e SQLite sì. Senza
+  // questi codici arriverebbero da dentro la transazione come UNKNOWN, dopo che
+  // l'anteprima aveva dichiarato il file buono — la convenzione «Errori» del
+  // CLAUDE.md descrive esattamente questa sequenza.
+  SNAPSHOT_DUPLICATE_TEAM: (p: { name: string }) =>
+    `Il file elenca due volte la squadra ${p.name}, o due squadre nella stessa posizione.`,
+  SNAPSHOT_DUPLICATE_PLAYER: (p: { name: string }) =>
+    `Nel file ${p.name} è acquistato due volte.`,
+  SNAPSHOT_UNKNOWN_TEAM: () =>
+    'Il file assegna un acquisto a una squadra che non elenca.',
 
   /* import of a dataset — document 4 §6 */
   DATASET_MANIFEST_UNREADABLE: () =>
@@ -366,6 +427,20 @@ export const notices = {
    */
   ANOMALIES_OPEN: (p: { n: number }) =>
     p.n === 1 ? '1 anomalia aperta:' : `${p.n} anomalie aperte:`,
+  /**
+   * Cosa si perde sostituendo una lega con un file, documento 1 §2.
+   *
+   * Senza verbo davanti ai conteggi, e non per stile: «se ne vanno 1 versione»
+   * e «se ne va nessun acquisto» sono i due modi in cui questa frase è già
+   * uscita sbagliata, perché il ramo singolare stava nei frammenti e la
+   * concordanza fuori. Un'etichetta e una lista non hanno niente da accordare, e
+   * i due frammenti contano da soli. Nemmeno un aggettivo: «1 versione
+   * cristallizzate» è lo stesso difetto un passo più in là, ed è già ricomparso
+   * scrivendo questa riga. «Versione» in quest'app vuol già dire cristallizzata
+   * — il resoconto le numera così — quindi la parola non serve.
+   */
+  REPLACING_LEAGUE: (p: { name: string; purchases: number; versions: number }) =>
+    `${p.name} è già qui e viene sostituita. Cosa se ne va: ${purchases(p.purchases)}, ${versions(p.versions)} di questa macchina. Prima viene fatto un backup del database.`,
   /** Il campo squadra prima che ci sia scritto qualcosa. */
   PICK_A_TEAM: () => 'Scegli la squadra: le prime lettere, o il suo numero.',
   /**

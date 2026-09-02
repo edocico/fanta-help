@@ -453,6 +453,61 @@ const snapshotSummary = z.object({
   createdAt: z.number().int(),
 })
 
+/**
+ * Cosa succederebbe importando questo file, prima di importarlo.
+ *
+ * La forma è quella di `listonePreview`, `refusal` compreso: la chiamata riesce
+ * anche quando il file non si può importare, perché la schermata deve **dire
+ * perché** invece di limitarsi a fallire. Il codice del rifiuto è lo stesso che
+ * l'import solleverebbe, così le due frasi non possono divergere.
+ */
+const snapshotImportPreview = z.object({
+  file: z.string(),
+  leagueName: z.string(),
+  seasonId: z.string(),
+  version: z.number().int().positive(),
+  contentHash: z.string(),
+  createdAt: z.number().int(),
+  /**
+   * Il **nome** dell'istanza che ha prodotto il file, o null.
+   *
+   * Non il ripiego sull'uuid che la colonna `league_snapshot.produced_by` fa:
+   * quello è l'identità giusta in un file e una firma illeggibile a schermo, e
+   * la barra del resoconto per la stessa ragione la omette. Finché le
+   * impostazioni di T21 non danno un nome all'installazione, è sempre null.
+   */
+  producedBy: z.string().nullable(),
+  teams: z.number().int(),
+  purchases: z.number().int(),
+  /** I nomi che il listone locale non ha: i primi, non tutti. */
+  missing: z.array(z.string()),
+  missingTotal: z.number().int(),
+  /**
+   * La lega che questo file sostituirebbe, quando una con lo stesso uuid è già
+   * qui. `versions` sono le cristallizzazioni locali che se ne andrebbero con
+   * lei: il file ne porta una sola, ed è l'unica cosa che l'import non può
+   * restituire.
+   */
+  replaces: z
+    .object({
+      name: z.string(),
+      purchases: z.number().int(),
+      versions: z.number().int(),
+    })
+    .nullable(),
+  refusal: appErrorShape.nullable(),
+})
+
+const snapshotImportReport = z.object({
+  leagueId: z.number().int(),
+  leagueName: z.string(),
+  version: z.number().int().positive(),
+  teams: z.number().int(),
+  purchases: z.number().int(),
+  replaced: z.boolean(),
+  backup: z.string(),
+})
+
 /** La stessa, col file del documento 1 §7 dentro, già letto. */
 const snapshotDetail = snapshotSummary.extend({ file: snapshotFile })
 
@@ -857,6 +912,46 @@ export const contracts = {
   'snapshot.reopen': {
     input: z.object({ leagueId: z.number().int() }),
     output: z.void(),
+  },
+
+
+  /**
+   * Export, documento 2 §4.11: «Il XLSX è per gli amici, il JSON è per l'app».
+   *
+   * Il percorso non è un ingresso: il renderer chiede, il main apre il dialogo e
+   * scrive dove la persona ha davvero indicato. Null quando il dialogo è stato
+   * annullato, che non è un errore.
+   */
+  'snapshot.exportJson': {
+    input: z.object({ leagueId: z.number().int(), version: z.number().int().positive().optional() }),
+    output: z.object({ path: z.string() }).nullable(),
+  },
+
+  'snapshot.exportXlsx': {
+    input: z.object({ leagueId: z.number().int(), version: z.number().int().positive().optional() }),
+    output: z.object({ path: z.string() }).nullable(),
+  },
+
+  /** Il dialogo di apertura, come `listone.pick`. */
+  'snapshot.pick': {
+    input: z.void(),
+    output: z.object({ filePath: z.string() }).nullable(),
+  },
+
+  'snapshot.preview': {
+    input: z.object({ filePath: z.string() }),
+    output: snapshotImportPreview,
+  },
+
+  /**
+   * «Import JSON per riprendere o spostare una sessione», documento 1 §2.
+   *
+   * Non una fusione: il §2 mette la riconciliazione fra versioni di partecipanti
+   * diversi fuori dalla v1. Il file entra intero o non entra.
+   */
+  'snapshot.import': {
+    input: z.object({ filePath: z.string() }),
+    output: snapshotImportReport,
   },
 
   'player.list': {
