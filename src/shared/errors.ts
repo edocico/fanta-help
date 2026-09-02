@@ -11,7 +11,43 @@
  * screen in front of ten people.
  */
 
-import { ROLE_LABELS, type CoherenceWarning } from './domain'
+import {
+  ROLE_LABELS,
+  ROLE_LABELS_ONE,
+  type ClassicRole,
+  type CoherenceWarning,
+  type Violation,
+} from './domain'
+
+/**
+ * «un credito» / «N crediti», in un posto solo.
+ *
+ * Il CLAUDE.md lo dice in una riga che è già costata tre task: «Un messaggio che
+ * conta sa contare fino a uno e a zero». La puntata minima legale è 1
+ * (`contracts.ts`), quindi nella seconda metà di ogni asta gran parte degli
+ * acquisti si chiude proprio lì, e il toast — la frase più letta della serata —
+ * direbbe «Svilar → Real Fanta, 1 crediti» decine di volte.
+ *
+ * Una funzione e non un ramo in linea perché i punti che contano crediti sono
+ * sei, sparsi fra due processi: due messaggi di rifiuto qui sotto, il toast, due
+ * righe di cronologia. Scritti a mano, il primo che si dimentica il ramo è
+ * indistinguibile dagli altri finché non lo si legge a schermo.
+ */
+export function credits(n: number): string {
+  return n === 1 ? '1 credito' : `${n} crediti`
+}
+
+/**
+ * «una squadra ha slot liberi» / «N squadre hanno slot liberi».
+ *
+ * Un frammento e non due frasi intere, perché i due lettori la incastonano
+ * diversamente: la conferma di chiusura chiede «… Chiudere lo stesso?», la
+ * cronologia scrive «asta chiusa, …». In T14 le due frasi erano state scritte
+ * separatamente e avevano già preso strade diverse.
+ */
+export function teamsWithFreeSlots(n: number): string {
+  return n === 1 ? 'una squadra ha slot liberi' : `${n} squadre hanno slot liberi`
+}
 
 export const errorMessages = {
   /* infrastructure — never carry parameters, always carry `details` */
@@ -33,9 +69,14 @@ export const errorMessages = {
       : p.n === 1
         ? `${p.team} ha già un ${p.one}`
         : `${p.team} ha già ${p.n} ${p.many}`,
-  INSUFFICIENT_CREDITS: (p: { team: string; n: number }) => `${p.team} ha ${p.n} crediti`,
+  // Le due frasi del documento 2 §7 con il ramo a uno che il documento non
+  // scrive perché i suoi esempi hanno numeri grandi. T14 ne cambia il peso: da
+  // rifiuti che tornavano dopo l'Invio sono diventate testo stampato sotto il
+  // campo prezzo a ogni cifra digitata, e nel finale d'asta `keep` vale 1 su
+  // quasi tutte le squadre.
+  INSUFFICIENT_CREDITS: (p: { team: string; n: number }) => `${p.team} ha ${credits(p.n)}`,
   EXCEEDS_MAX_BID: (p: { team: string; max: number; n: number }) =>
-    `${p.team} può arrivare a ${p.max}: deve tenere ${p.n} crediti per gli slot rimasti`,
+    `${p.team} può arrivare a ${p.max}: deve tenere ${credits(p.n)} per gli slot rimasti`,
   BELOW_MIN_BID: (p: { n: number }) => `La puntata minima è ${p.n}`,
   LEAGUE_FROZEN: () => 'Il resoconto è cristallizzato. Riaprilo per modificarlo.',
   RULES_LOCKED: () => 'Il regolamento si blocca quando parte l’asta.',
@@ -165,6 +206,84 @@ export function warningMessage(warning: CoherenceWarning): string {
     case 'BUDGET_BELOW_SLOTS':
       return `Il budget di ${warning.budget} non basta: servono ${warning.needed} crediti per riempire la rosa alla puntata minima`
   }
+}
+
+/**
+ * The sentence for one violation of `checkPurchase`, with the numbers in place.
+ *
+ * Here and not in the auction service, because it has two readers now. The
+ * service raises it as a refusal; the assignment panel of document 2 §4.8 shows
+ * it *before* the Enter, to grey out the button "per cortesia" as rule 2 of
+ * CLAUDE.md puts it. Written twice, the two would word the same rule differently
+ * — and this is the exact family of sentences the revision has already caught
+ * three times for not knowing how to count to one.
+ *
+ * `role` and `team` are arguments rather than fields of the violation: the pure
+ * function that produces it works on a `RosterState`, which knows neither whose
+ * roster it is nor which role was asked for. The caller has both.
+ *
+ * A `switch` over the discriminated union, for the reason `warningMessage` gives
+ * above it: a code added to `Violation` without a branch is a compile error here
+ * instead of an `undefined` on screen.
+ */
+export function violationMessage(v: Violation, team: string, role: ClassicRole): string {
+  switch (v.code) {
+    case 'BELOW_MIN_BID':
+      return errorMessages.BELOW_MIN_BID({ n: v.detail.n })
+    case 'ROLE_SLOTS_FULL':
+      return errorMessages.ROLE_SLOTS_FULL({
+        team,
+        n: v.detail.n,
+        one: ROLE_LABELS_ONE[role],
+        many: ROLE_LABELS[role],
+      })
+    case 'INSUFFICIENT_CREDITS':
+      return errorMessages.INSUFFICIENT_CREDITS({ team, n: v.detail.n })
+    case 'EXCEEDS_MAX_BID':
+      return errorMessages.EXCEEDS_MAX_BID({ team, max: v.detail.max, n: v.detail.keep })
+  }
+}
+
+/**
+ * Le frasi della tabella del documento 2 §7 che **nessun servizio lancia**.
+ *
+ * Il CLAUDE.md è netto — «I messaggi d'errore stanno in `src/shared/errors.ts`
+ * accanto al codice, mai sparsi nei componenti» — e queste sono righe di quella
+ * tabella come le altre: constatano un rifiuto dell'interfaccia, non un rifiuto
+ * del main. Una rosa completa arriva al processo principale come
+ * `ROLE_SLOTS_FULL`, e aggiungere un codice che niente solleva metterebbe un
+ * ramo irraggiungibile nel file che promette che ogni codice è un rifiuto vero.
+ * Quindi vivono qui accanto, non dentro `errorMessages`.
+ *
+ * Il precedente è `warningMessage` più sotto, che sta in questo file per la
+ * stessa ragione: non è un rifiuto e non attraversa l'IPC. Il costo di non
+ * averle qui si è già visto in T14, dove «una squadra ha slot liberi» era stata
+ * scritta due volte da due autori con due esiti diversi.
+ */
+export const notices = {
+  /** Documento 2 §7, parola per parola. */
+  NO_SEARCH_RESULTS: () => 'Nessun giocatore. Prova con meno lettere.',
+  /** L'altra metà di «rosa completa → la squadra sparisce dal selettore». */
+  ROSTER_COMPLETE: (p: { team: string }) => `${p.team} ha completato la rosa`,
+  /**
+   * Invariante 10: è uscito dal listone, i suoi acquisti no.
+   *
+   * §7 scrive «Non è più nel listone del 5 settembre», cioè la **data** della
+   * versione installata — che `AuctionState` non porta e che il pannello non ha
+   * modo di sapere. Nominare la stagione al posto della data direbbe una cosa
+   * falsa: «non è più nel listone 2026-27» sotto un giocatore che stai
+   * comprando proprio da lì. Questa è la frase che PlayerDetail usa già.
+   */
+  DELISTED: () => 'Non è più nel listone importato.',
+  /** §7: «permesso, con avviso». La domanda, non un rifiuto. */
+  CLOSE_WITH_FREE_SLOTS: (p: { n: number }) =>
+    `${capitalize(teamsWithFreeSlots(p.n))}. Chiudere lo stesso?`,
+  /** Il campo squadra prima che ci sia scritto qualcosa. */
+  PICK_A_TEAM: () => 'Scegli la squadra: le prime lettere, o il suo numero.',
+} as const
+
+function capitalize(sentence: string): string {
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1)
 }
 
 export type AppError = {

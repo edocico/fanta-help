@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { call } from '@/lib/ipc'
+import Reference from '@/components/Reference'
 import { useLeagueStore } from '@/stores/league'
 import type { LeagueSummary } from '@shared/types'
 
@@ -15,9 +16,17 @@ import type { LeagueSummary } from '@shared/types'
  * always there. They say what they are, the way the download half of the
  * onboarding does.
  *
- * "Durante l'asta la barra si ritrae e la vista occupa tutto" is not here: the
- * auction arrives with T13, and retracting for a screen that does not exist would
- * be untestable scaffolding.
+ * "Durante l'asta la barra si ritrae e la vista occupa tutto", §3, is the one
+ * behaviour of this file that is conditional. It retracts to a rail rather than
+ * disappearing — that is what the sentence says, and a bar that vanished would
+ * leave the auction with no way out of itself on the one evening nobody has time
+ * to look for one.
+ *
+ * The condition is the *state* of the league and not only the route: the same
+ * URL shows "Apri l'asta" before it starts and the board afterwards, and
+ * retracting for the first would hide the navigation from a screen with a single
+ * button on it. The status is read off `league.list`, which is already loaded
+ * here — no second call, and it is marked stale by every auction mutation.
  */
 
 type Section = { path: string; label: string; ready: boolean }
@@ -26,7 +35,7 @@ const SECTIONS: Section[] = [
   { path: '', label: 'Squadre', ready: true },
   { path: 'obiettivi', label: 'Obiettivi', ready: true },
   { path: 'piani', label: 'Piani', ready: true },
-  { path: 'asta', label: 'Asta', ready: false },
+  { path: 'asta', label: 'Asta', ready: true },
   { path: 'revisione', label: 'Revisione', ready: false },
   { path: 'resoconto', label: 'Resoconto', ready: false },
 ]
@@ -48,18 +57,41 @@ export default function AppShell(): JSX.Element {
     if (activeLeagueId === null && first) setActive(first.id)
   }, [leagues.data, activeLeagueId, setActive])
 
+  const openId = useOpenLeagueId()
+  const location = useLocation()
+  const running =
+    location.pathname.endsWith('/asta') &&
+    leagues.data?.find((l) => l.id === openId)?.status === 'auction'
+
   return (
     <div className="flex h-screen bg-pitch-900 text-chalk">
-      <nav className="flex w-52 shrink-0 flex-col gap-1 border-r border-line bg-pitch-800 p-3">
-        <LeaguePicker leagues={leagues.data ?? []} />
-        <LeagueSections />
-        <hr className="my-2 border-line" />
-        <Entry to="/giocatori" label="Giocatori" />
-      </nav>
+      {running ? (
+        <nav className="flex w-10 shrink-0 flex-col items-center border-r border-line bg-pitch-800 py-3">
+          <NavLink
+            to={`/lega/${openId}`}
+            className="rounded-md border border-line px-2 py-1 text-sm leading-none text-chalk-dim hover:text-chalk"
+            title="torna alla lega"
+            aria-label="torna alla lega"
+          >
+            ←
+          </NavLink>
+        </nav>
+      ) : (
+        <nav className="flex w-52 shrink-0 flex-col gap-1 border-r border-line bg-pitch-800 p-3">
+          <LeaguePicker leagues={leagues.data ?? []} />
+          <LeagueSections />
+          <hr className="my-2 border-line" />
+          <Entry to="/giocatori" label="Giocatori" />
+        </nav>
+      )}
 
       <main className="min-w-0 flex-1 overflow-auto">
         <Outlet />
       </main>
+
+      {/* `?` from document 2 §6, which says "ovunque" — so it hangs off the frame
+          and not off any one view. */}
+      <Reference />
     </div>
   )
 }

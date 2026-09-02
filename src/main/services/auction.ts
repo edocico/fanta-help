@@ -8,14 +8,12 @@ import {
   freeSlots,
   frozen,
   maxBid,
-  ROLE_LABELS,
-  ROLE_LABELS_ONE,
   totalSlots,
   type ClassicRole,
   type RosterState,
   type Violation,
 } from '@shared/domain'
-import { raise } from '@shared/errors'
+import { DomainError, raise, violationMessage } from '@shared/errors'
 import type { AuctionLogEntry, AuctionState } from '@shared/types'
 import type { Db } from '../db/client'
 import {
@@ -116,6 +114,7 @@ export function auctionState(on: Reader, leagueId: number): AuctionState | null 
       slotRole: purchase.slotRole,
       sequence: purchase.sequence,
       name: player.name,
+      delistedAt: player.delistedAt,
       teamCode: serieATeam.code,
       teamName: serieATeam.name,
     })
@@ -157,6 +156,8 @@ export function auctionState(on: Reader, leagueId: number): AuctionState | null 
         slotRole: p.slotRole as ClassicRole,
         price: p.price,
         sequence: p.sequence,
+        // Invariant 10: he left the listone, his purchase did not.
+        delisted: p.delistedAt !== null,
       })),
     }
   })
@@ -294,34 +295,21 @@ function teamOf(on: Reader, leagueId: number, teamId: number): { id: number; nam
 /**
  * From violation to refusal, with the numbers in the right places.
  *
- * A `switch` and not a map: every code wants different parameters, and the
- * compiler checks them case by case against the discriminated union. A code
- * added to `Violation` without a branch here fails to compile, instead of
- * reaching the renderer as `UNKNOWN`.
+ * The sentence itself is `violationMessage` in shared/errors.ts, because the
+ * assignment panel of document 2 §4.8 needs the same one *before* the Enter —
+ * rule 2 of CLAUDE.md: the interface greys the button out as a courtesy, the
+ * service refuses for real. What stays here is the throw, which is the half a
+ * renderer must not have.
+ *
+ * The code travels with it. `DomainError` carries an `AppError`, and losing the
+ * code on the way out would leave the renderer unable to tell a bid too high
+ * from a role that is full — the two behave differently in the panel.
  */
 function refuse(violation: Violation, team: string, role: ClassicRole): never {
-  switch (violation.code) {
-    case 'BELOW_MIN_BID':
-      raise('BELOW_MIN_BID', { n: violation.detail.n })
-      break
-    case 'ROLE_SLOTS_FULL':
-      raise('ROLE_SLOTS_FULL', {
-        team,
-        n: violation.detail.n,
-        one: ROLE_LABELS_ONE[role],
-        many: ROLE_LABELS[role],
-      })
-      break
-    case 'INSUFFICIENT_CREDITS':
-      raise('INSUFFICIENT_CREDITS', { team, n: violation.detail.n })
-      break
-    case 'EXCEEDS_MAX_BID':
-      raise('EXCEEDS_MAX_BID', {
-        team,
-        max: violation.detail.max,
-        n: violation.detail.keep,
-      })
-  }
+  throw new DomainError({
+    code: violation.code,
+    message: violationMessage(violation, team, role),
+  })
 }
 
 function log(

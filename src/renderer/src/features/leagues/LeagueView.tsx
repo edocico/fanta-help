@@ -357,7 +357,7 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
  */
 const NEXT_STEP: Record<LeagueDetail['status'], string> = {
   setup: 'Il prossimo passo è completare il regolamento.',
-  pre_auction: 'Il prossimo passo è l’asta, che arriva con la prossima versione.',
+  pre_auction: 'Il prossimo passo è l’asta: aprila dalla scheda Asta.',
   auction: 'L’asta è in corso: alla fine si passa alla revisione.',
   review: 'Dalla revisione si cristallizza il resoconto.',
   closed: 'Il resoconto è cristallizzato. Riaprirlo riporta in revisione.',

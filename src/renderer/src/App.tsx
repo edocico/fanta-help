@@ -2,6 +2,7 @@ import { QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { HashRouter, Route, Routes } from 'react-router-dom'
 import { queryClient } from './lib/query'
 import AppShell from './components/AppShell'
+import AuctionView from './features/auction/AuctionView'
 import Onboarding from './features/data/Onboarding'
 import Home from './features/leagues/Home'
 import LeagueView from './features/leagues/LeagueView'
@@ -33,6 +34,7 @@ export default function App(): JSX.Element {
             <Route path="/lega/:id" element={<LeagueView />} />
             <Route path="/lega/:id/obiettivi" element={<TargetsView />} />
             <Route path="/lega/:id/piani" element={<PlansView />} />
+            <Route path="/lega/:id/asta" element={<AuctionView />} />
             <Route path="/giocatori" element={<PlayersView />} />
           </Route>
         </Routes>

@@ -353,6 +353,15 @@ const auctionTeam = z.object({
       slotRole: ROLE,
       price: z.number().int(),
       sequence: z.number().int(),
+      /**
+       * Gone from a later listone — invariant 10 — and still in the roster.
+       *
+       * Document 2 §7: "giocatore sparito dal nuovo listone ma già acquistato →
+       * resta in rosa, marcato". The mark needs the flag to travel, and the
+       * expanded roster is the only place in the auction where "in rosa" is
+       * something you can look at.
+       */
+      delisted: z.boolean(),
     }),
   ),
 })

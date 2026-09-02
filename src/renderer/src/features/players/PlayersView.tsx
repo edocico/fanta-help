@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   createColumnHelper,
   flexRender,
@@ -11,6 +11,7 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { call, IpcError } from '@/lib/ipc'
+import { isMod, isTypingTarget } from '@/lib/keys'
 import { useLeagueStore } from '@/stores/league'
 import { usePlayersStore, type Filters } from '@/stores/players'
 import { haystack, search as fuzzy } from './search'
@@ -108,6 +109,33 @@ export default function PlayersView(): JSX.Element {
   const setStatsSeason = usePlayersStore((s) => s.setStatsSeason)
   const selectedPlayerId = usePlayersStore((s) => s.selectedPlayerId)
   const select = usePlayersStore((s) => s.select)
+
+  /**
+   * `Ctrl/Cmd+K` and `/` — document 2 §6, column "dove": **ovunque**.
+   *
+   * Written here as well as in the auction panel because the table means it: the
+   * two rows are the only ones scoped to everywhere, and the `?` reference lists
+   * them that way. Left in the auction alone they would have been two more false
+   * lines in the panel that is read once a year, by somebody for whom nothing
+   * else has worked.
+   *
+   * `/` yields to any field being typed into — the same rule §6 states for it —
+   * while `Ctrl/Cmd+K` does not, because it cannot be typed by accident.
+   */
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent): void {
+      const wanted =
+        (isMod(e) && e.key.toLowerCase() === 'k') || (e.key === '/' && !isTypingTarget(e.target))
+      if (!wanted) return
+      e.preventDefault()
+      searchRef.current?.focus()
+      searchRef.current?.select()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const seasonsQuery = useQuery({
     queryKey: ['dataset.list'],
@@ -322,6 +350,7 @@ export default function PlayersView(): JSX.Element {
       <header className="border-b border-line px-6 py-3">
         <div className="flex items-baseline gap-4">
           <input
+            ref={searchRef}
             className="min-w-0 flex-1 rounded-md border border-line bg-pitch-800 px-3 py-1.5 text-sm placeholder:text-chalk-dim"
             placeholder="Cerca un giocatore"
             value={query}

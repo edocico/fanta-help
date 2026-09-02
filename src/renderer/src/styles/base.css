@@ -183,3 +183,49 @@
     cursor: default;
   }
 }
+
+/* Il movimento del documento 2 §2, la metà che è un cambio di colore.
+ *
+ * «La riga di un acquisto appena registrato lampeggia una volta nel colore
+ * della squadra, 400ms» e, negli obiettivi ancora liberi, «quando qualcuno te
+ * ne compra uno sparisce dall'elenco con un lampeggio rosso».
+ *
+ * Qui e non in un hook perché §2 chiude così: «`prefers-reduced-motion`
+ * disattiva tutto tranne il cambio di colore». Questi due *sono* il cambio di
+ * colore, quindi restano accesi anche lì — ed è l'unico posto dell'app dove
+ * quella media query non compare. Il conteggio dei crediti, che è movimento
+ * vero, la rispetta in lib/motion.ts.
+ *
+ * `color-mix` invece di un colore con l'alfa scritto a mano: il colore della
+ * squadra arriva dal database come `#RRGGBB` e concatenargli due cifre
+ * esadecimali produrrebbe una stringa valida anche quando il colore è nullo. */
+@keyframes flash-row {
+  from {
+    background-color: color-mix(in srgb, var(--flash) 38%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.flash-row {
+  animation: flash-row 400ms ease-out 1;
+}
+
+/* Lo stesso lampeggio, in `taken`, per la tessera di un obiettivo che qualcun
+   altro si è appena preso. Sfuma anche l'opacità perché quella riga sta uscendo
+   dall'elenco, non cambiando stato: è l'ultima cosa che se ne vede. */
+@keyframes flash-lost {
+  from {
+    background-color: color-mix(in srgb, var(--taken) 45%, transparent);
+    opacity: 1;
+  }
+  to {
+    background-color: transparent;
+    opacity: 0;
+  }
+}
+
+.flash-lost {
+  animation: flash-lost 400ms ease-out 1 forwards;
+}
