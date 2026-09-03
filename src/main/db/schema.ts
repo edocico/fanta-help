@@ -72,6 +72,17 @@ export const player = sqliteTable(
     // Written with normalizeName() from shared/domain.ts — the four steps of
     // document 4. Anything that searches this column must use the same function.
     nameNormalized: text('name_normalized').notNull(),
+    // The name he is called by, which the listone does not carry: `name` is a
+    // surname plus a disambiguating initial where two share one — `Martinez L.`.
+    // Comes from FBref through the optional stage of T6, so it is null for a
+    // player that stage did not reach, and null for every row until it runs.
+    //
+    // No `full_name_normalized` twin, deliberately: `name_normalized` exists for
+    // an index and is never read back by a query, and the search this feeds lives
+    // in the renderer with uFuzzy (document 3 §5), which normalises both ends
+    // itself. A second column would be written by two importers and read by
+    // nobody. Added in 0002_player_full_name.sql.
+    fullName: text('full_name'),
     serieATeamId: integer('serie_a_team_id')
       .notNull()
       .references(() => serieATeam.id),

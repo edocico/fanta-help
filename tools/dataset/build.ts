@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { basename, join } from 'node:path'
 import { gzipSync } from 'node:zlib'
 import { z } from 'zod'
-import { normalizeName } from '@shared/domain'
+import { normalizeName, spelledOut } from '@shared/domain'
 import {
   DATASET_FORMAT,
   FORMAT_VERSION,
@@ -349,6 +349,17 @@ async function main(): Promise<void> {
   const fbrefLinked = new Set<string>()
   const fbrefEligible = new Set<string>()
   const birthYears = new Map<string, number>()
+  /**
+   * The other half of T6, and the whole of T14b: the name a player is actually
+   * called by.
+   *
+   * Twin of `birthYears` on purpose, because it is the same kind of thing — a
+   * fact about the *person*, not about his season, and the only two the stage
+   * writes onto the player rather than onto a statistics row. It inherits the
+   * useful property for free: `fbref.seasons` is sorted ascending, so the last
+   * write wins and what survives is the most recent spelling.
+   */
+  const fullNames = new Map<string, string>()
   let enrichedRows = 0
   let aggregated = 0
 
@@ -468,6 +479,10 @@ async function main(): Promise<void> {
       entry.row.minutes = total(parts, 'minutes')
       entry.row.cleanSheets = total(parts, 'cleanSheets')
       if (to.birthYear !== null) birthYears.set(entry.row.identityKey, to.birthYear)
+      // Unconditional where the year is not, because a name is never absent from
+      // an FBref row — `mergeTable` skips a row that has none — while `Born` is a
+      // column an export can lose, and has.
+      fullNames.set(entry.row.identityKey, to.name)
       fbrefLinked.add(entry.row.identityKey)
       enrichedRows++
     }
@@ -576,6 +591,7 @@ async function main(): Promise<void> {
         sourceId: row.sourceId,
         identityKey,
         name: row.name,
+        fullName: fullNames.get(identityKey) ?? null,
         team: row.team,
         roleClassic: row.roleClassic,
         rolesMantra: row.rolesMantra,
@@ -641,6 +657,13 @@ async function main(): Promise<void> {
   // Conditioned on the files being there, not on the stage having succeeded. A
   // stage that ran and matched nobody is the case the report matters most for,
   // and "non eseguito" above a list of what it failed to match is a lie.
+  // The number T14b is measured by, and the reason it gets its own line rather
+  // than hiding inside "collegati": a player can be linked — his four columns
+  // filled — and still be called the same thing the listone calls him, in which
+  // case the search gains nothing. `named` says how many have a second name at
+  // all; `renamed` says for how many that name is one you could type instead.
+  const named = players.filter((p) => p.fullName !== null).length
+  const renamed = players.filter((p) => spelledOut(p.name, p.fullName) !== null).length
   const fbrefLines =
     fbref.seasons.length > 0
       ? [
@@ -648,6 +671,8 @@ async function main(): Promise<void> {
             `${fbrefEligible.size - fbrefLinked.size} senza corrispondenza`,
           `                 ${enrichedRows} ${enrichedRows === 1 ? 'riga arricchita' : 'righe arricchite'} da ${fbrefFiles} file` +
             (aggregated > 0 ? `, ${aggregated} con due squadre nella stagione, minuti sommati` : ''),
+          `                 ${named} ${named === 1 ? 'nome per esteso' : 'nomi per esteso'}, ` +
+            `${renamed === 1 ? '1 diverso' : `${renamed} diversi`} dal nome del listone`,
         ]
       : ['FBref            non eseguito']
   const apiLines =

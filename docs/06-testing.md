@@ -195,6 +195,13 @@ export default defineConfig({
 | **T5** | test della normalizzazione dei nomi |
 | **T13** | scrivere `invariants.test.ts` **prima** dei servizi d'asta: le funzioni pure sono la specifica |
 | **T17** | `canonical.test.ts` insieme alla serializzazione |
+| **T6 / T14b** | `search.test.ts` accanto a `search.ts`, e le prove di `spelledOut` in `domain.test.ts` |
+
+T6 e T14b sono l'eccezione alla riga «niente test sull'interfaccia»: `search.ts` sta nel renderer ma non tocca né Node né il DOM, quindi il guardrail del §5 non lo riguarda, e il criterio del task — «digitare il nome con cui il giocatore viene chiamato al tavolo lo trova» — è letteralmente un caso di test. Due cose vanno dette su come scriverlo.
+
+**I fissati si prendono dal dataset costruito.** `Martinez L.` e `Martinez Jo.` giocano nella stessa squadra, `Thuram` e `Thuram K.` no, e il disambiguatore non è sempre una lettera sola: `Esposito F.P.`, `Pessina Mas.`. Una coppia inventata a memoria proverebbe un listone che non esiste.
+
+**La forma dell'ago è un valore d'oro, non un confronto.** La stringa che uFuzzy riceve va scritta per intero — `'martinez l martinezl lautaro martinez lautaromartinez'` — perché un'uguaglianza fra due chiamate della stessa funzione va bene per qualunque ordine purché sia sempre lo stesso. È la lezione che T17 ha pagato sulla serializzazione canonica, e qui l'ordine conta allo stesso modo: la mutazione che scambia i due nomi l'ha presa solo quel test.
 
 Su T13 vale la pena insistere. Le funzioni pure di `shared/domain.ts` e i loro test vengono prima del servizio che le usa, perché sono la definizione di cosa è corretto. Scrivere il servizio prima significa scoprire le regole mentre si scrive il codice che le applica, che è il modo più affidabile di scrivere regole sbagliate.
 

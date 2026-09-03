@@ -18,6 +18,7 @@ const player = {
   sourceId: 2764,
   identityKey: 'fc-2764',
   name: 'Martinez L.',
+  fullName: 'Lautaro Martínez',
   team: 'Inter',
   roleClassic: 'A',
   rolesMantra: ['A', 'Pc'],
@@ -35,7 +36,11 @@ const player = {
 
 describe('datasetPlayer', () => {
   it('accepts the shape the pipeline writes today', () => {
-    expect(datasetPlayer.parse(player).birthYear).toBeNull()
+    const parsed = datasetPlayer.parse(player)
+    expect(parsed.birthYear).toBeNull()
+    // Kept verbatim, accents and all. The search normalises at both ends, so
+    // stripping them here would only lose the spelling the report has to show.
+    expect(parsed.fullName).toBe('Lautaro Martínez')
   })
 
   /** A file written before T6 existed. It has to stay readable. */
@@ -58,6 +63,30 @@ describe('datasetPlayer', () => {
   it('still refuses a birthYear that is not a whole number', () => {
     expect(() => datasetPlayer.parse({ ...player, birthYear: '1997' })).toThrow()
     expect(() => datasetPlayer.parse({ ...player, birthYear: 1997.5 })).toThrow()
+  })
+
+  /**
+   * Every dataset published so far, including the v1 sitting in
+   * `tools/dataset/output/`, was written before T14b existed. The field is
+   * additive, so they all have to keep parsing — and `.default(null)` is what
+   * makes the key optional coming in while still present going out, so no reader
+   * has to remember it might be missing.
+   */
+  it('reads a player written before fullName existed', () => {
+    const older: Record<string, unknown> = { ...player }
+    delete older.fullName
+    expect('fullName' in older).toBe(false)
+    expect(datasetPlayer.parse(older).fullName).toBeNull()
+  })
+
+  /**
+   * Absent is normal; empty is not. A player FBref did not match keeps null, and
+   * an empty string reaching the search would build a needle with a stray
+   * separator in it and a name column showing nothing at all.
+   */
+  it('refuses a fullName that is present but not a real name', () => {
+    expect(() => datasetPlayer.parse({ ...player, fullName: '' })).toThrow()
+    expect(() => datasetPlayer.parse({ ...player, fullName: 42 })).toThrow()
   })
 })
 

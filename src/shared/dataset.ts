@@ -32,6 +32,22 @@ export const datasetPlayer = z.object({
   sourceId: z.number().int(),
   identityKey: z.string(),
   name: z.string(),
+  // The name as the listone spells it is a **surname**, with an initial only
+  // where the surname is ambiguous: `Martinez L.`, `Pellegrini Lo.`,
+  // `Esposito F.P.`. Nobody calls a player that at the table, so the search of
+  // T14b needs the name he is actually called by — and that name exists in no
+  // offline source but FBref, which is why the optional stage of T6 stopped
+  // being postponable.
+  //
+  // Null in three different situations, all normal: the stage did not run, the
+  // player had no FBref row to match (document 4 §5: a missing match costs
+  // columns, never the run), or the file is older than this field. Additive by
+  // the CLAUDE.md rule, so `formatVersion` stays 1 — see `birthYear` below for
+  // what happens when that rule is broken.
+  // `.min(1)` and not a bare string: absent is normal, empty is a pipeline bug.
+  // An empty name would build a search needle with a dangling separator and a
+  // report line claiming a match that shows nothing.
+  fullName: z.string().min(1, 'nome per esteso vuoto').nullable().default(null),
   team: z.string(),
   roleClassic: z.enum(CLASSIC_ROLES),
   // Unique, because `player_mantra_role` has PRIMARY KEY (player_id, role_code)

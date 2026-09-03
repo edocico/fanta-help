@@ -235,6 +235,7 @@ export const handlers: HandlerMap = {
         id: player.id,
         identityKey: player.identityKey,
         name: player.name,
+        fullName: player.fullName,
         roleClassic: player.roleClassic,
         teamName: serieATeam.name,
         teamCode: serieATeam.code,
@@ -310,6 +311,7 @@ export const handlers: HandlerMap = {
       players: rows.map((row) => ({
         id: row.id,
         name: row.name,
+        fullName: row.fullName,
         roleClassic: row.roleClassic,
         rolesMantra: mantra.get(row.id) ?? [],
         teamName: row.teamName,

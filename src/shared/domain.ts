@@ -83,6 +83,34 @@ export function normalizeName(value: string): string {
 }
 
 /**
+ * The full name, but only when it says something the listone's name does not.
+ *
+ * The listone writes a surname and, where two players share it, a disambiguating
+ * abbreviation: `Martinez L.`, `Pellegrini Lu.`, `Esposito F.P.`. FBref writes
+ * given name and surname, for everybody. So the two agree **rarely**, not often:
+ * 407 of the 524 names in the 2026-27 listone are a single word, and FBref puts
+ * a given name in front of every one of them — `Zortea` against `Nadir Zortea`.
+ * What is left is the mononym, the player known by one name and listed under it
+ * by both sources, and there are a handful.
+ *
+ * That the rare case is the rare one still has to be said, because it is the one
+ * that reads as a bug: `Bremer · Bremer` on a row, and a spelling repeated in
+ * the search index.
+ *
+ * Compared through `normalizeName` and not by string equality, because the two
+ * sources disagree about accents constantly: `Vlahovic` against `Vlahović` is
+ * the same name written twice, and showing both would be noise dressed as
+ * information.
+ */
+export function spelledOut(name: string, fullName: string | null): string | null {
+  if (fullName === null) return null
+  const spelled = normalizeName(fullName)
+  if (spelled === '' || spelled === normalizeName(name)) return null
+  return fullName
+}
+
+
+/**
  * Which backup files to delete so that at most `keep` survive, newest kept.
  *
  * Pure, and here rather than beside the code that unlinks files, for one reason:

@@ -206,10 +206,18 @@ CREATE TABLE player (
   season_id            TEXT NOT NULL REFERENCES season(id) ON DELETE CASCADE,
   source_id            INTEGER NOT NULL,     -- colonna 'Id' del listone
   identity_key         TEXT NOT NULL,        -- 'fc-<source_id>'
-  name                 TEXT NOT NULL,
+  name                 TEXT NOT NULL,        -- come lo scrive il listone: un cognome, più
+                                             -- un'abbreviazione dove due lo condividono
   name_normalized      TEXT NOT NULL,        -- i quattro passi del documento 4: minuscolo,
                                              -- NFD senza diacritici, via apostrofi e
                                              -- punteggiatura, spazi collassati
+  full_name            TEXT,                 -- il nome per cui è conosciuto, da FBref. Nullo per
+                                             -- chi lo stadio 2 non aggancia, e per tutti finché
+                                             -- non gira. Non ha una gemella normalizzata:
+                                             -- name_normalized esiste per un indice e non la
+                                             -- rilegge nessuna query, e la ricerca che usa questo
+                                             -- campo vive nel renderer (documento 3 §5).
+                                             -- Aggiunta in T6/T14b con 0002_player_full_name.sql
   serie_a_team_id      INTEGER NOT NULL REFERENCES serie_a_team(id),
   role_classic         TEXT NOT NULL CHECK (role_classic IN ('P','D','C','A')),
   qt_classic_initial   REAL,
@@ -319,6 +327,8 @@ CREATE VIRTUAL TABLE player_fts USING fts5 (
 ```
 
 Tabella contentless, popolata all'import con `rowid = player.id`. Nessun trigger: i dati di riferimento cambiano solo durante un import, quindi l'indice si ricostruisce lì.
+
+**`full_name` non è indicizzato qui, ed è una scelta.** La ricerca dell'asta e quella della vista Giocatori vivono nel renderer, in memoria, con uFuzzy: il documento 3 §5 dice che questo indice serve alle query fatte dal main, e oggi nessuna lo interroga. Aggiungere una colonna a una tabella FTS5 non è nemmeno un `ALTER TABLE` — le tabelle virtuali lo rifiutano, «virtual tables may not be altered» — quindi costerebbe una migrazione che la ricrea e due punti di ricostruzione da tenere allineati, per un indice che nessuno legge. Il giorno in cui una ricerca nascesse nel main, questa riga è il posto dove cambiare idea.
 
 ### Dati utente
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { haystack, search as fuzzy } from '@/features/players/search'
 import { isMod, isTypingTarget } from '@/lib/keys'
 import { useAuctionStore } from '@/stores/auction'
-import { checkPurchase, normalizeName, type ClassicRole } from '@shared/domain'
+import { checkPurchase, normalizeName, spelledOut, type ClassicRole } from '@shared/domain'
 import { errorMessages, notices, violationMessage } from '@shared/errors'
 import type { AuctionState, AuctionTeam, PlayerRow } from '@shared/types'
 
@@ -96,6 +96,9 @@ export default function AssignPanel({
   // Null when the id names nobody in this listone — an import between one
   // keystroke and the next, which nothing forbids.
   const chosen = chosenPlayerId === null ? null : byId.get(chosenPlayerId) ?? null
+  // Computed once rather than three times inside the JSX below, so the line, its
+  // tooltip and the condition that shows it cannot drift apart.
+  const chosenSpelled = chosen === null ? null : spelledOut(chosen.name, chosen.fullName)
 
   /**
    * Who already owns whom, and for how much — the left-hand side of the first
@@ -414,8 +417,17 @@ export default function AssignPanel({
 
       {chosen && (
         <>
-          <p className="truncate pt-1 text-base text-chalk" title={chosen.name}>
+          {/* Both halves in the tooltip, for the reason spelled out at the result
+              row below: this line truncates too, and what an ellipsis eats is the
+              end of the *second* name. */}
+          <p
+            className="truncate pt-1 text-base text-chalk"
+            title={chosenSpelled === null ? chosen.name : `${chosen.name} · ${chosenSpelled}`}
+          >
             {chosen.name}{' '}
+            {chosenSpelled !== null && (
+              <span className="text-base text-chalk-dim">· {chosenSpelled} </span>
+            )}
             <span className="label text-xs text-chalk-dim">
               {chosen.roleClassic} {chosen.teamCode ?? chosen.teamName}
               {chosen.qtClassicCurrent !== null && ` · qt. ${chosen.qtClassicCurrent}`}
@@ -655,6 +667,7 @@ function Results({
     <ul className="max-h-44 shrink-0 overflow-auto rounded-md border border-line">
       {results.map((p, i) => {
         const owner = owners.get(p.id)
+        const spelled = spelledOut(p.name, p.fullName)
         return (
           <li key={p.id}>
             <div
@@ -669,7 +682,27 @@ function Results({
                 if (!owner) onPick(p)
               }}
             >
-              <span className="min-w-0 flex-1 truncate text-chalk">{p.name}</span>
+              {/*
+                The name that matched, next to the name the listone prints.
+                Inline and dimmed rather than on a second line: once the FBref
+                stage has run almost every row has one, and a second line would
+                halve how many fit in the max-h-44 list — the opposite of what
+                §4.8 asks of a panel you drive in a few seconds.
+              */}
+              {/*
+                The title carries both halves, and that is the point: measured in
+                the running app, `Esposito F.P. · Francesco Pio Esposito` wants
+                242px in a 199px cell, so what the ellipsis eats is the end of the
+                *second* name. A tooltip repeating only the first would say back
+                exactly the half that never gets cut.
+              */}
+              <span
+                className="min-w-0 flex-1 truncate text-chalk"
+                title={spelled === null ? p.name : `${p.name} · ${spelled}`}
+              >
+                {p.name}
+                {spelled !== null && <span className="pl-1.5 text-chalk-dim">· {spelled}</span>}
+              </span>
               <span className="label shrink-0 text-xs text-chalk-dim">
                 {p.roleClassic} {p.teamCode ?? p.teamName}
               </span>

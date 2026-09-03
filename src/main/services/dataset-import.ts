@@ -285,6 +285,7 @@ export async function importDataset(
         identityKey: p.identityKey,
         name: p.name,
         nameNormalized: normalizeName(p.name),
+        fullName: p.fullName,
         serieATeamId: teamId.get(p.team) as number,
         roleClassic: p.roleClassic,
         qtClassicInitial: p.qtClassicInitial,

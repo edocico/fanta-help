@@ -226,9 +226,14 @@ Il giro che vale la pena mostrare, perché è il motivo per cui l'app esiste: tr
    quella di turno.
 4. `Invio` — l'acquisto è registrato, il fuoco torna alla ricerca vuota.
 
-Il listone nomina **per cognome**, con l'iniziale quando è ambiguo — 89 nomi su
-524. Cercare `lauta` non trova niente: la voce è `Martinez L.`. Vale la pena
-provare i nomi che si vogliono usare **prima** della serata.
+Il listone nomina **per cognome**, con un'abbreviazione del nome quando è
+ambiguo — 89 nomi su 524. La ricerca cerca anche sul **nome per esteso**, quindi
+`lauta` trova `Martinez L.`: ma quel nome arriva dallo stadio FBref, e per chi
+quello stadio non ha agganciato resta solo il cognome. Il rapporto della pipeline
+lo dice in una riga, `N nomi per esteso`. Se quella riga dice zero, o se al suo
+posto il blocco FBref dice `non eseguito` — che è lo stato finché i CSV non
+vengono scaricati — si cerca per cognome come prima, e vale la pena provare i nomi
+che si vogliono usare **prima** della serata.
 
 ### Le scorciatoie che esistono davvero
 

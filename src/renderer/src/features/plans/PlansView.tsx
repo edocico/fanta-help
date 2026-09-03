@@ -11,6 +11,7 @@ import {
   ROLE_LABELS,
   ROLE_LABELS_ONE,
   type ClassicRole,
+  spelledOut,
 } from '@shared/domain'
 import { errorMessages } from '@shared/errors'
 import type { LeagueDetail, PlanDetail, PlayerRow } from '@shared/types'
@@ -484,7 +485,23 @@ function Picker({
               className="flex w-full items-baseline gap-2 rounded-md px-1 py-0.5 text-left text-sm hover:bg-pitch-700"
               onClick={() => onPick(player)}
             >
-              <span className="min-w-0 flex-1 truncate">{player.name}</span>
+              {/* Same reason as the auction panel: this list searches both names
+                  now, so a row that answered `lauta` has to say why. */}
+              <span
+                className="min-w-0 flex-1 truncate"
+                title={
+                  spelledOut(player.name, player.fullName) === null
+                    ? player.name
+                    : `${player.name} · ${spelledOut(player.name, player.fullName)}`
+                }
+              >
+                {player.name}
+                {spelledOut(player.name, player.fullName) !== null && (
+                  <span className="pl-1.5 text-chalk-dim">
+                    · {spelledOut(player.name, player.fullName)}
+                  </span>
+                )}
+              </span>
               <span className="label text-chalk-dim">{player.teamCode ?? player.teamName}</span>
               <span className="figures text-credit">{player.qtClassicCurrent ?? '—'}</span>
             </button>

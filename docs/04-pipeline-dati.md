@@ -43,8 +43,8 @@ Il resto degli endpoint non serve. I trasferimenti li copre l'aggiornamento del 
 ```
    [tu, una volta a stagione]                  [l'app]
             │                                     │
-   scarichi 4 XLSX ─────────┐                     │
-   esporti 9 CSV da FBref ──┤                     │
+   scarichi 5 XLSX ─────────┐                     │
+   esporti 12 CSV da FBref ─┤                     │
             │               │                     │
             ▼               ▼                     ▼
    ┌──────────────────────────────┐      ┌──────────────────────┐
@@ -64,18 +64,21 @@ Il resto degli endpoint non serve. I trasferimenti li copre l'aggiornamento del 
 
 Vale ancora, e ora vale per due fonti invece di una. **Lo script prende in ingresso file già presenti sul disco**, che scarichi tu a mano.
 
-Per Fantacalcio.it sono i due tipi di XLSX. Per FBref è l'export CSV che il sito offre per ogni tabella: tre tabelle per tre stagioni, nove copia-incolla una volta a stagione.
+Per Fantacalcio.it sono i due tipi di XLSX. Per FBref è l'export CSV che il sito offre per ogni tabella: tre tabelle per stagione, una volta a stagione.
+
+Quante stagioni dipende da quante ne copre il file statistiche, non da un numero fisso: la pipeline scarta ogni stagione FBref che le statistiche non hanno («FBref copre la stagione, le statistiche no. Ignorata.»). Col §3 di questo documento — tre stagioni passate **più quella in corso** — fanno dodici file. La prima stesura ne diceva nove perché contava tre stagioni, prima che la stagione in corso entrasse nel dataset.
 
 E per API-Football, la stessa disciplina: la rosa di ogni club si salva a mano da `/players/squads?team=<id>`, un file per club. La regola non ha un'eccezione qui — la rete a runtime resta concessa ai soli infortuni. Le rose cambiano una volta a stagione come tutto il resto di questa sezione, e chiedere gli id a ogni build sposterebbe online una cosa che è ferma.
 
 In cambio: nessuno scraper da manutenere, nessun captcha, nessuna dipendenza dalla struttura HTML, e nessun problema di accesso automatizzato, visto che Sports Reference lo limita ma non limita certo lo scarico manuale.
 
-Il costo onesto: tredici file da procurarsi una volta a stagione invece di quattro, più le rose se si vuole lo stadio 3. Nessuno dei tre gruppi è obbligatorio oltre al primo.
+Il costo onesto: diciassette file da procurarsi una volta a stagione invece di cinque, più le rose se si vuole lo stadio 3. Nessuno dei tre gruppi è obbligatorio oltre al primo.
 
 ```
 tools/dataset/
 ├── input/                              non versionato
 │   ├── quotazioni-2026-27.xlsx
+│   ├── statistiche-2026-27.xlsx        la stagione in corso, vedi §3
 │   ├── statistiche-2025-26.xlsx
 │   ├── statistiche-2024-25.xlsx
 │   ├── statistiche-2023-24.xlsx
@@ -97,7 +100,11 @@ tools/dataset/
 
 **Stadio 1 — Fantacalcio.it.** Obbligatorio. Produce un dataset completo e utilizzabile. Se gli altri due non girano, l'app funziona con qualche colonna in meno.
 
-**Stadio 2 — FBref.** Facoltativo. Aggiunge minuti, titolarità, presenze totali, clean sheet e date di nascita. Se salta, il dataset esce con `hasFbref: false` e l'app nasconde le colonne corrispondenti invece di mostrarle vuote.
+**Stadio 2 — FBref.** Facoltativo. Aggiunge minuti, titolarità, presenze totali, clean sheet, date di nascita e **il nome per esteso**. Se salta, il dataset esce con `hasFbref: false` e l'app nasconde le colonne corrispondenti invece di mostrarle vuote.
+
+Il nome per esteso è l'ultimo arrivato e cambia il peso dello stadio. Il listone nomina **per cognome** — `Martinez L.`, `Pellegrini Lu.`, `Esposito F.P.` — e chi grida un nome al tavolo grida quello per cui il giocatore è conosciuto: senza questo stadio, digitare `lauta` in asta non trova niente. Nessun'altra fonte offline ha quel nome. «Facoltativo» resta vero nel senso stretto — non può far fallire lo stadio 1 — ma non vuol più dire rimandabile.
+
+Va tenuto distinto dagli altri quattro campi, perché si spegne in modo diverso. Minuti e clean sheet sono colonne che si accendono **per stagione**, con `season.has_fbref`; il nome per esteso è un dato **per riga**, e resta nullo per chi lo stadio non ha agganciato anche quando la bandiera è accesa. Nasconderlo a tutti perché manca ad alcuni sarebbe la lettura sbagliata.
 
 **Stadio 3 — Identificativi esterni.** Facoltativo. Risolve la corrispondenza con API-Football e la scrive nel dataset. Senza, lo strato dei dati vivi non ha modo di agganciare un infortunio a un giocatore, e resta spento.
 
@@ -124,11 +131,13 @@ Nessuno stadio può far fallire quelli precedenti. Se lo stadio 2 non trova un f
 
 | Tabella | Colonne prese |
 |---|---|
-| Standard Stats | `Born` (anno di nascita, quattro cifre), `MP`, `Starts`, `Min` |
-| Playing Time | `MP`, `Starts`, `Min` (più completa della Standard) |
-| Goalkeeping | `CS` (clean sheet), `Starts` |
+| Standard Stats | `Player` (nome per esteso), `Born` (anno di nascita, quattro cifre), `MP`, `Starts`, `Min` |
+| Playing Time | `Player`, `MP`, `Starts`, `Min` (più completa della Standard) |
+| Goalkeeping | `Player`, `CS` (clean sheet), `Starts` |
 
 Tre tabelle per stagione, esportate in CSV dal sito.
+
+`Player` è in tutte e tre perché è la colonna con cui si fa la corrispondenza — ma è anche un **dato che si tiene**, non solo una chiave di aggancio: è il nome per esteso che il listone non ha. Fra le stagioni vince la grafia più recente.
 
 ### API-Football
 
@@ -197,9 +206,10 @@ Il campo `note` compare nell'interfaccia quando l'app propone l'aggiornamento. "
   "serieATeams": [ { "name": "Inter", "code": "INT" } ],
   "players": [
     {
-      "sourceId": 2170,
-      "identityKey": "fc-2170",
-      "name": "Lautaro Martinez",
+      "sourceId": 2764,
+      "identityKey": "fc-2764",
+      "name": "Martinez L.",
+      "fullName": "Lautaro Martínez",
       "team": "Inter",
       "roleClassic": "A",
       "rolesMantra": ["A", "Pc"],
@@ -230,7 +240,19 @@ Il campo `note` compare nell'interfaccia quando l'app propone l'aggiornamento. "
 }
 ```
 
+I due campi del nome non sono un doppione. `name` è **come il listone lo scrive**, ed è quello che l'app stampa dappertutto: nelle rose, nel resoconto, nello snapshot. `fullName` è come lo chiama chi lo bandisce, arriva da FBref, e serve a **trovarlo**, non a rinominarlo. Le prime stesure di questo documento scrivevano `"name": "Lautaro Martinez"`, che è il nome vero di una persona vera e non è mai stato il contenuto di quel campo: il listone 2026-27 lo elenca come `Martinez L.`, ed è da lì che è nato il T14b della roadmap.
+
+`fullName` è nullo per chi lo stadio 2 non ha agganciato, e per tutti finché non gira. Chi lo legge non deve mai contarci.
+
 `sources` con le impronte dei file di partenza serve a una cosa: fra sei mesi, davanti a un dato strano, poter dire con certezza da quale file veniva.
+
+### Aggiungere un campo
+
+**Un campo nuovo è additivo, e il numero di versione non si muove.** `formatVersion` dice se un file vecchio è ancora leggibile, non se il formato è cresciuto: chi legge tratta ogni campo aggiunto come opzionale, e solo un cambiamento che rende illeggibile ciò che è già stato pubblicato alza il numero.
+
+La regola è scritta qui perché è già stata violata una volta, e nel modo più silenzioso possibile. T6 aggiunse `birthYear` **obbligatorio** lasciando `formatVersion` a 1: ogni dataset pubblicato prima smetteva di validare pur continuando a dichiararsi della stessa versione, e nessuno se ne accorse perché fino a T7 nessuno rileggeva un dataset. Il rimedio è una riga dello schema, non un numero: il campo si dichiara nullable con valore predefinito nullo, così la chiave può mancare in ingresso ed è sempre presente in uscita, e nessun lettore deve ricordarsi che potrebbe non esserci.
+
+`fullName` è entrato così.
 
 **Il dataset non filtra per significatività.** Ogni giocatore del listone porta tutte le righe di statistica che le fonti gli danno, comprese quelle a `Pv 0` della stagione appena iniziata. Stabilire che una riga è troppo magra per essere mostrata è una decisione di presentazione, e sta nell'app, dove si può cambiare idea. Congelarla qui significherebbe dover rigenerare il dataset per ripensarci.
 
@@ -312,6 +334,8 @@ Riconciliazione 2026-27 v4
   3 AMBIGUI → richiedono una decisione
 
 FBref            631/643 collegati, 12 senza corrispondenza
+                 1974 righe arricchite da 12 file
+                 628 nomi per esteso, 611 diversi dal nome del listone
 API-Football     628/643 collegati, 15 senza corrispondenza
 
 AMBIGUI
@@ -322,6 +346,8 @@ AMBIGUI
 Lo script **fallisce** se restano ambigui non risolti negli override: o il dataset è pulito o non esce. Tre minuti di revisione l'anno valgono la certezza che nessuna riga sia sbagliata in silenzio.
 
 Le corrispondenze mancanti con FBref e API-Football invece **non** fanno fallire: quei giocatori avranno qualche colonna in meno, non un dato sbagliato.
+
+Le due cifre dei nomi per esteso sono separate di proposito. La prima dice quanti giocatori hanno un secondo nome; la seconda quanti ce l'hanno **diverso** dal nome del listone, cioè per quanti la ricerca ha guadagnato qualcosa. Su un cognome di una parola sola le due fonti scrivono la stessa cosa, e contarlo come un nome in più direbbe che T14b ha funzionato molto più di quanto abbia fatto.
 
 ---
 

@@ -1,0 +1,1 @@
+ALTER TABLE `player` ADD `full_name` text;

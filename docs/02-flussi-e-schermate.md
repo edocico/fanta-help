@@ -166,7 +166,7 @@ La vista di consultazione, il cuore della fase pre-asta.
 ├────┬──────────────────┬─────┬───────┬─────┬─────┬──────┬─────┬─────┬─────┬────┤
 │    │ Giocatore        │ Ruo │ Squa  │ Qt. │ FVM │  FM  │ MV  │ Pr. │ Bon │ ★  │
 ├────┼──────────────────┼─────┼───────┼─────┼─────┼──────┼─────┼─────┼─────┼────┤
-│    │ Lautaro Martinez │ A   │ INT   │  32 │ 145 │ 9,12 │6,41 │  34 │+2,7 │ ★  │
+│    │ Martinez L.      │ A   │ INT   │  32 │ 145 │ 9,12 │6,41 │  34 │+2,7 │ ★  │
 │    │ Dimarco          │ D   │ INT   │  18 │  72 │ 7,84 │6,18 │  31 │+1,7 │ ☆  │
 │ ▓  │ Thuram           │ A   │ INT   │  29 │ 130 │ 8,90 │6,35 │  29 │+2,6 │ ★  │
 └────┴──────────────────┴─────┴───────┴─────┴─────┴──────┴─────┴─────┴─────┴────┘
@@ -187,6 +187,12 @@ La vista di consultazione, il cuore della fase pre-asta.
 - La stella aggiunge agli obiettivi della lega attiva, con rating impostabile al passaggio del mouse.
 
 La tabella è virtualizzata. La ricerca filtra mentre digiti, senza pulsante e senza attesa.
+
+**Su cosa cerca, e cosa mostra, sono due domande diverse.** Cerca su **entrambi i nomi**: quello del listone e, dove c'è, il nome per esteso che arriva da FBref (documento 4 §3), ciascuno anche con gli spazi chiusi — `lauta`, `lautaro martinez` e `lautaromartinez` trovano tutti e tre `Martinez L.`.
+
+La colonna Giocatore invece **resta quella del listone**, e la prima stesura di questo mock scriveva `Lautaro Martinez` perché fu disegnato prima che si scoprisse che il listone quel nome non ce l'ha. Mostrare il nome per esteso dove c'è e il cognome altrove darebbe una colonna che si ordina sotto due lettere diverse per lo stesso giocatore, e la si legge scorrendola in ordine alfabetico con un listone stampato in mano.
+
+Il nome per esteso compare invece **dove si sceglie un giocatore cercandolo**, che è la regola: nel pannello di dettaglio sotto il titolo, nei risultati della ricerca d'asta e sulla riga del giocatore scelto sopra il campo prezzo (§4.8), nel selettore dei giocatori di un piano (§4.7) e nella sostituzione di un acquisto in revisione (§4.10) — quest'ultima perché il pannello d'asta è lo stesso componente. Ovunque serve alla stessa cosa: capire perché quella riga ha risposto a quello che hai digitato.
 
 ### 4.5 Dettaglio giocatore
 
@@ -220,10 +226,10 @@ Schermo intero, tre zone.
 ├──────────────────────────────┬────────────────────────────────────────────────┤
 │ ASSEGNA                      │ ROSE                                           │
 │                              │                                                │
-│  🔍 lauta                    │  ▌Real Fanta            218 cr   max 205       │
+│  🔍 martinez                 │  ▌Real Fanta            218 cr   max 205       │
 │  ─────────────────────────   │   P ●●○   D ●●●●●●○○   C ●●●○○○○○   A ●●○○○○  │
-│  Lautaro Martinez  A INT 32  │                                                │
-│  Lautaro Rojas     C TOR  5  │  ▌Bomber Team            96 cr   max  84       │
+│  Martinez L. · Lautaro  A 32 │                                                │
+│  Martinez Jo. · Josep   P  8 │  ▌Bomber Team            96 cr   max  84       │
 │                              │   P ●●●   D ●●●●○○○○   C ●●●●●●○○   A ●●●○○○  │
 │  Prezzo    [   47 ]          │                                                │
 │  Squadra   [ Real Fanta  ▾]  │  ▌Zona Cesarini          31 cr   max  19       │
@@ -239,7 +245,15 @@ Schermo intero, tre zone.
 └──────────────────────────────┴────────────────────────────────────────────────┘
 ```
 
+Nel bozzetto i due nomi per esteso sono **abbreviati** per stare nella cornice, che è più stretta del pannello vero: a schermo escono interi, `Martinez L. · Lautaro Martínez`, e la riga porta anche la squadra. Vale la licenza del §1 — sono bozzetti di impaginazione, non copy letterale — ma qui conviene dirlo, perché `· Lautaro` sembra una scelta e non lo è.
+
 **Zona di assegnazione (sinistra).** Il campo di ricerca è sempre a fuoco quando la vista si apre e dopo ogni assegnazione. Sotto, i risultati con ruolo, squadra e quotazione. Sotto ancora, prezzo e squadra acquirente.
+
+Ogni risultato porta il nome del listone e, attenuato di seguito, il nome per esteso quando dice qualcosa in più — è quello che risponde a `lauta`, ed è ciò che spiega perché quella riga ha risposto.
+
+**Quasi tutti ne avranno uno**, e conviene aspettarselo invece di scoprirlo: FBref scrive nome e cognome per chiunque, mentre il listone scrive il solo cognome, quindi anche i 407 nomi di una parola sola su 524 guadagnano qualcosa — `Zortea` diventa `Zortea · Nadir Zortea`. Dove le due fonti scrivono davvero la stessa cosa non compare niente, ma è il caso raro: il mononimo, chi è conosciuto con un nome solo.
+
+Per questo è **sulla stessa riga** e non sotto. Una seconda riga per riga varrebbe per quasi tutta la lista e dimezzerebbe quanti risultati ci stanno, che è l'opposto di ciò che serve a un pannello guidato in pochi secondi. Misurato nell'app: la riga resta di 28px e ne restano visibili sei; la cella del nome è 199px, che `Martinez L. · Lautaro Martínez` riempie esatti, e le combinazioni più lunghe — `Esposito F.P. · Francesco Pio Esposito`, 242px — si troncano da destra, cioè perdono la coda del secondo nome e mai il nome del listone. Il tooltip porta entrambi.
 
 Se il giocatore selezionato risulta indisponibile, **il pannello lo dice lì**, prima del campo prezzo: `Infortunato · rientro previsto a novembre · dato di 2 giorni fa`. È l'unico momento in cui quell'informazione conta davvero, e nessun foglio Excel te la mette davanti mentre stai per pagare.
 
@@ -400,6 +414,7 @@ Ogni riga è un comportamento da implementare, non un suggerimento.
 | Giocatore sparito dal nuovo listone ma già acquistato | Resta in rosa, marcato | "Non è più nel listone del 5 settembre" |
 | App chiusa a metà asta | Riapre allo stato esatto | nessuno |
 | Ricerca senza risultati | Riga singola | "Nessun giocatore. Prova con meno lettere." |
+| Ricerca su un nome che il listone non usa | Trovato lo stesso: si cerca anche sul nome per esteso | nessuno |
 | Anomalia in revisione | Segnalata, mai bloccante | "Bomber Team ha sforato di 4 crediti" |
 | Cristallizzazione con anomalie | Permessa, con conferma che le elenca | "3 anomalie non risolte. Cristallizzare comunque?" |
 | Modifica su lega cristallizzata | Bloccata, con la via d'uscita | "Il resoconto è cristallizzato. Riaprilo per modificarlo." |

@@ -38,22 +38,50 @@ export type Haystack = {
 }
 
 /**
- * Rebuilt only when the list changes, never per keystroke.
+ * Every spelling of one player's name, on one line, for uFuzzy to match against.
  *
- * Each entry carries the name twice: as written, and with the spaces closed up.
+ * Two names go in, because the listone has only one and it is the wrong one for
+ * this. It writes a **surname**, with a disambiguating initial where two share
+ * it — `Martinez L.`, `Pellegrini Lu.`, `Esposito F.P.` — while whoever is
+ * bidding shouts the name the player is known by. That name reaches here from
+ * FBref, through the optional stage of T6, and is null for anyone it did not
+ * reach: T14b's whole point is that it exists nowhere else offline.
+ *
+ * Each spelling is carried twice, as written and with the spaces closed up.
  * uFuzzy splits the needle on spaces and matches each term inside one word, so
  * `debruyne` typed in a hurry would otherwise find nothing while `de bruyne`,
- * `bruyne` and even `bruynee` all work. Doubling the haystack is a kilobyte and
- * closes the whole family: `zepedro`, `martinezl`, `deroon`.
+ * `bruyne` and even `bruynee` all work. The same doubling is what makes
+ * `lautaromartinez` land — without it only the spaced `lautaro martinez` would.
+ *
+ * Deduplicated for the case where the two sources land on the same string. It is
+ * not the common one — FBref writes a given name in front of every surname, so
+ * the 407 single-word names of this listone all gain something — but the mononym
+ * exists, and a repeated spelling would lengthen the haystack for nothing.
  */
+export function searchKey(name: string, fullName: string | null): string {
+  const parts: string[] = []
+
+  const add = (value: string): void => {
+    const spelling = normalizeName(value)
+    // A name that normalises away entirely — punctuation, or a stray cell that
+    // got this far — would otherwise contribute a bare separator, and a needle
+    // with a doubled space matches differently from one without.
+    if (spelling === '') return
+    if (!parts.includes(spelling)) parts.push(spelling)
+    const closed = spelling.replace(/ /g, '')
+    if (closed !== spelling && !parts.includes(closed)) parts.push(closed)
+  }
+
+  add(name)
+  if (fullName !== null) add(fullName)
+  return parts.join(' ')
+}
+
+/** Rebuilt only when the list changes, never per keystroke. */
 export function haystack(players: readonly PlayerRow[]): Haystack {
   return {
     players,
-    needles: players.map((p) => {
-      const name = normalizeName(p.name)
-      const closed = name.replace(/ /g, '')
-      return closed === name ? name : `${name} ${closed}`
-    }),
+    needles: players.map((p) => searchKey(p.name, p.fullName)),
   }
 }
 

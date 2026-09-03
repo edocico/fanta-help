@@ -11,6 +11,7 @@ import {
   minutesPerMatch,
   reliability,
   seasonWindow,
+  spelledOut,
   startShare,
   TIERS,
 } from '@shared/domain'
@@ -114,6 +115,14 @@ export default function PlayerDetail({
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-medium">{player.name}</h2>
+            {/*
+              Under the heading and not inside it: the heading is what the
+              listone calls him, and it is what every other pane of the app —
+              roster, report, snapshot — will keep calling him.
+            */}
+            {spelledOut(player.name, player.fullName) !== null && (
+              <p className="text-sm text-chalk-dim">{spelledOut(player.name, player.fullName)}</p>
+            )}
             <p className="mt-1 text-sm text-chalk-dim">
               {player.roleClassic} · {player.teamName}
               {player.rolesMantra.length > 0 && ` · ${player.rolesMantra.join(' ')}`}

@@ -15,6 +15,13 @@
       "when": 1788248644108,
       "tag": "0001_player_birth_year",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788454519607,
+      "tag": "0002_player_full_name",
+      "breakpoints": true
     }
   ]
 }

@@ -303,9 +303,12 @@ export async function importListone(
         .values(columns)
         .onConflictDoUpdate({
           target: [player.seasonId, player.sourceId],
-          // `birth_date`, `birth_year`, `penalty_taker` and the external ids are
-          // absent from this file, not empty in it. Listing only what the listone
-          // carries is what keeps an XLSX import from erasing them.
+          // `birth_date`, `birth_year`, `full_name`, `penalty_taker` and the
+          // external ids are absent from this file, not empty in it. Listing only
+          // what the listone carries is what keeps an XLSX import from erasing
+          // them — and `full_name` is the one that would be missed, because the
+          // symptom is not an empty column but an auction search that quietly
+          // goes back to finding nothing for `lauta`.
           set: columns,
         })
         .run()

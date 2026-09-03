@@ -90,7 +90,20 @@ const seasonStats = z.object({
 
 const playerRow = z.object({
   id: z.number().int(),
+  /** As the listone writes it: a surname, plus an initial where two share one. */
   name: z.string(),
+  /**
+   * The name he is called by, from FBref through the optional stage of T6.
+   *
+   * Null for anyone that stage did not reach, and null for everyone until it
+   * runs, so nothing may depend on it being there. It travels because the search
+   * of document 2 §4.4 lives in the renderer over the whole listone in memory
+   * (document 3 §5) — a name that stops at the database is a name nobody can
+   * type. It is *searched*, not shown in place of `name`: the Giocatori column is
+   * scanned and sorted by surname, and a list where some rows read `Lautaro
+   * Martínez` and others `Zortea` sorts the same player under two letters.
+   */
+  fullName: z.string().nullable(),
   roleClassic: ROLE,
   /** Badges under the name, per document 2 §4.4: never a column of their own. */
   rolesMantra: z.array(z.string()),

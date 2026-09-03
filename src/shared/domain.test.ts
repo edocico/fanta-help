@@ -40,6 +40,7 @@ import {
   normalizeName,
   reliability,
   rosterAnomalies,
+  spelledOut,
   startShare,
   TEAM_COLORS,
   teamListEditable,
@@ -90,6 +91,64 @@ describe('normalizeName', () => {
       const once = normalizeName(input)
       expect(normalizeName(once)).toBe(once)
     }
+  })
+})
+
+/**
+ * The one decision T14b makes about what the screen shows, in one function so it
+ * cannot be made twice differently.
+ *
+ * Both callers depend on it saying no often: the auction result row would read
+ * `Zortea · Zortea` on most of the listone, and the pipeline's report would claim
+ * every linked player gained a name he can be found by.
+ */
+describe('spelledOut', () => {
+  it('gives the full name when the listone hid it behind an abbreviation', () => {
+    expect(spelledOut('Martinez L.', 'Lautaro Martínez')).toBe('Lautaro Martínez')
+    expect(spelledOut('Esposito F.P.', 'Francesco Pio Esposito')).toBe('Francesco Pio Esposito')
+  })
+
+  it('says nothing when the optional stage never reached the player', () => {
+    expect(spelledOut('Zortea', null)).toBeNull()
+  })
+
+  /**
+   * The mononym, and it is worth naming which case this is. The obvious guess —
+   * a one-word surname — is wrong: 407 of the 524 names in the 2026-27 listone
+   * are one word, and FBref puts a given name in front of every one of them, so
+   * `Zortea` gets `Nadir Zortea` and the two differ. What is genuinely spelled
+   * the same by both is the player known by a single name. `Bremer` is one, and
+   * he is really in this listone as `fc-2788`.
+   */
+  it('says nothing for a mononym, which both sources spell the same', () => {
+    expect(spelledOut('Bremer', 'Bremer')).toBeNull()
+  })
+
+  /**
+   * The accent case, which is the common one and the one a plain `!==` gets
+   * wrong: FBref writes `Vlahović`, the listone writes `Vlahovic`, and they are
+   * the same name. Showing both would be noise dressed as information.
+   */
+  it('says nothing when the two spellings differ only by accents', () => {
+    expect(spelledOut('Vlahovic', 'Vlahović')).toBeNull()
+    expect(spelledOut('Zapata D.', 'Zapata D')).toBeNull()
+  })
+
+  /**
+   * A hyphen is *dropped*, not turned into a space, so `Milinkovic-Savic V.`
+   * normalises to one word plus an initial. Written down because it is the kind
+   * of thing that reads as a bug at the wrong moment: the two spellings here
+   * genuinely differ — FBref adds the given name — and the pair is worth keeping
+   * as the reminder of which half of the difference is real.
+   */
+  it('keeps a hyphenated surname as one word', () => {
+    expect(normalizeName('Milinkovic-Savic V.')).toBe('milinkovicsavic v')
+    expect(spelledOut('Milinkovic-Savic V.', 'Vanja Milinković-Savić')).toBe('Vanja Milinković-Savić')
+  })
+
+  /** A cell that normalises to nothing is a pipeline bug, not a name. */
+  it('says nothing for a full name that is only punctuation', () => {
+    expect(spelledOut('Bremer', '—')).toBeNull()
   })
 })
 

@@ -196,7 +196,7 @@ Pannello di assegnazione col flusso a tre `Invio`, griglia rose, obiettivi liber
 ### T14b · Il nome che si grida non è il nome del listone — *emerso in T14*
 **Documenti:** 4 (§3, §4, §5), 2 (§4.8, §7)
 
-**Il fatto.** Il listone nomina **per cognome**, e aggiunge l'iniziale solo quando il cognome è ambiguo: nel 2026-27 succede a **89 nomi su 524**, perché ci sono due Martinez, due Thuram, due Pellegrini, due Stankovic. Lautaro Martinez è `Martinez L.`. Chi digita «lauta» in asta non trova niente e riceve «Nessun giocatore. Prova con meno lettere.», che è la riga giusta del §7 detta al momento sbagliato: il problema non è che ha scritto troppo, è che ha scritto un nome che il listone non usa.
+**Il fatto.** Il listone nomina **per cognome**, e aggiunge un'abbreviazione del nome solo quando il cognome è ambiguo: nel 2026-27 succede a **89 nomi su 524**, perché ci sono due Martinez, due Thuram, due Pellegrini, due Stankovic. Non sempre è una lettera: dove una non basta il listone ne mette due — `Martinez Jo.`, `Pellegrini Lo.`, `Pessina Mas.` — o due puntate, `Esposito F.P.`, `Ederson D.S.`. Lautaro Martinez è `Martinez L.`. Chi digita «lauta» in asta non trova niente e riceve «Nessun giocatore. Prova con meno lettere.», che è la riga giusta del §7 detta al momento sbagliato: il problema non è che ha scritto troppo, è che ha scritto un nome che il listone non usa.
 
 **Perché conta.** Il §1 mette l'asta al centro — «hai pochi secondi per registrare un acquisto mentre gli altri già chiamano il giocatore dopo» — e questo è l'unico punto in cui la ricerca sbaglia proprio nel momento in cui non c'è tempo. Chi bandisce grida il nome con cui il giocatore è conosciuto, non quello con cui Fantacalcio.it lo elenca.
 
@@ -215,6 +215,8 @@ Ne seguono due cose. **T6 e T14b sono un lavoro solo** e vanno aperti insieme. E
 Le colonne `tit.`, `min` e `CS` si accendono con lo stesso lavoro: oggi la vista Giocatori le nasconde applicando la propria regola sulle colonne che sarebbero vuote.
 
 **Fatto quando:** digitare il nome con cui il giocatore viene chiamato al tavolo lo trova. Il fissato si prende dal dataset costruito e non a memoria — `lauta` deve trovare `Martinez L.`, che è esattamente il caso da cui questo task è nato.
+
+**Stato: la strada è costruita, il criterio non è ancora soddisfatto.** Il campo `fullName` attraversa pipeline, dataset, database, IPC e ricerca, ed è provato in ogni passaggio — ma i CSV di FBref non sono ancora stati scaricati, quindi nel dataset vero è nullo per tutti e 524 e `lauta` continua a non trovare. Le prove sono state fatte con un export FBref scritto a mano. Chi riapre questo task fa due cose: scarica i dodici file elencati in `tools/dataset/README.md`, rilancia `npm run dataset:build`, e rifà la verifica coi nomi che escono dal rapporto invece che con quelli inventati.
 
 ### T15 · Modo proiezione
 **Documenti:** 2 (§4.9)
@@ -295,6 +297,8 @@ Con `Sigla` arriva anche il pannello di riferimento: `?` passa da elenco delle s
 **Documenti:** 7 (§10, §11)
 
 Sostituisce il pannello a righe con una board a colonne: squadre in colonna, slot in riga raggruppati per ruolo. È l'unico cambiamento **strutturale** del refactoring, non solo di aspetto, quindi va isolato dagli altri.
+
+**Debito da T14b.** La proiezione è l'unico schermo dell'asta che **legge chi non ha digitato**, e il nome per esteso non ci arriva: `Ctrl/Cmd+P` smonta il pannello d'asta, che è l'unico posto dove quel nome vive durante l'asta, e in grande resta `Martinez L.` mentre chi bandisce sta gridando «Lautaro». Non è stato fatto in T14b perché il §4.9 non è fra i suoi documenti, e non è stato fatto subito dopo perché questo task riscrive la proiezione da capo: fissare adesso una taglia fra le `--proj-*` vorrebbe dire misurarla due volte. Va deciso qui, e la taglia va misurata nell'app come tutte le altre.
 
 **Fatto quando:** funziona con dieci squadre a rose piene, e la proiezione è la stessa board a scala doppia senza la striscia di assegnazione — non un secondo layout.
 

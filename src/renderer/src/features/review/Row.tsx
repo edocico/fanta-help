@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { haystack, search as fuzzy } from '@/features/players/search'
+import { spelledOut } from '@shared/domain'
 import { errorMessages, notices } from '@shared/errors'
 import type { AuctionState } from '@shared/types'
 
@@ -144,7 +145,25 @@ export default function Row({
                               setQuery('')
                             }}
                           >
-                            <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                            {/* The list you replace a purchase from: knowing
+                                which player you are about to take matters more
+                                here than anywhere, so the name that matched is
+                                shown, as in the auction panel. */}
+                            <span
+                              className="min-w-0 flex-1 truncate"
+                              title={
+                                spelledOut(p.name, p.fullName) === null
+                                  ? p.name
+                                  : `${p.name} · ${spelledOut(p.name, p.fullName)}`
+                              }
+                            >
+                              {p.name}
+                              {spelledOut(p.name, p.fullName) !== null && (
+                                <span className="pl-1.5 text-chalk-dim">
+                                  · {spelledOut(p.name, p.fullName)}
+                                </span>
+                              )}
+                            </span>
                             <span className="label shrink-0 text-xs text-chalk-dim">
                               {owner === null
                                 ? `${p.roleClassic} · ${p.teamCode ?? p.teamName}`

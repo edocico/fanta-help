@@ -38,6 +38,63 @@ Quindi la verifica decide una cosa sola: con quale livello si aggancia lo
 storico. Il livello 1 è un confronto fra interi. Il livello 2 vuole le date di
 nascita, che arrivano da FBref — cioè da T6, un task che viene **dopo** questo.
 
+## Gli stadi facoltativi: i file da procurarsi
+
+Lo stadio 1 gira con i soli XLSX. I due stadi sotto non possono far fallire
+niente: se la cartella non c'è, lo dicono nel rapporto e la build prosegue.
+
+### Stadio 2 — FBref, in `input/fbref/`
+
+Il nome del file è vincolante, `<stagione>-<tabella>.csv`, con la tabella fra
+`standard`, `playing-time` e `goalkeeping`. Un nome fuori schema **non viene
+ignorato in silenzio**: finisce nel rapporto, perché un `2025-26-standard-stats.csv`
+fermo lì assomiglia troppo a FBref che non ha dati per quella stagione.
+
+```
+input/fbref/
+  2023-24-standard.csv      2023-24-playing-time.csv      2023-24-goalkeeping.csv
+  2024-25-standard.csv      2024-25-playing-time.csv      2024-25-goalkeeping.csv
+  2025-26-standard.csv      2025-26-playing-time.csv      2025-26-goalkeeping.csv
+  2026-27-standard.csv      2026-27-playing-time.csv      2026-27-goalkeeping.csv
+```
+
+**Quante stagioni**: quelle che il file statistiche copre, oggi quattro. Una
+stagione FBref che le statistiche non hanno viene scartata con una riga di
+rapporto, quindi dodici file e non nove.
+
+Su FBref ogni tabella sta su una pagina sua — Standard, Playing Time e
+Goalkeeping — e si esporta con **Share & Export → Get table as CSV (for Excel)**.
+Non ripulire il testo: il lettore in `csv.ts` si aspetta già l'intestazione di
+gruppo, le intestazioni ripetute a metà tabella e il `Save%` doppio dei portieri.
+Solo la Standard porta `Born`, che è l'anno di nascita e non la data, ed è quello
+che tiene separati i due Thuram.
+
+**Due cose da sapere prima di stupirsi del risultato.**
+
+Il nome per esteso arriva da qui, e da nessun'altra parte offline: è metà di
+T14b. Ma vale **per riga**, non per stagione — un giocatore che FBref non
+aggancia resta col solo cognome anche quando `hasFbref` è vero. Il rapporto conta
+quanti ne hanno uno e quanti ce l'hanno diverso dal nome del listone.
+
+Le colonne `tit.`, `min` e `CS` invece si accendono **per stagione**, e la vista
+Giocatori guarda quella che il selettore mostra per difetto: l'ultima stagione
+**conclusa**, non quella in corso. Scaricando solo la 2026-27 il nome per esteso
+arriva e le tre colonne restano spente — che è corretto, e sembra uno stadio non
+eseguito.
+
+### Stadio 3 — Identificativi esterni, in `input/api-football/`
+
+Qualunque nome purché finisca in `.json`, una risposta salvata a mano per club:
+
+```
+curl -H 'x-apisports-key: …' \
+  'https://v3.football.api-sports.io/players/squads?team=505' \
+  > tools/dataset/input/api-football/inter.json
+```
+
+Ventun richieste su cento al giorno, una volta a stagione. Senza, lo strato dei
+dati vivi non ha su cosa agganciare un infortunio e resta spento.
+
 ## Costruire il dataset
 
 ```
@@ -97,7 +154,10 @@ si marca `derived`. Le designazioni manuali in `overrides.json` vincono sempre e
 si marcano `manual`, e la distinzione arriva fino all'interfaccia: un rigorista
 designato a mano è certo, uno dedotto è un indizio.
 
-## Gli stadi facoltativi
+## Come si comportano gli stadi facoltativi
+
+Quali file servono e come si chiamano sta più sopra, in «Gli stadi facoltativi: i
+file da procurarsi». Qui c'è come si comportano quando ci sono.
 
 Il documento 4 §2 li chiama facoltativi e lo intende in senso forte: **nessuno dei
 due può far fallire la build**. Quello che non riescono a fare diventa una riga
@@ -109,43 +169,26 @@ cancellare la cartella è l'opzione.
 
 ### Stadio 2 — FBref
 
-Nove CSV esportati a mano dal sito, in `input/fbref/`, nominati
-`<stagione>-<tabella>.csv`:
-
-```
-2025-26-standard.csv        Born, MP, Starts, Min
-2025-26-playing-time.csv    MP, Starts, Min — più completa, ha la precedenza
-2025-26-goalkeeping.csv     CS
-```
-
 Le tabelle sono tre e non una perché si contraddicono, e la precedenza è quella
-del documento §3. Un punto merita di essere detto: **le presenze da titolare di
+del documento §3: Playing Time vince sulla Standard per le tre colonne che hanno
+in comune. Un punto merita di essere detto: **le presenze da titolare di
 Goalkeeping sono le presenze in porta**, e lasciarle scrivere sopra a quelle
 generali riscriverebbe la stagione di ogni portiere. Non lo fanno, e c'è un test
 che se ne accorge.
-
-Un file col nome fuori schema finisce nel rapporto invece di essere ignorato:
-`2025-26-standard-stats.csv` che sta lì senza fare niente ha lo stesso aspetto di
-FBref che non copre quella stagione.
 
 **`Born` è l'anno, non la data.** Va in `birthYear`. Se un giorno FBref lo toglie
 come ha già tolto i dati Opta, il file continua a valere per le altre tre colonne
 e il rapporto dice che gli anni non ci sono.
 
+**La colonna `Player` si tiene**, e non serve solo ad agganciare: è il nome per
+esteso, che il listone non ha. Fra le stagioni vince la grafia più recente,
+perché i file si leggono in ordine crescente di stagione.
+
 ### Stadio 3 — Identificativi esterni
 
-Le rose di API-Football, salvate a mano in `input/api-football/`, un file per
-club, con qualunque nome:
-
-```
-curl -H 'x-apisports-key: …' \
-  'https://v3.football.api-sports.io/players/squads?team=505' \
-  > tools/dataset/input/api-football/inter.json
-```
-
-Ventun richieste su cento al giorno, una volta a stagione. Vanno bene sia la
-risposta intera sia il solo array che contiene, e sia `players/squads` sia
-`players`: quello che sei riuscito a salvare è quello che lo stadio usa.
+Vanno bene sia la risposta intera sia il solo array che contiene, e sia
+`players/squads` sia `players`: quello che sei riuscito a salvare è quello che lo
+stadio usa.
 
 Serve a una cosa sola, ed è il documento 4 §7 a dirlo: senza id esterni lo strato
 degli infortuni non ha modo di agganciare una risposta a un giocatore, e resta
