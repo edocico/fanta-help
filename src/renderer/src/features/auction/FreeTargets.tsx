@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import Figure from '@/components/Figure'
 import { MAX_RATING } from '@shared/domain'
 import type { AuctionState } from '@shared/types'
 
@@ -63,16 +64,55 @@ export default function FreeTargets({ targets }: { targets: readonly Free[] }): 
 function Tile({ row, lost = false }: { row: Free; lost?: boolean }): JSX.Element {
   return (
     <p className={`flex items-baseline gap-2 py-0.5 text-sm ${lost ? 'flash-lost' : ''}`}>
+      {/* `★` is a glossary key, and this is still not an `Abbr`: the entry
+          explains the *column* of the players table, and §10 spends its whole
+          first paragraph on the difference — an abbreviation explains itself
+          where it is defined, never where it is used. Here the stars are the
+          value, and the `aria-label` already says how many out of how many. */}
       <span className="shrink-0 text-xs text-target" aria-label={`${row.rating ?? 0} su ${MAX_RATING}`}>
         {'★'.repeat(row.rating ?? 0)}
         <span className="text-line">{'☆'.repeat(MAX_RATING - (row.rating ?? 0))}</span>
       </span>
       <span className="min-w-0 flex-1 truncate">{row.name}</span>
+      {/* Neither of these two is an abbreviation the glossary can hold — the
+          role letters collide between Classic and Mantra, the club codes are
+          data that changes with every promotion — and neither is a `RoleBadge`
+          either: §10 gives the badge a shape, and a shape here would be the
+          heaviest thing in a row that already carries five stars. Text. */}
       <span className="label shrink-0 text-xs text-chalk-dim">
         {row.roleClassic} {row.teamCode}
       </span>
-      <span className="figures w-14 shrink-0 text-right text-xs text-credit">
-        {row.maxPrice === null ? '—' : `max ${row.maxPrice}`}
+      {/*
+        "fino a", not "max".
+
+        The `max` of the glossary is the maximum bid, and it is on this same
+        screen a few centimetres away, over every column of the roster grid.
+        This number is a different thing entirely: the ceiling *you* set for
+        this objective. One drawn string cannot carry two meanings, and §10
+        says which one gives way — "la sigla migliore è quella che non serve".
+        Spelled out, it also says what it is, which `max` never did here.
+
+        The words stay outside `Figure` so the amber falls on the number alone
+        (§15), and they go away with it: "fino a —" would read as a ceiling
+        that exists and is unknown, where the truth is that there is none. The
+        dash carries no `kind` for the same reason: there is no money there to
+        colour.
+
+        `min-w-14` and not the `w-14` this was: the prefix is three characters
+        longer than `max`, and a fixed 3.5rem stops being enough somewhere
+        around a three-digit price. The floor keeps the column, the nowrap keeps
+        the row one line tall, and the name beside it is `min-w-0 flex-1
+        truncate` and gives up the difference. Not measured in the running app:
+        worth a look with a three-digit ceiling in the 320px panel.
+      */}
+      <span className="min-w-14 shrink-0 whitespace-nowrap text-right text-xs">
+        {row.maxPrice === null ? (
+          <Figure value={null} />
+        ) : (
+          <>
+            fino a <Figure value={row.maxPrice} kind="money" />
+          </>
+        )}
       </span>
     </p>
   )

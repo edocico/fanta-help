@@ -200,6 +200,8 @@ Pannello laterale, 420px, si chiude con Esc.
 
 Anagrafica e quotazioni in alto. Sotto, lo storico stagione per stagione in tabella compatta, e un grafico a linee di FM e MV sulle stagioni disponibili. Poi gli indicatori derivati del documento 1, ognuno con una riga di spiegazione in linguaggio piano, perché "bonus index +2,7" non dice niente da solo.
 
+> **Precisato in T23, dove questa riga si è scontrata con un'altra.** Il §10 del documento 7 dice l'opposto — «una sigla si spiega dove è definita, mai dove è usata» — e nessuna delle due si dichiarava superata. Qui vincono tutte e due: **la riga resta**, perché questo è l'unico posto dell'app con lo spazio per scriverla e la regola del §10 punta alle tabelle da seicento celle, che nomina per esteso; ma il testo **viene dal glossario**, non da una copia locale. Erano davvero due: `bon` aveva «quanto la fantamedia supera la media voto» nel pannello di riferimento e «quanto aggiunge al voto in gol e assist» qui, e nessuna delle due sapeva dell'altra. Gli indicatori che non sono sigle — affidabilità, malus, gol subiti — la loro riga se la portano, perché non hanno niente da condividere con nessuno.
+
 In fondo, il blocco obiettivo: fascia, prezzo massimo, rating, note. Si compila da qui senza aprire altro.
 
 ### 4.6 Obiettivi

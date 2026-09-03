@@ -1,4 +1,8 @@
 import { useMemo, useState } from 'react'
+import { DataTableCell, DataTableRow } from '@/components/DataTable'
+import Figure from '@/components/Figure'
+import Glyph from '@/components/Glyph'
+import RoleBadge from '@/components/RoleBadge'
 import { haystack, search as fuzzy } from '@/features/players/search'
 import { spelledOut } from '@shared/domain'
 import { errorMessages, notices } from '@shared/errors'
@@ -33,6 +37,7 @@ const MAX_RESULTS = 6
 
 export default function Row({
   line,
+  position,
   teams,
   index,
   owners,
@@ -40,6 +45,14 @@ export default function Row({
   onDelete,
 }: {
   line: Line
+  /**
+   * Dove sta la riga fra quelle mostrate, per le righe alterne del §10.
+   *
+   * Non `index`, che qui è già l'indice della ricerca, e non `line.sequence`,
+   * che è l'ordine di registrazione: con un filtro attivo le righe mostrate
+   * sono un sottoinsieme, e la zebra deve alternarsi su quello che si vede.
+   */
+  position: number
   teams: AuctionState['teams']
   /** Costruito una volta sola dalla vista: un indice per riga sarebbe duecento. */
   index: ReturnType<typeof haystack>
@@ -99,10 +112,15 @@ export default function Row({
   }
 
   return (
-    <tr className="border-b border-line/50 hover:bg-pitch-800">
-      <td className="figures px-2 py-1.5 text-right text-sm text-chalk-dim">{line.sequence}</td>
+    <DataTableRow index={position}>
+      <DataTableCell numeric className="text-sm text-chalk-dim">
+        {/* Un ordine di registrazione, non del denaro: `whole`, quindi niente
+            ambra — il `text-chalk-dim` della cella è quello di prima — e
+            nessun conteggio animato, che il §7 dà ai crediti soltanto. */}
+        <Figure value={line.sequence} />
+      </DataTableCell>
 
-      <td className="relative min-w-0 px-2 py-1.5 text-sm">
+      <DataTableCell className="relative min-w-0 text-sm">
         {searching ? (
           <>
             <input
@@ -179,23 +197,50 @@ export default function Row({
             )}
           </>
         ) : (
-          <button
-            className="flex w-full min-w-0 items-center gap-2 text-left hover:text-chalk"
-            onClick={() => setSearching(true)}
-          >
-            <span className="min-w-0 truncate">{line.name}</span>
+          /* Il glifo è fuori dal bottone e non dentro: si porta il proprio
+             popover, quindi è a fuoco da tastiera, e un elemento a fuoco dentro
+             un bottone sono due fermate di tabulazione su una parola sola — lo
+             stesso motivo per cui `Abbr` ha una render prop. Il nome resta
+             cliccabile per intero, che è il gesto del §4.10.
+
+             Niente `gap` sulla riga: il glifo si porta il proprio margine
+             sinistro, come nella vista Giocatori, e sommarli lo staccherebbe
+             dal nome che qualifica. */
+          <div className="flex w-full min-w-0 items-center">
+            <button
+              className="min-w-0 flex-1 truncate text-left hover:text-chalk"
+              onClick={() => setSearching(true)}
+            >
+              {line.name}
+            </button>
+            {/* Non più `title`: il §15 lo vieta «né per spiegare una sigla, né
+                per nient'altro». La frase non sparisce, cambia posto: `Glyph`
+                la mette nel popover — che si apre anche al fuoco da tastiera,
+                dove il `title` non arrivava — e in un'espansione nascosta per
+                i lettori di schermo. Il segno visibile diventa `fuori`, come
+                nella vista Giocatori, che lo scriveva già così: la parola
+                «listone» era la differenza fra le due, e a portarla adesso è
+                `notices.DELISTED()`. */}
             {line.delisted && (
-              <span className="label shrink-0 text-xs text-taken" title={notices.DELISTED()}>
-                fuori listone
-              </span>
+              <Glyph
+                mark="fuori"
+                says={notices.DELISTED()}
+                className="shrink-0 text-xs text-taken"
+              />
             )}
-          </button>
+          </div>
         )}
-      </td>
+      </DataTableCell>
 
-      <td className="px-2 py-1.5 text-sm text-chalk-dim">{line.slotRole}</td>
+      {/* La lettera del ruolo disegnata come forma, §10: quadrata, neutra, e
+          con la parola sotto per chi legge con lo schermo. Non una sigla del
+          glossario — `C` e `A` stanno in Classic e in Mantra con due
+          significati, e un popover non saprebbe quale dire. */}
+      <DataTableCell>
+        <RoleBadge role={line.slotRole} />
+      </DataTableCell>
 
-      <td className="px-2 py-1.5 text-sm">
+      <DataTableCell className="text-sm">
         <select
           /*
             `min-w-[6.5rem]` e non una larghezza sulla colonna: in una tabella a
@@ -214,11 +259,15 @@ export default function Row({
             </option>
           ))}
         </select>
-      </td>
+      </DataTableCell>
 
-      <td className="px-2 py-1.5 text-right">
+      <DataTableCell numeric>
+        {/* Un campo, non una `Figure`: il valore è la bozza digitata e cambia a
+            ogni battuta. Gli resta `figure-column`, che è la metà del primitivo
+            che si può dare a un `input` — cifre tabulari e Plex 500 — così la
+            colonna dei prezzi non balla mentre si corregge. */}
         <input
-          className="figures w-14 rounded-md border border-line bg-pitch-900 px-1 py-0.5 text-right text-sm"
+          className="figure-column w-14 rounded-md border border-line bg-pitch-900 px-1 py-0.5 text-right text-sm"
           inputMode="numeric"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -231,13 +280,13 @@ export default function Row({
             }
           }}
         />
-      </td>
+      </DataTableCell>
 
       {/* Il menu del §4.10, e il menu *è* la cautela: eliminare una riga in
           revisione non ha un annulla — `auction.undo` toglie l'ultimo acquisto
           dell'asta, non una riga qualunque — quindi la protezione è che ci
           vogliano due gesti, non una domanda in mezzo allo schermo. */}
-      <td className="relative px-2 py-1.5 text-right">
+      <DataTableCell numeric className="relative">
         <button
           className="px-1 text-chalk-dim hover:text-chalk"
           aria-label="Azioni sulla riga"
@@ -259,7 +308,7 @@ export default function Row({
             </button>
           </div>
         )}
-      </td>
-    </tr>
+      </DataTableCell>
+    </DataTableRow>
   )
 }

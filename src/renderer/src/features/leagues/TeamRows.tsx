@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import Figure from '@/components/Figure'
 import { TEAM_COLORS } from '@shared/domain'
 
 /**
@@ -78,13 +79,17 @@ export default function TeamRows({
           }}
           className="flex h-9 items-center gap-2 px-2"
         >
+          {/* The turn, and the handle you drag to change it. `Figure` draws the
+              number; the span around it stays because it is the handle — it
+              carries the grab cursor and the hint, and neither of those is
+              something a figure knows about. */}
           <span
-            className={`figures w-6 text-right text-sm text-chalk-dim ${
+            className={`w-6 text-right text-sm text-chalk-dim ${
               locked || frozen ? '' : 'cursor-grab'
             }`}
             title={locked || frozen ? undefined : 'Trascina per cambiare il turno'}
           >
-            {index + 1}
+            <Figure value={index + 1} />
           </span>
 
           <Swatch

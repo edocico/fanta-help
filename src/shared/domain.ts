@@ -60,6 +60,32 @@ export const MANTRA_ROLES = ['Por', 'Dd', 'Ds', 'Dc', 'B', 'E', 'M', 'C', 'W', '
 export type MantraRole = (typeof MANTRA_ROLES)[number]
 
 /**
+ * The same twelve, spelled out.
+ *
+ * They live beside `ROLE_LABELS` rather than in the glossary of abbreviations,
+ * and the reason is a collision: `C` and `A` belong to both role vocabularies at
+ * once and mean different things. Measured on the 2026-27 dataset, Mantra `A` is
+ * carried by 33 Classic attaccanti **and by 19 Classic centrocampisti** —
+ * Zaccagni, Orsolini and Pulisic read `ruo C` with Mantra `W;A` on the same row.
+ * A single object keyed on the drawn string cannot hold two `A`, so the two sets
+ * stay two objects and the reference panel prints them under two headings.
+ */
+export const MANTRA_LABELS: Readonly<Record<MantraRole, string>> = {
+  Por: 'portiere',
+  Dd: 'difensore destro',
+  Ds: 'difensore sinistro',
+  Dc: 'difensore centrale',
+  B: 'braccetto',
+  E: 'esterno',
+  M: 'mediano',
+  C: 'centrocampista centrale',
+  W: 'ala',
+  T: 'trequartista',
+  A: 'attaccante',
+  Pc: 'punta centrale',
+}
+
+/**
  * The four steps of document 4: lowercase, NFD with diacritics removed,
  * apostrophes and punctuation removed, multiple spaces collapsed.
  *

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { call, IpcError } from '@/lib/ipc'
+import Figure from '@/components/Figure'
 import PriceField from '@/components/PriceField'
 import { haystack, search as fuzzy } from '@/features/players/search'
 import {
@@ -105,8 +106,7 @@ export default function PlansView(): JSX.Element {
     <Frame>
       <h1 className="text-lg font-medium">Piani</h1>
       <p className="mt-1 text-sm text-chalk-dim">
-        {openLeague.name} · budget{' '}
-        <span className="figures text-credit">{openLeague.budget}</span>
+        {openLeague.name} · budget <Figure value={openLeague.budget} kind="money" />
       </p>
 
       <div className="mt-4 flex flex-wrap items-end gap-3">
@@ -262,25 +262,40 @@ function Grid({
       <dl className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-1 border-b border-line pb-3">
         <div>
           <dt className="label inline text-sm text-chalk-dim">speso </dt>
-          <dd className="figures inline text-sm text-credit">{totals.spent}</dd>
+          <dd className="inline text-sm">
+            <Figure value={totals.spent} kind="money" />
+          </dd>
         </div>
         <div>
           <dt className="label inline text-sm text-chalk-dim">residuo </dt>
-          <dd className="figures inline text-sm text-credit">{totals.remaining}</dd>
+          <dd className="inline text-sm">
+            <Figure value={totals.remaining} kind="money" />
+          </dd>
         </div>
         <div>
           <dt className="label inline text-sm text-chalk-dim">
             media per slot rimanente{' '}
           </dt>
-          <dd className="figures inline text-base text-credit">
-            {totals.perSlot === null
-              ? '—'
-              : totals.perSlot.toLocaleString('it-IT', { maximumFractionDigits: 1 })}
+          {/* `decimal` and not `money`: this is a division, and the tenth is
+              what it has to say. The line it replaces formatted here instead of
+              going through the shared formatter — `toLocaleString` with
+              `maximumFractionDigits: 1` and no minimum — and the two disagree
+              precisely on a result that comes out whole: an exact 20 printed as
+              «20», where `decimal` prints «20,0». With the defaults the app
+              creates a league with, 500 crediti over 25 slot, an empty plan is
+              exactly 20, so the difference showed on the first opening of every
+              new plan, on the one number the plan exists for.
+              The amber stays because it is still crediti: `kind` picks the
+              format, and only `money` brings the colour with it. */}
+          <dd className="inline text-base">
+            <Figure value={totals.perSlot} kind="decimal" className="text-money" />
           </dd>
         </div>
         <div>
           <dt className="label inline text-sm text-chalk-dim">slot </dt>
-          <dd className="figures inline text-sm">
+          {/* Two numbers and a slash, not one figure: `3/25` is read as a single
+              fraction, so it stays a string and takes the column role by class. */}
+          <dd className="figure-column inline text-sm">
             {totals.slotsFilled}/{totals.slotsTotal}
           </dd>
         </div>
@@ -503,7 +518,9 @@ function Picker({
                 )}
               </span>
               <span className="label text-chalk-dim">{player.teamCode ?? player.teamName}</span>
-              <span className="figures text-credit">{player.qtClassicCurrent ?? '—'}</span>
+              {/* The dash for a missing quotazione is `Figure`'s own now: `value`
+                  takes null, so the `?? '—'` that used to stand here is gone. */}
+              <Figure value={player.qtClassicCurrent} kind="money" />
             </button>
           </li>
         ))}

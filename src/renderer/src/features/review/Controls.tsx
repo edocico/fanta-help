@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Figure from '@/components/Figure'
 import { rosterAnomalies, type ClassicRole, type RosterAnomaly } from '@shared/domain'
 import { anomalyMessage } from '@shared/errors'
 import type { AuctionState } from '@shared/types'
@@ -71,7 +72,11 @@ export default function Controls({
                       pannello — la trappola di T14, con `truncate` che non
                       tronca perché nessun antenato costringe la larghezza. */}
                   <span className="min-w-0 flex-1 truncate">{team.name}</span>
-                  <span className="figures text-chalk-dim">{anomalies.length}</span>
+                  {/* Quante ne ha quella squadra, non dei crediti: niente
+                      ambra e nessun conteggio animato, che il §7 riserva al
+                      denaro. Il `text-chalk-dim` è quello di prima, e la
+                      taglia la dà la riga. */}
+                  <Figure value={anomalies.length} className="text-chalk-dim" />
                 </button>
 
                 {open && (

@@ -6,6 +6,7 @@ import { isMod, isTypingTarget } from '@/lib/keys'
 import { useAuctionStore } from '@/stores/auction'
 import { useLeagueStore } from '@/stores/league'
 import { useProjectionStore } from '@/stores/projection'
+import Figure from '@/components/Figure'
 import Toast from '@/components/Toast'
 import { canStartAuction, canTransition } from '@shared/domain'
 import { credits, errorMessages, notices } from '@shared/errors'
@@ -556,8 +557,13 @@ function TopBar({
           )}
         </span>
 
-        <span className="figures shrink-0 text-sm">
-          {state.assigned}/{state.slotsTotal}
+        {/* Slots and not credits, so `whole`: no amber — §15 keeps it for money
+            — and no count-up, which §7 gives to the credits figure alone. Two
+            `Figure`s and not one span holding "142/200": they are two numbers,
+            as the comment above this component says, and only the first of them
+            moves. */}
+        <span className="shrink-0 text-sm">
+          <Figure value={state.assigned} />/<Figure value={state.slotsTotal} />
         </span>
 
         {/* "Attivabile da un pulsante nella barra superiore o con Ctrl/Cmd+P",

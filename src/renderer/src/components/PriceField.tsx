@@ -18,6 +18,21 @@ import { useEffect, useState } from 'react'
  * **It truncates.** `type="number"` accepts `40,5` and every price it feeds is a
  * `z.number().int()`, so without this the answer is "Richiesta non valida" with
  * no field named.
+ *
+ * **It is a field, not a figure**, so `Figure` cannot render it: the value lives
+ * in the `value` of an `<input>`, and a component would have to replace the
+ * input to draw it. The numeric treatment therefore comes from `figure-column`
+ * applied by hand — the column role of document 7 §4, Plex 500 tabular, and not
+ * the large Archivo one: Archivo enters at 20px and this field is nowhere near
+ * it. The `text-sm` below is still Tailwind's 14px, not §4's 13 — the working
+ * measure moves in T25 — and the role is the same on either side of that move.
+ *
+ * **The amber stays**, even though §15 reserves it for money and nothing else:
+ * what is typed here *is* a price. §9 grants that exception by name to the price
+ * field of the assignment panel, which is a different component — `AssignPanel`
+ * keeps its own digits-only input — so what carries over is its reason and not
+ * its count: the same amber on the same kind of value, in the three places an
+ * objective or a plan cell is priced.
  */
 export default function PriceField({
   value,
@@ -67,7 +82,7 @@ export default function PriceField({
       aria-label={label}
       title={label}
       disabled={disabled}
-      className={`figures w-14 rounded-md border border-line bg-pitch-900 px-1 py-0.5 text-right text-sm text-credit disabled:opacity-40 ${className}`}
+      className={`figure-column w-14 rounded-md border border-line bg-pitch-900 px-1 py-0.5 text-right text-sm text-credit disabled:opacity-40 ${className}`}
       value={draft}
       placeholder={placeholder}
       onChange={(e) => setDraft(e.target.value)}

@@ -56,7 +56,14 @@ export default function History({
         <ul>
           {history.data?.map((entry) => (
             <li key={entry.id} className="flex items-baseline gap-2 border-b border-line px-3 py-1.5 text-sm">
-              <span className="figures shrink-0 text-xs text-chalk-dim">{when(entry.createdAt)}</span>
+              {/* A timestamp is not a figure — no `Figure` here, and no colour.
+                  `figure-column` all the same: it is the one thing in this
+                  panel that stands in a column, and "3 set, 09:07" over
+                  "12 set, 23:41" only reads as a column if the digits are
+                  tabular. */}
+              <span className="figure-column shrink-0 text-xs text-chalk-dim">
+                {when(entry.createdAt)}
+              </span>
               <span className="min-w-0 flex-1">{describe(entry, teams)}</span>
             </li>
           ))}

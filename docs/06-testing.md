@@ -196,6 +196,11 @@ export default defineConfig({
 | **T13** | scrivere `invariants.test.ts` **prima** dei servizi d'asta: le funzioni pure sono la specifica |
 | **T17** | `canonical.test.ts` insieme alla serializzazione |
 | **T6 / T14b** | `search.test.ts` accanto a `search.ts`, e le prove di `spelledOut` in `domain.test.ts` |
+| **T23** | `glossary.test.ts` accanto al glossario, e `utils.test.ts` accanto a `cn` |
+
+T23 aggiunge due prove piccole e per due ragioni diverse. `glossary.test.ts` fissa **l'elenco delle chiavi per intero**, scritto a mano: è la lezione di T17: `expect(ABBREVIATIONS).toEqual(Object.keys(glossary))` passerebbe con un glossario vuoto e passerebbe il giorno che qualcuno cancella una voce. Aggiungere o togliere una sigla deve comparire nel diff di quella riga. Le altre quattro prove guardano il registro — espansione senza punto, spiegazione con, e mai due sigle con la stessa espansione, che è la forma con cui `max` era finito a significare due cose.
+
+`utils.test.ts` è la seconda eccezione alla riga «niente test sull'interfaccia», e sta nel renderer per lo stesso motivo di `search.ts`: `cn` è puro e non tocca né Node né il DOM. Guarda una cosa sola e invisibile — che una taglia e un colore sopravvivano insieme al passaggio da `tailwind-merge` — **in tutti e due gli ordini**, perché scritta in un ordine solo la prova sarebbe passata metà delle volte contro la versione rotta.
 
 T6 e T14b sono l'eccezione alla riga «niente test sull'interfaccia»: `search.ts` sta nel renderer ma non tocca né Node né il DOM, quindi il guardrail del §5 non lo riguarda, e il criterio del task — «digitare il nome con cui il giocatore viene chiamato al tavolo lo trova» — è letteralmente un caso di test. Due cose vanno dette su come scriverlo.
 

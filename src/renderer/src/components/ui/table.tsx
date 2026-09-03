@@ -1,13 +1,20 @@
 /**
- * Primitive shadcn, generata dalla CLI e per ora non usata da nessuna vista.
+ * Primitive shadcn, generata dalla CLI, **superata da `components/DataTable.tsx`
+ * e ancora senza nessun import.**
  *
  * La tabella dei Giocatori di T9 non la usa apposta: è virtualizzata, e ha
  * bisogno di controllare `tbody`, le righe distanziatrici e il contenitore che
  * scorre — cose che il wrapper `overflow-x-auto` di questo componente le toglie.
- * Resta qui perché le tabelle *non* virtualizzate arrivano subito dopo: lo
- * storico del pannello di dettaglio (T10, documento 2 §4.5) e la cronologia
- * dell'asta (T14). Rigenerarla nel frattempo costa un giro con la CLI di shadcn,
- * che il CLAUDE.md segnala come trappola quando `paths` non è a posto.
+ * Il commento che stava qui diceva di tenerla perché «le tabelle non
+ * virtualizzate arrivano subito dopo»: sono arrivate — lo storico del dettaglio,
+ * la cronologia d'asta, la revisione — e nessuna la usa. T23 ha scritto le parti
+ * del §10 del documento 7, che sono **parti** proprio per la ragione qui sopra.
+ * Curiosamente questo file era anche il solo posto del progetto dove i 40px di
+ * riga del §5 erano già scritti (`h-10` sul `TableHead`, più sotto).
+ *
+ * Resta perché la CLI di shadcn può richiederla come dipendenza di un componente
+ * futuro, e perché cancellare codice morto è la passata finale del §14, cioè
+ * T25. Non aggiungerne usi: la tabella dell'app è `DataTable`.
  *
  * `lib/utils.ts` (`cn`) esiste per lo stesso motivo: ogni componente generato lo
  * importa.

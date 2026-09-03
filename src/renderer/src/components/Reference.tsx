@@ -1,5 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { call } from '@/lib/ipc'
 import { isTypingTarget } from '@/lib/keys'
+import { usePlayersStore } from '@/stores/players'
+import {
+  CLASSIC_ROLES,
+  MANTRA_LABELS,
+  MANTRA_ROLES,
+  ROLE_LABELS_ONE,
+} from '@shared/domain'
+import { ABBREVIATIONS, glossary } from '@shared/glossary'
 
 /**
  * The `?` panel of document 2 §6: "tutte le scorciatoie, e tutte le sigle
@@ -51,11 +61,15 @@ export default function Reference(): JSX.Element | null {
     return () => window.removeEventListener('keydown', onKey, true)
   }, [open])
 
+  // Prima del ritorno anticipato: le regole dei hook non ammettono un `useQuery`
+  // dopo un `return`, e le due query sono comunque spente finché `open` è falso.
+  const clubs = useClubs(open)
+
   if (!open) return null
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-pitch-900/70 p-6">
-      <div className="flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-md border border-line bg-pitch-800">
+      <div className="flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-line bg-surface-panel">
         <header className="flex items-center justify-between border-b border-line px-4 py-2">
           <h2 className="text-sm">Riferimento</h2>
           <button
@@ -66,42 +80,142 @@ export default function Reference(): JSX.Element | null {
           </button>
         </header>
 
-        <div className="grid min-h-0 flex-1 grid-cols-2 gap-6 overflow-auto p-4">
-          <section>
-            <h3 className="label mb-2 text-xs text-chalk-dim">Scorciatoie</h3>
+        <div className="grid min-h-0 flex-1 grid-cols-2 gap-x-6 gap-y-5 overflow-auto p-4">
+          <Section title="Scorciatoie">
             <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
               {SHORTCUTS.map(([keys, what]) => (
-                <Row key={keys} term={keys} definition={what} mono />
+                <Row key={keys} term={keys} definition={what} figures />
               ))}
             </dl>
-          </section>
+          </Section>
 
-          <section>
-            <h3 className="label mb-2 text-xs text-chalk-dim">Sigle</h3>
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-              {GLOSSARY.map(([short, long]) => (
-                <Row key={short} term={short} definition={long} />
+          {/* Espansione **e** spiegazione, §10: sapere che `FM` sta per
+              "fantamedia" non dice cosa sia una fantamedia. Sono i due campi del
+              glossario, ed è lo stesso testo che il popover mostra — un solo
+              posto da correggere quando una definizione si rivela storta. */}
+          <Section title="Sigle">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+              {ABBREVIATIONS.map((abbr) => (
+                <Row
+                  key={abbr}
+                  term={abbr}
+                  definition={
+                    <>
+                      <span className="text-chalk">{glossary[abbr].full}</span>{' '}
+                      {glossary[abbr].explains}
+                    </>
+                  }
+                />
               ))}
             </dl>
-          </section>
+          </Section>
+
+          {/* I ruoli non stanno nel glossario e questa sezione è il perché: `C` e
+              `A` compaiono in tutti e due gli insiemi con due significati, quindi
+              un oggetto solo non può tenerli. Un pannello sì, sotto due titoli. */}
+          <Section title="Ruoli Classic">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+              {CLASSIC_ROLES.map((role) => (
+                <Row key={role} term={role} definition={ROLE_LABELS_ONE[role]} />
+              ))}
+            </dl>
+          </Section>
+
+          <Section title="Ruoli Mantra">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+              {MANTRA_ROLES.map((role) => (
+                <Row key={role} term={role} definition={MANTRA_LABELS[role]} />
+              ))}
+            </dl>
+          </Section>
+
+          {clubs.length > 0 && (
+            <Section title="Squadre" wide>
+              <dl className="grid grid-cols-[auto_1fr_auto_1fr] gap-x-3 gap-y-1 text-sm">
+                {clubs.map((club) => (
+                  <Row key={club.code} term={club.code} definition={club.name} />
+                ))}
+              </dl>
+            </Section>
+          )}
         </div>
       </div>
     </div>
   )
 }
 
+/**
+ * The three-letter club codes, read from the data and not written down.
+ *
+ * They are the one set §10 lists that cannot be a glossary entry: all twenty are
+ * derived at build time from the club name and change with every promotion and
+ * relegation — the installed dataset still carries FRO, MON and VEN. Written by
+ * hand they would be three keys matching nothing and three clubs with no entry,
+ * and nothing would fail.
+ *
+ * Fetched only once the panel is open, and on the key the players view already
+ * uses, so it is free whenever that view has been visited and one call when it
+ * has not. The season is the same fallback the players view applies: the store
+ * holds an override, and `null` there means "the most recent import".
+ */
+function useClubs(open: boolean): { code: string; name: string }[] {
+  const override = usePlayersStore((s) => s.seasonId)
+  const seasons = useQuery({
+    queryKey: ['dataset.list'],
+    queryFn: () => call('dataset.list'),
+    enabled: open,
+  })
+  const seasonId = override ?? seasons.data?.[0]?.id ?? null
+  const list = useQuery({
+    queryKey: ['player.list', { seasonId }],
+    queryFn: () => call('player.list', { seasonId: seasonId as string }),
+    enabled: open && seasonId !== null,
+  })
+
+  return useMemo(() => {
+    const byCode = new Map<string, string>()
+    for (const p of list.data?.players ?? []) {
+      if (p.teamCode !== null && !byCode.has(p.teamCode)) byCode.set(p.teamCode, p.teamName)
+    }
+    return [...byCode]
+      .map(([code, name]) => ({ code, name }))
+      .sort((a, b) => a.code.localeCompare(b.code))
+  }, [list.data])
+}
+
+function Section({
+  title,
+  wide = false,
+  children,
+}: {
+  title: string
+  wide?: boolean
+  children: React.ReactNode
+}): JSX.Element {
+  return (
+    <section className={wide ? 'col-span-2' : undefined}>
+      <h3 className="label mb-2 text-micro text-chalk-dim">{title}</h3>
+      {children}
+    </section>
+  )
+}
+
 function Row({
   term,
   definition,
-  mono = false,
+  figures = false,
 }: {
   term: string
-  definition: string
-  mono?: boolean
+  definition: React.ReactNode
+  /** Only the key names: they are glyphs in a column and want tabular figures.
+   *  An abbreviation is a word and takes the interface face. */
+  figures?: boolean
 }): JSX.Element {
   return (
     <>
-      <dt className={`whitespace-nowrap text-chalk ${mono ? 'figures' : 'label'}`}>{term}</dt>
+      <dt className={`whitespace-nowrap text-chalk ${figures ? 'figure-column' : 'label'}`}>
+        {term}
+      </dt>
       <dd className="text-chalk-dim">{definition}</dd>
     </>
   )
@@ -147,31 +261,20 @@ const SHORTCUTS: ReadonlyArray<readonly [string, string]> = [
  * insieme al modo proiezione.
  */
 
-/**
- * Every abbreviation the interface prints, spelled out.
+/*
+ * Il glossario non è più qui.
  *
- * The list is the columns of the players table of document 2 §4.4 plus the two
- * the auction adds. `cr` and `max` are here because the rose grid writes them
- * next to a figure and nowhere explains them, which is the exact complaint §6
- * raises about `Pv` and `MV`.
+ * Stava in questo file come quindici coppie `[sigla, definizione]`, ed era la
+ * cosa più vicina a una fonte unica che il progetto avesse — ma era nel
+ * renderer, aveva un campo di testo solo dove il §10 ne vuole due, e soprattutto
+ * non era sola: `PlayerDetail` portava un secondo insieme di spiegazioni per
+ * `bon`, `tit.`, `min` e `CS`, diverse parola per parola. Ora sta in
+ * `src/shared/glossary.ts`, lo leggono questo pannello, il popover di `Abbr` e le
+ * righe degli indicatori, e il tipo `Abbr` impedisce che una sigla senza voce
+ * arrivi allo schermo.
+ *
+ * Il commento che stava qui dichiarava «every abbreviation the interface
+ * prints»: misurato, ne mancavano sedici — le quattordici lettere di ruolo,
+ * `qt. iniziale` e `#`. Le lettere di ruolo hanno adesso due sezioni proprie, per
+ * la collisione fra `C` e `A` che nessun oggetto solo può tenere.
  */
-const GLOSSARY: ReadonlyArray<readonly [string, string]> = [
-  ['ruo', 'ruolo Classic: portiere, difensore, centrocampista, attaccante'],
-  ['squa', 'squadra di Serie A'],
-  ['qt.', 'quotazione attuale sul listone'],
-  ['FVM', 'Fanta Valore di Mercato: quanto vale all’asta secondo Fantacalcio.it'],
-  ['FM', 'fantamedia: media dei voti con bonus e malus'],
-  ['MV', 'media voto: la media senza bonus né malus'],
-  ['Pv', 'partite con voto: quante volte ha preso un voto'],
-  ['bon', 'quanto la fantamedia supera la media voto: il peso dei bonus'],
-  ['pt.', 'punteggio: quanto vale nel complesso, sulla scala di una fantamedia'],
-  [
-    'pr.',
-    'prezzo atteso: quanto dovrebbe costare, dividendo i crediti della lega fra i giocatori che entrano in rosa',
-  ],
-  ['tit.', 'titolarità: quota di partite giocate dall’inizio'],
-  ['min', 'minuti giocati per partita'],
-  ['CS', 'clean sheet: quota di partite da titolare senza subire gol'],
-  ['cr', 'crediti ancora da spendere'],
-  ['max', 'puntata massima: il più che può offrire tenendo un credito per ogni slot libero'],
-]

@@ -133,7 +133,7 @@ Tabella virtualizzata con TanStack Table + Virtual, filtri come chip, ricerca fu
 
 Quello che il documento 2 §4.4 elenca e T9 **non** ha, perché ha bisogno di una lega: la fascia di colore della squadra che ha comprato e la riga attenuata (T13), la stella degli obiettivi (T12), il prezzo atteso e il punteggio sintetico (T11 per i pesi, T12 per le fasce), il pannello di dettaglio al click (T10). Non sono mostrati vuoti: vale la regola che il §4.4 si dà per le colonne FBref, «le nasconde invece di mostrare quindici trattini».
 
-**Nota:** le etichette di colonna vengono da `src/shared/glossario.ts`, non scritte a mano nella tabella. La mappa è dati puri e può atterrare già qui; il componente `Sigla` che ne mostra l'espansione arriva più avanti, a T23. Farlo in quest'ordine evita di riscrivere le intestazioni due volte.
+**Nota:** le etichette di colonna vengono da `src/shared/glossary.ts`, non scritte a mano nella tabella. La mappa è dati puri e può atterrare già qui; il componente `Abbr` che ne mostra l'espansione arriva più avanti, a T23. Farlo in quest'ordine evita di riscrivere le intestazioni due volte.
 
 ### T10 · Dettaglio giocatore
 **Documenti:** 2 (§4.5)
@@ -283,15 +283,19 @@ Primitivi e semantici in `:root`, blocco `@theme` con la mappatura shadcn **e co
 ### T23 · Primitivi dell'app
 **Documenti:** 7 (§10)
 
-`Cifra`, `TabellaDati`, `ChipFiltro`, `BadgeRuolo`, `Sigla`.
+`Figure`, `DataTable`, `FilterChip`, `RoleBadge`, `Abbr` — in inglese, come chiede il `CLAUDE.md`, e il §10 del documento 7 è stato allineato.
 
-Con `Sigla` arriva anche il pannello di riferimento: `?` passa da elenco delle scorciatoie a due sezioni, scorciatoie e sigle.
+Con `Abbr` arriva anche il glossario condiviso, e con lui il pannello di riferimento.
 
-**Debito da recuperare, da T9 e T10.** `src/shared/glossario.ts` non esiste ancora e le sigle sono scritte a mano in **due** file: `PlayersView.tsx` (intestazioni di colonna) e `PlayerDetail.tsx` (tabella storico e indicatori). Vanno raccolte da entrambi, e l'insieme reale è più largo delle sei voci d'esempio del §10: `Pv MV FM FVM qt. bon tit. min CS`, più i ruoli. Stessa cosa per i cinque `Intl.NumberFormat` e la funzione `show()`, ricopiati nei due file.
+**Debito recuperato, da T9 e T10.** Il glossario non esisteva, e i cinque `Intl.NumberFormat` con la funzione `show()` stavano ricopiati in due file — 667 byte per parte, identici byte per byte, coi commenti da una parte sola. Ora stanno in `src/shared/glossary.ts` e in `src/renderer/src/lib/format.ts`.
 
-**Decisione aperta, da sciogliere qui provandola sul codice.** Il §10 fa coincidere la chiave del glossario con la stringa disegnata, e le due grafie in circolazione non coincidono: il codice e il `CLAUDE.md` scrivono `MV`, `FM`, `qt.`, mentre lo schema (`src/main/db/schema.ts`) e i documenti 0, 1 e 4 scrivono `Mv`, `Fm`, `Qt` perché sono i nomi delle colonne della fonte. O la chiave è l'etichetta mostrata — e il glossario passa a `MV`/`FM`/`qt.` — oppure è il nome di colonna, e la voce prende un terzo campo per l'etichetta. La seconda strada tiene il tipo onesto verso i dati, la prima lo tiene onesto verso lo schermo.
+**Chiuso in T23, e per tre volte la premessa era sbagliata.**
 
-**Fatto quando:** nessun numero dell'applicazione è più scritto a mano dentro un `<span>`, e nessuna sigla compare fuori dal componente. Il tipo `Sigla = keyof typeof glossario` deve impedire che una sigla senza voce nel glossario compili.
+- *«Le sigle sono scritte a mano in due file.»* Sono **otto** file del renderer per le sole sigle di metrica, **dodici** contando le lettere di ruolo e i codici squadra, più `src/shared/domain.ts` e `src/shared/workbook.ts`. Quello che la riga non nominava e conta più di tutti è `Reference.tsx`, che portava già un glossario di quindici voci.
+- *«`?` passa da elenco delle scorciatoie a due sezioni.»* Le due sezioni c'erano dal T14. Il lavoro era far leggere la seconda dal glossario condiviso, e aggiungere le sezioni dei ruoli.
+- *«La decisione aperta fra chiave-etichetta e chiave-colonna.»* Sciolta a favore dell'**etichetta**, con le prove nel §10 del documento 7: `Qt` non è il nome di nessuna colonna dei quattro listoni, sei voci su diciassette non hanno nessuna colonna su cui chiavare, e il documento 1 §8 aveva già chiuso la domanda gemella con «`matches_rated` internamente, `Pv` nell'interfaccia».
+
+**Fatto quando:** nessun numero dell'applicazione è più scritto a mano dentro un `<span>`, e nessuna sigla compare fuori dal componente. Il tipo `Abbr = keyof typeof glossary` deve impedire che una sigla senza voce nel glossario compili.
 
 ### T24 · La board delle rose
 **Documenti:** 7 (§3, §10, §11)

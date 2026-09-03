@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Abbr from '@/components/Abbr'
+import Figure from '@/components/Figure'
 import { haystack, search as fuzzy } from '@/features/players/search'
 import { isMod, isTypingTarget } from '@/lib/keys'
 import { useAuctionStore } from '@/stores/auction'
@@ -430,7 +432,33 @@ export default function AssignPanel({
             )}
             <span className="label text-xs text-chalk-dim">
               {chosen.roleClassic} {chosen.teamCode ?? chosen.teamName}
-              {chosen.qtClassicCurrent !== null && ` · qt. ${chosen.qtClassicCurrent}`}
+              {/*
+                The abbreviation and its figure in the same breath, which is what
+                makes this a *definition* of `qt.` rather than one of the six
+                hundred cells §10 refuses to gloss: the label is right here,
+                beside the only value it names.
+
+                The popover appears in review and not in the auction, and both
+                are §10: this panel is mounted at `/lega/:id/revisione` too,
+                where `useDense()` is false. During the auction `Abbr` goes
+                quiet by design — the hidden expansion stays.
+
+                `money`, because a quotazione is a price in credits — the
+                glossary entry says so in as many words — and the amber is on the
+                figure alone, never on the label: §15, "nemmeno una volta".
+
+                `animate={false}`, because this figure never counts. It changes
+                only when the *player* under it changes, and a count-up from the
+                previous pick's quotazione would be a movement document 2 §2 does
+                not list, announcing a change that did not happen.
+              */}
+              {chosen.qtClassicCurrent !== null && (
+                <>
+                  {' · '}
+                  <Abbr name="qt." />{' '}
+                  <Figure value={chosen.qtClassicCurrent} kind="money" animate={false} />
+                </>
+              )}
             </span>
           </p>
           {chosen.delisted && (
@@ -460,7 +488,12 @@ export default function AssignPanel({
           inputMode="numeric"
           disabled={chosen === null}
           placeholder={String(state.league.minBid)}
-          className="figures w-20 rounded-md border border-line bg-pitch-900 px-2 py-1 text-right text-sm text-credit disabled:opacity-40"
+          /* The one interactive element in the app that is allowed to be amber,
+             §9: what is typed here *is* money. So the colour stays and only the
+             family changes — `figure-column` rather than `Figure`, because a
+             field is not a figure to wrap: its value is a string being edited,
+             and it has to stay editable. */
+          className="figure-column w-20 rounded-md border border-line bg-pitch-900 px-2 py-1 text-right text-sm text-credit disabled:opacity-40"
           onChange={(e) => setPrice(e.target.value.replace(/\D/g, ''))}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
@@ -551,11 +584,46 @@ export default function AssignPanel({
                   teamRef.current?.focus()
                 }}
               >
-                <span className="figures w-4 text-xs text-chalk-dim">
+                {/*
+                  Not a `Figure`: this digit is the *key you press*, not a
+                  quantity — which is why the tenth team onwards shows nothing
+                  rather than a dash, there being no key past `9`. It keeps the
+                  tabular column so the names line up under it.
+                */}
+                <span className="figure-column w-4 text-xs text-chalk-dim">
                   {t.orderIndex < 9 ? t.orderIndex + 1 : ''}
                 </span>
                 <span className="min-w-0 flex-1 truncate">{t.name}</span>
-                <span className="figures text-xs text-credit">max {t.maxBid}</span>
+                {/*
+                  The render prop, because the row is already a button: the
+                  default shape's `tabIndex={0}` span would be a second tab stop
+                  inside it, the nesting `Abbr` exists to avoid. The trigger is a
+                  plain span, so the button keeps the only tab stop and the
+                  hidden expansion is read out as part of its name.
+
+                  The amber moved off the word and onto the figure alone, §15 —
+                  and the word then takes the `label text-chalk-dim` that the
+                  other six labels of this panel wear, and that the identical
+                  `max` wears in `RosterGrid`. Left to inherit it would come out
+                  at the brightness of the team name, louder than the figure it
+                  names.
+
+                  The count-up is `Figure`'s default for money, and a purchase
+                  never runs it: `restart()` resets the step and unmounts this
+                  list, so no mounted row sees its own `maxBid` change that way.
+                  Left on rather than switched off because `Ctrl/Cmd+Z` does
+                  change it under a standing list — undo absorbs new state and
+                  touches neither the step nor the draft — and that is §7's one
+                  animated figure.
+                */}
+                <span className="text-xs">
+                  <Abbr name="max">
+                    {(label, trigger) => (
+                      <span className={`${trigger} label text-chalk-dim`}>{label}</span>
+                    )}
+                  </Abbr>{' '}
+                  <Figure value={t.maxBid} kind="money" />
+                </span>
               </button>
             </li>
           ))}
@@ -706,9 +774,17 @@ function Results({
               <span className="label shrink-0 text-xs text-chalk-dim">
                 {p.roleClassic} {p.teamCode ?? p.teamName}
               </span>
-              <span className="figures w-8 shrink-0 text-right text-xs text-credit">
-                {p.qtClassicCurrent ?? '—'}
-              </span>
+              {/*
+                No abbreviation here, and that is the rule rather than an
+                omission: these are the cells under the label, and §10 explains a
+                sigla only where it is defined. The dash for a missing quotazione
+                is `Figure`'s own, so the `??` that used to write it is gone.
+              */}
+              <Figure
+                value={p.qtClassicCurrent}
+                kind="money"
+                className="w-8 shrink-0 text-right text-xs"
+              />
             </div>
             {owner && (
               <p className="px-2 pb-1 text-xs text-taken">

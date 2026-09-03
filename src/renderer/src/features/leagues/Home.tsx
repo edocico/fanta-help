@@ -74,12 +74,18 @@ function Row({ league }: { league: LeagueSummary }): JSX.Element {
         className="flex items-center gap-4 px-2 py-2.5 hover:bg-pitch-800"
       >
         <span className="w-64 truncate font-medium">{league.name}</span>
-        <span className="figures w-20 text-sm text-chalk-dim">{league.seasonLabel}</span>
+        {/* No figure class at all: `season.label` renders "Serie A 2026/27" —
+            read back from the dev database, not the bare year pair the name
+            suggests. Two words and a slash carry no figure, so §4's column
+            role would only set the words in Plex 500 beside two neighbouring
+            columns at 400. And dropping `figures` drops Archivo at 12px,
+            which §15 forbids. */}
+        <span className="w-20 text-sm text-chalk-dim">{league.seasonLabel}</span>
         <span className="w-24 text-sm text-chalk-dim">{MODE_LABELS[league.mode]}</span>
         <span className="w-28 text-sm text-chalk-dim">{FORMAT_LABELS[league.auctionFormat]}</span>
-        <span className="figures w-20 text-sm text-chalk-dim">
-          {teams(league.teamCount)}
-        </span>
+        {/* `teams()` counts in Italian — "1 squadra" / "12 squadre" — so the
+            number never leaves the sentence and only the class changes. */}
+        <span className="figure-column w-20 text-sm text-chalk-dim">{teams(league.teamCount)}</span>
         <span className="ml-auto flex items-center gap-3">
           {league.status === 'auction' && <Progress league={league} />}
           <span className="w-32 text-right text-sm text-chalk-dim">
@@ -105,7 +111,10 @@ function Progress({ league }: { league: LeagueSummary }): JSX.Element | null {
 
   return (
     <span className="flex items-center gap-2">
-      <span className="figures text-sm text-chalk-dim">
+      {/* A sentence, per the note above, so §4's column role arrives as a class:
+          two `Figure` halves around the "su" would be two elements where the
+          reader sees one phrase. */}
+      <span className="figure-column text-sm text-chalk-dim">
         {league.slotsFilled} su {league.slotsTotal}
       </span>
       <span className="block h-1 w-24 rounded-sm bg-pitch-700">

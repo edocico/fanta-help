@@ -150,7 +150,11 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
     <Frame>
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h1 className="text-lg font-medium">{league.name}</h1>
-        <span className="figures text-sm text-chalk-dim">{league.seasonLabel}</span>
+        {/* Not a figure: "2026-27" is the name of a season, not a quantity, and
+            this header wraps rather than aligning, so there is no column for
+            tabular digits to hold. Document 7 §4 gives the numeric roles to
+            numbers, and a label that happens to contain digits is not one. */}
+        <span className="text-sm text-chalk-dim">{league.seasonLabel}</span>
         <span className="text-sm text-chalk-dim">
           {MODE_LABELS[league.mode]} · {FORMAT_LABELS[league.auctionFormat]}
         </span>
@@ -264,7 +268,14 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
                 />
               </span>
             ))}
-            <span className="figures text-chalk-dim">
+            {/* Two numbers inside a sentence, so they stay inside it: a `Figure`
+                around each would break the phrase into separate nodes to say
+                what one class already says. `figure-column` is the role of
+                document 7 §4 — Plex 500, tabular — and it is the right one at
+                any size under 20px, where Archivo starts. The `text-sm` on the
+                `<dl>` above is still Tailwind's 14px, not §4's 13: the working
+                measure moves in T25, and the role does not move with it. */}
+            <span className="figure-column text-chalk-dim">
               {totalSlots(league.slots)} per squadra · {league.slotsTotal} in tutto
             </span>
           </dd>
@@ -448,7 +459,24 @@ function AddTeam({ onAdd }: { onAdd: (name: string) => void }): JSX.Element {
   )
 }
 
-/** A figure that commits on blur or Enter, so one transaction per change. */
+/**
+ * A figure that commits on blur or Enter, so one transaction per change.
+ *
+ * **A field, not a `Figure`**, so the component cannot draw it: the value lives
+ * in the `value` of an `<input>`, and a component would have to replace the
+ * input to render it. The numeric treatment is therefore `figure-column` written
+ * by hand — the column role of document 7 §4, Plex 500 tabular, and not the
+ * large Archivo one: Archivo enters at 20px and this field is nowhere near it.
+ * The `text-sm` below is still Tailwind's 14px, not §4's 13 — the working
+ * measure moves in T25 — and the role is the same on either side of that move.
+ * Same reasoning, same class, as `PriceField`.
+ *
+ * **And no amber**, even though budget and puntata minima are credits: §9 gives
+ * the amber exactly one interactive element in the whole application, the price
+ * field of the assignment panel. This same component also edits the slots per
+ * role, which are counts and not money, so the colour could not be its own
+ * anyway.
+ */
 function Editable({
   value,
   min,
@@ -475,7 +503,7 @@ function Editable({
   return (
     <input
       type="number"
-      className="figures w-24 rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm disabled:opacity-50"
+      className="figure-column w-24 rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm disabled:opacity-50"
       value={draft}
       min={min}
       disabled={disabled}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import Figure from '@/components/Figure'
 import { call, IpcError } from '@/lib/ipc'
 import { useLeagueStore } from '@/stores/league'
 import {
@@ -139,7 +140,7 @@ export default function Wizard(): JSX.Element {
               }`}
               onClick={() => setStep(n)}
             >
-              <span className="figures mr-1.5">{n}</span>
+              <Figure value={n} className="mr-1.5" />
               {STEPS[n]}
             </button>
           </li>
@@ -243,7 +244,15 @@ export default function Wizard(): JSX.Element {
                 </Field>
               ))}
               <Field label="totale">
-                <p className="figures px-2 py-1 text-sm">{totalSlots(slots)}</p>
+                {/* The paragraph survives as the box, and it has to: `Field`
+                    hands its child to a block span, so a bare `Figure` would be
+                    an inline box there and its `py-1` would paint without
+                    adding any height — the total would end up shorter than the
+                    four inputs beside it. The numeral inside takes the column
+                    role, which is the one those inputs now wear too. */}
+                <p className="px-2 py-1 text-sm">
+                  <Figure value={totalSlots(slots)} />
+                </p>
               </Field>
             </div>
 
@@ -256,17 +265,25 @@ export default function Wizard(): JSX.Element {
                 <dd>{name.trim() || <span className="text-chalk-dim">senza nome</span>}</dd>
 
                 <dt className="label text-chalk-dim">stagione</dt>
-                <dd className="figures">{season?.label ?? '—'}</dd>
+                {/* The season reads `Serie A 2026/27` — `seasonLabel` in
+                    `shared/listone.ts` — so it is a name, and the year inside
+                    it is part of the name rather than a figure. The class goes
+                    and nothing takes its place: there is no column here to line
+                    up with. */}
+                <dd>{season?.label ?? '—'}</dd>
 
                 <dt className="label text-chalk-dim">regole</dt>
                 <dd>
                   {MODE_LABELS[mode]}, {FORMAT_LABELS[auctionFormat]},{' '}
-                  <span className="figures text-credit">{budget}</span> crediti, puntata minima{' '}
-                  <span className="figures text-credit">{minBid}</span>
+                  <Figure value={budget} kind="money" /> crediti, puntata minima{' '}
+                  <Figure value={minBid} kind="money" />
                 </dd>
 
                 <dt className="label text-chalk-dim">rosa</dt>
-                <dd className="figures">
+                {/* No Figure here, unlike the credits above: `3/8/8/6` is a
+                    single string of four numbers, and the total reads inside a
+                    sentence. Both only want the tabular figures of a column. */}
+                <dd className="figure-column">
                   {CLASSIC_ROLES.map((role) => slots[role]).join('/')} · {totalSlots(slots)} slot per
                   squadra
                 </dd>
@@ -276,7 +293,7 @@ export default function Wizard(): JSX.Element {
                   <ul className="space-y-0.5">
                     {teams.map((team, i) => (
                       <li key={team.key} className="flex items-center gap-2">
-                        <span className="figures w-4 text-right text-chalk-dim">{i + 1}</span>
+                        <Figure value={i + 1} className="w-4 text-right text-chalk-dim" />
                         <span
                           className="size-3 rounded-sm border border-line"
                           style={{ backgroundColor: team.color ?? 'transparent' }}
@@ -409,9 +426,12 @@ function NumberField({
   onChange: (value: number) => void
 }): JSX.Element {
   return (
+    // An input cannot host a `Figure`, so it wears the column role itself —
+    // Plex 500 with tabular figures, the same shape the number will keep once
+    // it is read back in the summary.
     <input
       type="number"
-      className="figures w-24 rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+      className="figure-column w-24 rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
       value={value}
       min={min}
       onChange={(e) => {

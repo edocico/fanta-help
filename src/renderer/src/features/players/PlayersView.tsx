@@ -6,12 +6,30 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type Header,
   type RowData,
 } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { call, IpcError } from '@/lib/ipc'
+import type { FigureKind } from '@/lib/format'
 import { isMod, isTypingTarget } from '@/lib/keys'
+import { cn } from '@/lib/utils'
+import Abbr from '@/components/Abbr'
+import Figure from '@/components/Figure'
+import FilterChip from '@/components/FilterChip'
+import Glyph from '@/components/Glyph'
+import RoleBadge from '@/components/RoleBadge'
+import {
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeadCell,
+  DataTableHeadRow,
+  DataTableRow,
+} from '@/components/DataTable'
+import type { Abbr as AbbrName } from '@shared/glossary'
 import { useLeagueStore } from '@/stores/league'
 import { usePlayersStore, type Filters } from '@/stores/players'
 import { haystack, search as fuzzy } from './search'
@@ -26,6 +44,7 @@ import {
   MANTRA_ROLES,
   MATCHDAYS,
   MAX_RATING,
+  ROLE_LABELS,
   minutesPerMatch,
   expectedPrices,
   malusRate,
@@ -57,35 +76,13 @@ import type { PlayerRow, SeasonStats, TargetRow } from '@shared/types'
  * only ever be empty.
  */
 
-/**
- * Italian numerals, spelled as the mock of document 2 §4.4 spells them: `32`,
- * `9,12`, `+2,7`.
- *
- * Quotazioni, FVM and Pv are whole things — a quotazione of `36,0` invites the
- * reader to look for the tenths that do not exist. `bon` carries its sign
- * because the column answers "how much beyond the vote", and an unsigned 2,25
- * next to an unsigned 0,93 hides that one of them could have been negative.
+/*
+ * I cinque formattatori e `show()` stavano qui, e identici in fondo a
+ * `PlayerDetail.tsx`: 667 byte per parte, confrontati byte per byte prima di
+ * accorparli. Ora stanno in `lib/format.ts`, che è anche dove `Figure` li
+ * legge — e i commenti che dicono *perché* una quotazione non ha decimali sono
+ * andati con loro, perché quelli sono la specifica.
  */
-const dec2 = new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const dec1 = new Intl.NumberFormat('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-const whole = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 0 })
-/**
- * One decimal, not two, because that is how the mock of document 2 §4.4 writes
- * the column: 2,71 appears as `+2,7`. Deliberate rounding — `bon` is read by
- * scanning a column for who brings bonuses, not by checking that FM minus MV
- * comes out right, and the second decimal is noise in that reading.
- */
-const signed = new Intl.NumberFormat('it-IT', {
-  signDisplay: 'exceptZero',
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1,
-})
-const pct = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 0 })
-
-/** Never zero, never "NaN": a metric that cannot be computed shows an em dash. */
-function show(value: number | null | undefined, format: Intl.NumberFormat): string {
-  return value === null || value === undefined ? '—' : format.format(value)
-}
 
 /**
  * Which columns hold a figure, so the header, the cell and the tabular numerals
@@ -94,12 +91,19 @@ function show(value: number | null | undefined, format: Intl.NumberFormat): stri
  * Declared through TanStack's own `meta` rather than a lookup table beside it:
  * a column added without a `meta` simply reads as text, while a second list
  * would go stale the moment someone adds a column and forgets it.
+ *
+ * `abbr` joined it in T23 and carries the same idea one step further: a heading
+ * that is an abbreviation says so once, and the `<th>` turns it into an `Abbr`
+ * with its popover. The string is never written twice — `num()` fills both
+ * `header` and `abbr` from its one argument — because two copies of `FM` are
+ * exactly how a column heading and its glossary entry come apart.
  */
 declare module '@tanstack/react-table' {
   // The two parameters are TanStack's own; the augmentation has to repeat them.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface ColumnMeta<TData extends RowData, TValue> {
     numeric?: boolean
+    abbr?: AbbrName
   }
 }
 
@@ -440,7 +444,11 @@ export default function PlayersView(): JSX.Element {
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
           />
-          <span className="figures shrink-0 text-sm text-chalk-dim">
+          {/* Un numero dentro una frase, che `Figure` non può avvolgere: non è una
+              cifra in un elemento suo, è una parola su tre. Prende la classe del
+              ruolo — cifre tabulari, così «524 giocatori» e «12 di 524» non
+              ballano mentre si digita — e non il componente. */}
+          <span className="figure-column shrink-0 text-sm text-chalk-dim">
             {sorted.length === list.players.length
               ? `${list.players.length} giocatori`
               : `${sorted.length} di ${list.players.length}`}
@@ -454,16 +462,21 @@ export default function PlayersView(): JSX.Element {
         {starRefusal && <p className="mt-2 text-sm text-taken">{starRefusal}</p>}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
+          {/* La lettera resta la lettera: `ROLE_LABELS` la porta per chi legge con
+              un lettore di schermo, e qui è il plurale giusto perché il chip
+              filtra un gruppo, non nomina un giocatore. Le lettere di ruolo non
+              sono nel glossario — `C` e `A` stanno in tutti e due i vocabolari
+              con due significati — e non sono scritte a mano: vengono da
+              `CLASSIC_ROLES`. */}
           {CLASSIC_ROLES.map((role) => (
-            <Chip
+            <FilterChip
               key={role}
-              on={filters.role === role}
-              onClick={() =>
-                patchFilters({ role: filters.role === role ? null : role })
-              }
+              active={filters.role === role}
+              onToggle={() => patchFilters({ role: filters.role === role ? null : role })}
+              aria-label={ROLE_LABELS[role]}
             >
               {role}
-            </Chip>
+            </FilterChip>
           ))}
 
           <Select
@@ -481,34 +494,34 @@ export default function PlayersView(): JSX.Element {
 
           {/* Document 2 §4.4: a number you can type, not a switch someone else
               set. The threshold stays visible and stays editable. */}
-          <label className="label flex items-center gap-1.5 text-chalk-dim">
-            Pv minime
+          <label className="label flex items-center gap-1.5 text-micro text-chalk-dim">
+            <Abbr name="Pv" /> minime
             <input
               type="number"
               min={0}
               max={MATCHDAYS}
-              className="figures w-14 rounded-md border border-line bg-pitch-800 px-1.5 py-1 text-sm"
+              className="figure-column w-14 rounded-md border border-line bg-surface-panel px-1.5 py-1 text-sm"
               value={filters.minPv ?? ''}
               onChange={(e) =>
                 patchFilters({ minPv: e.target.value === '' ? null : Number(e.target.value) })
               }
             />
           </label>
-          <Chip
-            on={filters.minPv === PV_PRESET}
-            onClick={() =>
+          <FilterChip
+            active={filters.minPv === PV_PRESET}
+            onToggle={() =>
               patchFilters({ minPv: filters.minPv === PV_PRESET ? null : PV_PRESET })
             }
           >
             ≥ {PV_PRESET} su {MATCHDAYS}
-          </Chip>
+          </FilterChip>
 
-          <Chip
-            on={filters.penaltyTakers}
-            onClick={() => patchFilters({ penaltyTakers: !filters.penaltyTakers })}
+          <FilterChip
+            active={filters.penaltyTakers}
+            onToggle={() => patchFilters({ penaltyTakers: !filters.penaltyTakers })}
           >
             rigoristi
-          </Chip>
+          </FilterChip>
 
           <div className="ml-auto flex items-center gap-3">
             {/* A menu with one entry is noise: document 2 §4.4 says so of the
@@ -536,19 +549,19 @@ export default function PlayersView(): JSX.Element {
         {active.length > 0 && (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {active.map((chip) => (
-              <button
+              <FilterChip
                 key={chip.label}
-                className="label rounded-md border border-line px-2 py-0.5 text-chalk-dim hover:text-chalk"
-                onClick={() => {
+                active
+                onToggle={() => {
                   if (chip.clearQuery) setQuery('')
                   else patchFilters(chip.clear ?? {})
                 }}
               >
-                {chip.label} ✕
-              </button>
+                {chip.label}
+              </FilterChip>
             ))}
             <button
-              className="label text-chalk-dim underline underline-offset-2 hover:text-chalk"
+              className="label text-micro text-chalk-dim underline underline-offset-2 hover:text-chalk"
               onClick={reset}
             >
               azzera
@@ -559,38 +572,32 @@ export default function PlayersView(): JSX.Element {
 
       <div className="flex flex-1 overflow-hidden">
       <div ref={scroller} className="flex-1 overflow-auto">
-        <table className="w-full border-collapse">
-          <thead className="sticky top-0 z-10 bg-pitch-900">
+        <DataTable>
+          <DataTableHead>
             {table.getHeaderGroups().map((group) => (
-              <tr key={group.id}>
+              <DataTableHeadRow key={group.id}>
                 {group.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className={`label border-b border-line px-3 py-2 text-chalk-dim ${
-                      header.column.columnDef.meta?.numeric ? 'text-right' : 'text-left'
-                    }`}
-                  >
-                    <button
-                      className="hover:text-chalk"
-                      onClick={header.column.getToggleSortingHandler()}
-                    >
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                      {{ asc: ' ↑', desc: ' ↓' }[header.column.getIsSorted() as string] ?? ''}
-                    </button>
-                  </th>
+                  <DataTableHeadCell key={header.id} numeric={header.column.columnDef.meta?.numeric}>
+                    <SortableHeading header={header} />
+                  </DataTableHeadCell>
                 ))}
-              </tr>
+              </DataTableHeadRow>
             ))}
-          </thead>
-          <tbody>
+          </DataTableHead>
+          <DataTableBody>
             {/* Two spacer rows around the visible window: the scrollbar stays
-                honest about six hundred rows while the DOM holds twenty. */}
+                honest about six hundred rows while the DOM holds twenty. And the
+                reason `DataTableRow` takes the logical index rather than striping
+                with `odd:`: this row is the first child, so CSS parity counts
+                from the wrong foot and the stripes would invert. */}
             <tr style={{ height: virtualizer.getVirtualItems()[0]?.start ?? 0 }} />
             {virtualizer.getVirtualItems().map((item) => {
               const row = sorted[item.index]
               return (
-                <tr
+                <DataTableRow
                   key={row.id}
+                  index={item.index}
+                  selected={row.original.id === selectedPlayerId}
                   data-index={item.index}
                   ref={virtualizer.measureElement}
                   role="button"
@@ -603,21 +610,17 @@ export default function PlayersView(): JSX.Element {
                       select(row.original.id)
                     }
                   }}
-                  className={`border-b border-line/50 ${
-                    row.original.id === selectedPlayerId ? 'bg-pitch-700' : 'hover:bg-pitch-800'
-                  }`}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td
+                    <DataTableCell
                       key={cell.id}
-                      className={`px-3 py-2 text-sm ${
-                        cell.column.columnDef.meta?.numeric ? 'figures text-right' : ''
-                      }`}
+                      numeric={cell.column.columnDef.meta?.numeric}
+                      className="text-sm"
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
+                    </DataTableCell>
                   ))}
-                </tr>
+                </DataTableRow>
               )
             })}
             <tr
@@ -627,8 +630,8 @@ export default function PlayersView(): JSX.Element {
                   (virtualizer.getVirtualItems().at(-1)?.end ?? 0),
               }}
             />
-          </tbody>
-        </table>
+          </DataTableBody>
+        </DataTable>
 
         {sorted.length === 0 && (
           <p className="px-6 py-10 text-center text-sm text-chalk-dim">
@@ -698,32 +701,48 @@ function buildColumns(
           <span className={c.row.original.delisted ? 'text-chalk-dim line-through' : ''}>
             {c.getValue()}
           </span>
-          {c.row.original.penaltyTaker && (
-            <span className="ml-1.5 text-credit" title="rigorista">
-              ◉
-            </span>
-          )}
+          {/* Non più ambra: il §15 la riserva al denaro, «nemmeno una volta», e
+              qui stava su una decorazione. E non più `title`, che la stessa lista
+              vieta — «né per spiegare una sigla, né per nient'altro»: era anche
+              l'unico modo di sapere cosa fosse il glifo, e non compariva al fuoco
+              da tastiera. Il §12 vuole comunque una parola accanto al colore, e
+              adesso c'è per tutti e due i lettori. */}
+          {c.row.original.penaltyTaker && <Glyph mark="◉" says="rigorista" />}
           {c.row.original.delisted && (
-            <span className="ml-1.5 text-taken" title="non è più nel listone">
-              fuori
-            </span>
+            <Glyph mark="fuori" says="non è più nel listone" className="text-taken" />
           )}
           {c.row.original.rolesMantra.length > 0 && (
-            <div className="label mt-0.5 text-chalk-dim">
+            /* 11px, come chiede il §10: «i ruoli Mantra stanno sotto il nome
+               come testo a 11px in `--text-muted`, non come badge — sono fino a
+               tre e riempirebbero la riga». Senza taglia esplicita rendevano a
+               **16px**, perché `label` porta peso e spaziatura e non una
+               misura, e nessun antenato ne dichiara una. Misurato nell'app: è
+               quella riga a tenere la riga della tabella a 42,5px invece dei 40
+               del §5. */
+            <div className="label mt-0.5 text-micro text-chalk-dim">
               {c.row.original.rolesMantra.join(' · ')}
             </div>
           )}
         </div>
       ),
     }),
-    columnHelper.accessor('roleClassic', { id: 'role', header: 'ruo' }),
-    columnHelper.accessor((r) => r.teamCode ?? r.teamName, { id: 'team', header: 'squa' }),
-    num('qt', 'qt.', (r) => r.qtClassicCurrent, whole),
-    num('fvm', 'FVM', (r) => r.fvmClassic, whole),
-    num('fm', 'FM', (r) => r.season?.fantaAvg, dec2),
-    num('mv', 'MV', (r) => r.season?.avgVote, dec2),
-    num('pv', 'Pv', (r) => r.season?.matchesRated, whole),
-    num('bon', 'bon', (r) => bonusIndex(r.season?.fantaAvg ?? null, r.season?.avgVote ?? null), signed),
+    columnHelper.accessor('roleClassic', {
+      id: 'role',
+      header: 'ruo',
+      meta: { abbr: 'ruo' },
+      cell: (c) => <RoleBadge role={c.getValue()} />,
+    }),
+    columnHelper.accessor((r) => r.teamCode ?? r.teamName, {
+      id: 'team',
+      header: 'squa',
+      meta: { abbr: 'squa' },
+    }),
+    num('qt', 'qt.', (r) => r.qtClassicCurrent, 'whole'),
+    num('fvm', 'FVM', (r) => r.fvmClassic, 'whole'),
+    num('fm', 'FM', (r) => r.season?.fantaAvg, 'average'),
+    num('mv', 'MV', (r) => r.season?.avgVote, 'average'),
+    num('pv', 'Pv', (r) => r.season?.matchesRated, 'whole'),
+    num('bon', 'bon', (r) => bonusIndex(r.season?.fantaAvg ?? null, r.season?.avgVote ?? null), 'signed'),
   ]
 
   /**
@@ -736,7 +755,7 @@ function buildColumns(
    * The whole column goes only when nobody has one.
    */
   if (evaluation?.hasScores) {
-    base.push(num('pt', 'pt.', (r) => evaluation.scores.get(r.id) ?? null, dec2))
+    base.push(num('pt', 'pt.', (r) => evaluation.scores.get(r.id) ?? null, 'average'))
   }
 
   /**
@@ -750,15 +769,15 @@ function buildColumns(
    */
   const prices = evaluation?.prices ?? null
   if (evaluation?.hasScores && prices) {
-    base.push(num('pr', 'pr.', (r) => prices.get(r.id) ?? null, whole))
+    base.push(num('pr', 'pr.', (r) => prices.get(r.id) ?? null, 'money'))
   }
 
   const withFbref = hasFbref
     ? [
         ...base,
-        num('tit', 'tit.', (r) => startShare(r.season?.starts ?? null, r.season?.matchesPlayed ?? null), pct),
-        num('min', 'min', (r) => minutesPerMatch(r.season?.minutes ?? null, r.season?.matchesPlayed ?? null), dec1),
-        num('cs', 'CS', (r) => cleanSheetRate(r.season?.cleanSheets ?? null, r.season?.starts ?? null), pct),
+        num('tit', 'tit.', (r) => startShare(r.season?.starts ?? null, r.season?.matchesPlayed ?? null), 'percent'),
+        num('min', 'min', (r) => minutesPerMatch(r.season?.minutes ?? null, r.season?.matchesPlayed ?? null), 'decimal'),
+        num('cs', 'CS', (r) => cleanSheetRate(r.season?.cleanSheets ?? null, r.season?.starts ?? null), 'percent'),
       ]
     : base
 
@@ -778,6 +797,7 @@ function buildColumns(
     columnHelper.display({
       id: 'star',
       header: '★',
+      meta: { abbr: '★' },
       cell: (c) => (
         <Star
           player={c.row.original}
@@ -872,16 +892,18 @@ function Star({
  */
 function num(
   id: string,
-  header: string,
+  abbr: AbbrName,
   read: (row: Row) => number | null | undefined,
-  format: Intl.NumberFormat,
+  kind: FigureKind,
 ) {
   return columnHelper.accessor((row) => read(row) ?? undefined, {
     id,
-    header,
+    // One argument, two uses: the heading TanStack needs and the glossary key the
+    // `<th>` explains it with.
+    header: abbr,
     sortUndefined: 'last',
-    meta: { numeric: true },
-    cell: (c) => show(c.getValue() as number | undefined, format),
+    meta: { numeric: true, abbr },
+    cell: (c) => <Figure value={c.getValue() as number | undefined} kind={kind} />,
   })
 }
 
@@ -899,24 +921,39 @@ function describeFilters(filters: Filters, query: string): ActiveChip[] {
   return chips
 }
 
-function Chip({
-  on,
-  onClick,
-  children,
-}: {
-  on: boolean
-  onClick: () => void
-  children: React.ReactNode
-}): JSX.Element {
+/**
+ * A column heading that sorts, and — when the heading is an abbreviation —
+ * explains itself.
+ *
+ * The button is the trigger, not a span inside it. Two focusable things on one
+ * word is two tab stops and a nesting no screen reader should be handed, and a
+ * span the keyboard cannot reach would drop the focus row of §10 in the densest
+ * table of the app, which is the one place where learning the abbreviations
+ * matters most. `Abbr` hands the classes over for exactly this.
+ */
+function SortableHeading({ header }: { header: Header<Row, unknown> }): JSX.Element {
+  const abbr = header.column.columnDef.meta?.abbr
+  const arrow = { asc: ' ↑', desc: ' ↓' }[header.column.getIsSorted() as string] ?? ''
+  const sort = header.column.getToggleSortingHandler()
+
+  if (abbr === undefined) {
+    return (
+      <button className="hover:text-chalk" onClick={sort}>
+        {flexRender(header.column.columnDef.header, header.getContext())}
+        {arrow}
+      </button>
+    )
+  }
+
   return (
-    <button
-      className={`label rounded-md border px-2 py-1 ${
-        on ? 'border-target bg-pitch-700 text-chalk' : 'border-line text-chalk-dim hover:text-chalk'
-      }`}
-      onClick={onClick}
-    >
-      {children}
-    </button>
+    <Abbr name={abbr}>
+      {(label, className) => (
+        <button className={cn(className, 'hover:text-chalk')} onClick={sort}>
+          {label}
+          {arrow}
+        </button>
+      )}
+    </Abbr>
   )
 }
 

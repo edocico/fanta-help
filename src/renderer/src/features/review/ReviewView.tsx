@@ -2,6 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import { call, IpcError } from '@/lib/ipc'
+import Abbr from '@/components/Abbr'
+import {
+  DataTable,
+  DataTableBody,
+  DataTableHead,
+  DataTableHeadCell,
+  DataTableHeadRow,
+} from '@/components/DataTable'
 import { useAuctionStore } from '@/stores/auction'
 import { useLeagueStore } from '@/stores/league'
 import { haystack } from '@/features/players/search'
@@ -338,7 +346,7 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
                 Nessun acquisto registrato. Aggiungine uno qui sotto.
               </p>
             ) : (
-              <table className="w-full border-collapse">
+              <DataTable>
                 {/*
                   `w-full` sulla sola colonna del giocatore: in una tabella
                   automatica è così che una colonna si prende tutto lo spazio che
@@ -356,32 +364,49 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
                   non un acronimo. `squadra` per esteso perché quella colonna è
                   larga per il selettore comunque, e abbreviare non le farebbe
                   guadagnare un pixel.
+
+                  Quelle misure sono di prima del §10: l'intestazione le aveva
+                  prese con `label` senza taglia, cioè ai 16px del browser, e
+                  ora `DataTableHeadCell` la porta agli 11 che il documento
+                  chiede. Ne muove due sole, però, e i numeri sopra dicono
+                  quali: `squadra` la tiene il `min-w-[6.5rem]` del selettore
+                  (104 + 16 di padding = 120), `prezzo` il `w-14` del campo
+                  (56 + 16 = 72) e l'ultima il bottone `⋯` sotto un'intestazione
+                  vuota (21 + 16 = 37) — tre larghezze che l'intestazione non
+                  ha mai deciso. Restano `#`, che si stringe, e `ruo`, che va
+                  nell'altro verso: la cella porta ora un badge da 18px al
+                  posto di una lettera. Niente di questo è stato rimisurato:
+                  il numero vero si prende con `getBoundingClientRect()`
+                  nell'app in esecuzione.
+
+                  `#` e `ruo` sono due delle diciassette voci del glossario e
+                  qui sono *definite*, che è l'unico posto dove il §10 vuole
+                  che si spieghino. `giocatore`, `squadra` e `prezzo` no: una
+                  parola per esteso non ha niente da espandere.
                 */}
-                <thead className="sticky top-0 z-10 bg-pitch-900">
-                  <tr>
-                    <th className="label border-b border-line px-2 py-2 text-right text-chalk-dim">
-                      #
-                    </th>
-                    <th className="label w-full border-b border-line px-2 py-2 text-left text-chalk-dim">
-                      giocatore
-                    </th>
-                    <th className="label border-b border-line px-2 py-2 text-left text-chalk-dim">
-                      ruo
-                    </th>
-                    <th className="label border-b border-line px-2 py-2 text-left text-chalk-dim">
-                      squadra
-                    </th>
-                    <th className="label border-b border-line px-2 py-2 text-right text-chalk-dim">
-                      prezzo
-                    </th>
-                    <th className="border-b border-line" />
-                  </tr>
-                </thead>
-                <tbody key={refusalToken}>
-                  {shown.map((line) => (
+                <DataTableHead>
+                  <DataTableHeadRow>
+                    <DataTableHeadCell numeric>
+                      <Abbr name="#" />
+                    </DataTableHeadCell>
+                    <DataTableHeadCell className="w-full">giocatore</DataTableHeadCell>
+                    <DataTableHeadCell>
+                      <Abbr name="ruo" />
+                    </DataTableHeadCell>
+                    <DataTableHeadCell>squadra</DataTableHeadCell>
+                    <DataTableHeadCell numeric>prezzo</DataTableHeadCell>
+                    <DataTableHeadCell />
+                  </DataTableHeadRow>
+                </DataTableHead>
+                <DataTableBody key={refusalToken}>
+                  {/* `position` e non `index`: la riga ha già una prop con quel
+                      nome — l'indice della ricerca — e la zebra del §10 vuole
+                      l'indice logico della riga, che è questo. */}
+                  {shown.map((line, position) => (
                     <Row
                       key={line.purchaseId}
                       line={line}
+                      position={position}
                       teams={state.teams}
                       index={index}
                       owners={owners}
@@ -389,8 +414,8 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
                       onDelete={() => void remove(line.purchaseId)}
                     />
                   ))}
-                </tbody>
-              </table>
+                </DataTableBody>
+              </DataTable>
             )}
 
             {lines.length > 0 && shown.length === 0 && (

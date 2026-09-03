@@ -129,6 +129,16 @@
   --color-blocking: var(--blocking);
   --color-confirmed: var(--confirmed);
 
+  /* Le superfici del §3 come utility. Fino a T22 esistevano solo in `:root`,
+     leggibili con `var()` e irraggiungibili da un `className`: per questo i
+     componenti scrivono `bg-pitch-700` 89 volte, cioè citano un primitivo, che
+     è proprio ciò che il §3 vieta. I nomi del testo restano fuori di proposito —
+     `--color-text-muted` genererebbe `text-text-muted`, e per quel colore il
+     ponte dà già `text-chalk-dim`, che è come sono scritte tutte e 594. */
+  --color-surface: var(--surface);
+  --color-surface-panel: var(--surface-panel);
+  --color-surface-raised: var(--surface-raised);
+
   /* L'altra metà del ponte, per le utility. `text-chalk`, `text-chalk-dim` e
      `text-credit` sono 310 delle 594. */
   --color-chalk: var(--chalk-100);
@@ -190,11 +200,25 @@
   --radius: 4px;
 }
 
+/* L'unica ombra dell'applicazione, §6: sta sotto popover e dialog, che devono
+   staccarsi da uno sfondo denso, e da nessun'altra parte — l'elevazione qui è
+   una superficie più chiara, non un'ombra. In `@theme` e non in `:root` perché
+   `--shadow-*` è uno spazio dei nomi vero di Tailwind v4: da qui nasce
+   `shadow-overlay`, e il popover delle sigle del §10 la indossa. */
+@theme {
+  --shadow-overlay: 0 8px 24px rgb(0 0 0 / 0.45);
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);
   --radius-lg: calc(var(--radius) + 2px);
   --radius-xl: calc(var(--radius) + 6px);
+  /* Il 3px che il §6 assegna a pastiglie e badge. Non deriva da `--radius`: la
+     scala di shadcn parte da 4 e scende di 2, quindi il gradino sotto è 2px e il
+     3 non nasce da nessun calcolo. Scritto, perché il badge di ruolo lo chiede
+     per nome. */
+  --radius-badge: 3px;
 }
 
 /* ── Seconda mappatura: il vocabolario di shadcn/ui ──────────────────────────
@@ -283,37 +307,85 @@
      anello ad alto contrasto, che su queste superfici è altrettanto
      inequivocabile e non ruba un significato. */
   :focus-visible {
-    outline: 1px solid var(--focus);
+    outline: 2px solid var(--focus);
     outline-offset: 1px;
   }
 }
 
-/* Figures: Archivo Expanded 600 with tabular numerals. Mandatory anywhere a
-   number appears in a column — without it the credit columns jitter on every
-   update. Amber is reserved for money and is applied separately.
- *
- * Declared outside any layer on purpose. Tailwind's utilities live in
- * @layer utilities, and in the cascade an unlayered rule beats a layered one,
- * so `font-medium` on the same element can no longer drop the 600 in silence.
- * The signature element of document 2 — the maximum bid — is exactly where that
- * would have happened, and it would have looked merely a little wrong.
- *
- * The family is now spelled out, and it has to be: until T22 this class simply
- * inherited Archivo from `body`, and `body` is IBM Plex Sans from here on.
- *
- * That it stays Archivo is a decision and not an omission. Document 7 §4 splits
- * figures into two roles — Plex 500 for a column, Archivo 600 expanded for a
- * large one — and this single class is worn by both, sixty-five times over.
- * Splitting it means touching sixty-five call sites, which is the one thing the
- * criterion of T22 forbids, and it is exactly what `Cifra` exists to do in T23.
- * Until then the whole class keeps the role it has: the projection numbers, read
- * from across a room, are the ones that would have paid for the other choice. */
-.figures {
-  font-family: var(--font-display);
-  font-variation-settings: 'wdth' 125;
-  font-weight: 600;
+/* ── Le cifre del §4, i tre ruoli e le quattro taglie ───────────────────────
+   Il §4 non dà «un carattere per i numeri»: dà **tre ruoli**, e ognuno cambia
+   famiglia, peso, asse di larghezza e interlinea insieme.
+
+     | Ruolo               | Famiglia | Peso | Larghezza | Interlinea |
+     | Cifre in colonna    | Plex     | 500  | —         | 1.2        |
+     | Cifre grandi        | Archivo  | 600  | 112       | 1.1        |
+     | Cifre in proiezione | Archivo  | 700  | 125       | 1.0        |
+
+   La `.figures` qui sotto ne indossava **uno solo** — quello della proiezione —
+   in tutti e 65 i suoi siti, colonne a 13px comprese. Non era una svista: T22
+   non poteva dividerla senza toccare 65 componenti, che è la cosa che il suo
+   criterio vietava, e lo dice nel proprio commento rimandando qui. È questo il
+   lavoro che `Figure` fa.
+
+   Classi e non utility perché `font-variation-settings` non ha una famiglia di
+   utility in Tailwind, e l'asse di larghezza è metà della scelta.
+
+   Fuori da ogni layer, per la stessa ragione della `.figures`: le utility
+   stanno in `@layer utilities`, e nella cascata una regola non stratificata
+   batte una stratificata, quindi un `font-medium` capitato sullo stesso elemento
+   non può più far cadere il peso in silenzio.
+
+   Le quattro taglie stanno in `:root` e si consumano con
+   `text-[length:var(--num-md)]`, che è l'idioma già in uso per le taglie della
+   proiezione. In `@theme` non funzionerebbero: `--num-*` non è uno spazio dei
+   nomi di Tailwind, quindi non genererebbe nessuna utility e la build le
+   scarterebbe — la trappola del `--radius` nudo. E i nomi del §4 non si possono
+   nemmeno prestare a `--text-*`: quel prefisso *è* lo spazio delle taglie, e
+   `--text-sm` dichiarato qui sovrascriverebbe quello di Tailwind, rimpicciolendo
+   a 12px le 283 utility `text-sm` già scritte senza che nessuno le abbia
+   rilette. */
+:root {
+  --num-sm: 13px; /* numeri dentro le colonne */
+  --num-md: 20px; /* crediti nell'intestazione di colonna della board */
+  --num-lg: 32px; /* puntata massima */
+  --num-xl: 56px; /* proiezione */
+}
+
+.figure-column {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
+
+.figure-large {
+  font-family: var(--font-display);
+  font-variation-settings: 'wdth' 112;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.figure-projection {
+  font-family: var(--font-display);
+  font-variation-settings: 'wdth' 125;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* La `.figures` è stata cancellata qui, in T23, e questa riga resta perché il
+   suo commento diceva quando sarebbe morta.
+ *
+ * Metteva Archivo 600 espanso a 125 — il ruolo che il §4 assegna alla
+ * **proiezione** — su tutti e 63 i suoi siti, colonne a 12 e 14px comprese, che
+ * è esattamente quello che il §15 vieta: «non usare Archivo sotto i 20px». Non
+ * era una svista, e il commento che stava qui lo dichiarava: dividerla voleva
+ * dire toccare 63 componenti, che è la cosa che il criterio di T22 escludeva, e
+ * rimandava a `Cifra` in T23. I tre ruoli sono ora le tre classi qui sopra e
+ * `Figure` sceglie fra loro; i 63 siti sono passati uno per uno, e 11 di essi
+ * non portavano nessun numero — etichette di stagione, impronte, elenchi di
+ * nomi di colonna letti dall'XLSX. */
 
 /* Labels: sentence case, never spaced capitals. Spaced capitals on every column
    heading is the most recognisable tic of generated interfaces, and on a table

@@ -13,6 +13,7 @@ import PlansView from './features/plans/PlansView'
 import PlayersView from './features/players/PlayersView'
 import TargetsView from './features/targets/TargetsView'
 import { call } from './lib/ipc'
+import { TooltipProvider } from './components/ui/tooltip'
 
 /**
  * HashRouter, never BrowserRouter: the packaged app is loaded from a file://
@@ -27,22 +28,32 @@ import { call } from './lib/ipc'
 export default function App(): JSX.Element {
   return (
     <QueryClientProvider client={queryClient}>
-      <HashRouter>
-        <Routes>
-          <Route element={<Start />}>
-            <Route path="/" element={<Home />} />
-            {/* Before the parametric one for a reader; the router ranks it first anyway. */}
-            <Route path="/lega/nuova" element={<Wizard />} />
-            <Route path="/lega/:id" element={<LeagueView />} />
-            <Route path="/lega/:id/obiettivi" element={<TargetsView />} />
-            <Route path="/lega/:id/piani" element={<PlansView />} />
-            <Route path="/lega/:id/asta" element={<AuctionView />} />
-            <Route path="/lega/:id/revisione" element={<ReviewView />} />
-            <Route path="/lega/:id/resoconto" element={<ReportView />} />
-            <Route path="/giocatori" element={<PlayersView />} />
-          </Route>
-        </Routes>
-      </HashRouter>
+      {/* One provider for the whole application, and it has to be one: the 300ms
+          grace of document 7 §10 — "dopo il primo popover i successivi si aprono
+          senza attesa, così scorrere le intestazioni per impararle funziona" —
+          is by definition the window *between tooltips of the same provider*.
+          With a provider per tooltip, which is what the shadcn CLI generates, it
+          would have nothing to count against and the line would be false while
+          looking implemented. Above the router because the onboarding replaces
+          the shell rather than nesting inside it, and §6 says "ovunque". */}
+      <TooltipProvider>
+        <HashRouter>
+          <Routes>
+            <Route element={<Start />}>
+              <Route path="/" element={<Home />} />
+              {/* Before the parametric one for a reader; the router ranks it first anyway. */}
+              <Route path="/lega/nuova" element={<Wizard />} />
+              <Route path="/lega/:id" element={<LeagueView />} />
+              <Route path="/lega/:id/obiettivi" element={<TargetsView />} />
+              <Route path="/lega/:id/piani" element={<PlansView />} />
+              <Route path="/lega/:id/asta" element={<AuctionView />} />
+              <Route path="/lega/:id/revisione" element={<ReviewView />} />
+              <Route path="/lega/:id/resoconto" element={<ReportView />} />
+              <Route path="/giocatori" element={<PlayersView />} />
+            </Route>
+          </Routes>
+        </HashRouter>
+      </TooltipProvider>
     </QueryClientProvider>
   )
 }

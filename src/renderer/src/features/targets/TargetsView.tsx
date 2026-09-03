@@ -2,6 +2,7 @@ import { Fragment, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { call, IpcError } from '@/lib/ipc'
+import Figure from '@/components/Figure'
 import PriceField from '@/components/PriceField'
 import {
   CLASSIC_ROLES,
@@ -156,9 +157,8 @@ function Board({
 
       {over && (
         <p className="mt-2 text-sm text-chalk">
-          I tuoi obiettivi di fascia 1 valgono{' '}
-          <span className="figures text-credit">{over.total}</span> crediti e il budget è{' '}
-          <span className="figures text-credit">{over.budget}</span>.
+          I tuoi obiettivi di fascia 1 valgono <Figure value={over.total} kind="money" /> crediti e
+          il budget è <Figure value={over.budget} kind="money" />.
         </p>
       )}
 
@@ -175,16 +175,19 @@ function Board({
           <div key={role} className="bg-pitch-900 px-2 pb-2">
             <div className="label text-sm">{ROLE_LABELS[role]}</div>
             <div className="text-sm text-chalk-dim">
-              <span className="figures">{totals[role].count}</span> ·{' '}
-              <span className="figures text-credit">{totals[role].maxPriceTotal}</span> crediti
+              <Figure value={totals[role].count} /> ·{' '}
+              <Figure value={totals[role].maxPriceTotal} kind="money" /> crediti
+              {/* `percent` is given the share itself, not `Math.round(share * 100)` with a `%`
+                  written next to it, and the two are not the same function. 29/200 is 14,5%,
+                  but the float product lands at 14.499999999999998, so the hand-rolled form
+                  rounds down to `14%` where Intl rounds the decimal and says `15%`. Counted
+                  over every whole share `t/budget`: 4 of the 201 shares at budget 200 disagree
+                  and 4 of the 1001 at budget 1000, against 0 at 100, 250, 300, 500 and 750.
+                  The wizard's default budget is 500, which is why this never showed. */}
               {totals[role].budgetShare !== null && (
                 <>
                   {' '}
-                  ·{' '}
-                  <span className="figures">
-                    {Math.round(totals[role].budgetShare * 100)}%
-                  </span>{' '}
-                  del budget
+                  · <Figure value={totals[role].budgetShare} kind="percent" /> del budget
                 </>
               )}
             </div>
@@ -242,7 +245,7 @@ function Header({ league }: { league: LeagueDetail }): JSX.Element {
     <div>
       <h1 className="text-lg font-medium">Obiettivi</h1>
       <p className="mt-1 text-sm text-chalk-dim">
-        {league.name} · budget <span className="figures text-credit">{league.budget}</span>
+        {league.name} · budget <Figure value={league.budget} kind="money" />
       </p>
     </div>
   )

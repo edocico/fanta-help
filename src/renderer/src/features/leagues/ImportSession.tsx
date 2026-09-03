@@ -102,7 +102,7 @@ export function useImportSession(): { button: JSX.Element; panel: JSX.Element | 
           */}
           <p className="pt-1 text-sm text-chalk-dim">
             {preview.seasonId} · {teams(preview.teams)} · {purchases(preview.purchases)} ·{' '}
-            {when(preview.createdAt)} · <span className="figures">{shortHash(preview.contentHash)}</span>
+            {when(preview.createdAt)} · <span className="figure-column">{shortHash(preview.contentHash)}</span>
             {preview.producedBy !== null && ` · firmato da ${preview.producedBy}`}
           </p>
 

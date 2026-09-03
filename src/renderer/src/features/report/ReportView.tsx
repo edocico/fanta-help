@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
+import Figure from '@/components/Figure'
 import { call, IpcError } from '@/lib/ipc'
 import { useLeagueStore } from '@/stores/league'
 import { shortHash, when } from '@/lib/format'
@@ -227,7 +228,11 @@ function Report({
         */}
         <p className="min-w-0 text-chalk-dim">
           Versione {detail.version} · {when(detail.createdAt)} ·{' '}
-          <span className="figures">{shortHash(detail.contentHash)}</span>
+          {/* Un'impronta e non una cifra, quindi `figure-column` e non
+              `Figure`: qui serve solo l'allineamento tabulare, perché due
+              impronte si confrontano una sotto l'altra — questa e quella
+              scritta nelle opzioni del selettore qui accanto. */}
+          <span className="figure-column">{shortHash(detail.contentHash)}</span>
           {file.producedBy.label !== null && ` · firmato da ${file.producedBy.label}`}
         </p>
         {versions.length > 1 && (
@@ -262,17 +267,17 @@ function Report({
       <div className="min-h-0 flex-1 overflow-auto px-4 py-3">
         {/* «I numeri che alla fine si guardano sempre.» */}
         <ul className="flex flex-wrap gap-x-8 gap-y-2 pb-4">
-          <Figure
+          <Stat
             label="giocatore più pagato"
             name={report.topPurchase?.playerName ?? null}
             figure={report.topPurchase?.price ?? null}
           />
-          <Figure
+          <Stat
             label="più speso in attacco"
             name={report.topAttack?.name ?? null}
             figure={report.topAttack?.byRole.A.spent ?? null}
           />
-          <Figure
+          <Stat
             label="più crediti in mano"
             name={report.richest?.name ?? null}
             figure={report.richest?.left ?? null}
@@ -293,9 +298,23 @@ function Report({
                   acquisto da un credito — la fine di ogni asta — leggeva «1
                   spesi». È l'ordine che usa già la board delle rose.
                 */}
+                {/*
+                  `money` conta al nuovo valore in 200ms, e in un resoconto in
+                  sola lettura l'unico modo di cambiare valore è il selettore di
+                  versione: si muovono le cifre cambiate e restano ferme le
+                  altre, che è la domanda di chi guarda due cristallizzazioni
+                  della stessa lega.
+
+                  Il conteggio si vede però solo **tornando** su una versione
+                  già in cache. Alla prima apertura di una versione la guardia
+                  `isPending` in cima smonta `Report` mentre la query è in volo,
+                  e `useCountUp` comincia dal valore corrente: al montaggio non
+                  parte niente. Non è un difetto — contare ha senso solo dove
+                  sullo schermo c'era un «prima», e lì non c'era.
+                */}
                 <span className="ml-auto text-sm text-chalk-dim">
-                  spesi <span className="figures text-credit">{team.spent}</span> · in mano{' '}
-                  <span className="figures text-credit">{team.left}</span>
+                  spesi <Figure value={team.spent} kind="money" /> · in mano{' '}
+                  <Figure value={team.left} kind="money" />
                 </span>
               </header>
 
@@ -315,8 +334,7 @@ function Report({
                 */}
                 {CLASSIC_ROLES.map((role) => (
                   <li key={role}>
-                    {ROLE_LABELS[role]}{' '}
-                    <span className="figures text-credit">{team.byRole[role].spent}</span>
+                    {ROLE_LABELS[role]} <Figure value={team.byRole[role].spent} kind="money" />
                   </li>
                 ))}
               </ul>
@@ -331,9 +349,11 @@ function Report({
                         {bought.playerTeam}
                       </span>
                     )}
-                    <span className="figures w-10 shrink-0 text-right text-credit">
-                      {bought.price}
-                    </span>
+                    <Figure
+                      value={bought.price}
+                      kind="money"
+                      className="w-10 shrink-0 text-right"
+                    />
                   </li>
                 ))}
                 {(byTeam.get(team.uuid) ?? []).length === 0 && (
@@ -389,13 +409,18 @@ function Report({
 }
 
 /**
- * Un numero del resoconto, o la sua assenza detta a parole.
+ * Una statistica del resoconto: un'etichetta, chi la porta, e quanto — «più
+ * speso in attacco: Real Fanta 218». La cifra dentro è un `Figure`, che è il
+ * componente del §10; questo è il blocchetto che la incornicia.
  *
  * `null` non è un caso di scuola: una lega chiusa senza che nessuno abbia
  * comprato un attaccante non ha un «più speso in attacco», e scrivere «Real
  * Fanta · 0 crediti» sarebbe una risposta finta a una domanda senza risposta.
+ * Il ternario resta anche adesso che `Figure` sa disegnare il vuoto da sé: qui a
+ * mancare non è il numero ma la statistica intera, e un trattino lungo accanto a
+ * un nome che non c'è sarebbe una riga rotta, non una risposta.
  */
-function Figure({
+function Stat({
   label,
   name,
   figure,
@@ -412,7 +437,9 @@ function Figure({
           <span className="text-chalk-dim">nessuno</span>
         ) : (
           <>
-            {name} <span className="figures text-credit">{figure}</span>
+            {/* Tutte e tre le statistiche sono crediti — un prezzo, una spesa,
+                un residuo — quindi `money`, e l'ambra la mette il componente. */}
+            {name} <Figure value={figure} kind="money" />
           </>
         )}
       </div>

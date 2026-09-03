@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { call } from '@/lib/ipc'
+import { useDense, useOpenLeagueId } from '@/lib/league'
 import Reference from '@/components/Reference'
 import { useLeagueStore } from '@/stores/league'
 import type { LeagueSummary } from '@shared/types'
@@ -58,10 +59,7 @@ export default function AppShell(): JSX.Element {
   }, [leagues.data, activeLeagueId, setActive])
 
   const openId = useOpenLeagueId()
-  const location = useLocation()
-  const running =
-    location.pathname.endsWith('/asta') &&
-    leagues.data?.find((l) => l.id === openId)?.status === 'auction'
+  const running = useDense()
 
   return (
     <div className="flex h-screen bg-pitch-900 text-chalk">
@@ -96,18 +94,6 @@ export default function AppShell(): JSX.Element {
   )
 }
 
-/**
- * The league in the URL is the one the sidebar follows, and the store carries it
- * to the screens that have no league in theirs — the players view, per document
- * 2 §9. Reading the route rather than a copy of it means the back button and the
- * selector can never disagree about which league is open.
- */
-function useOpenLeagueId(): number | null {
-  const params = useParams()
-  const stored = useLeagueStore((s) => s.activeLeagueId)
-  const fromRoute = Number(params.id)
-  return Number.isInteger(fromRoute) && fromRoute > 0 ? fromRoute : stored
-}
 
 function LeaguePicker({ leagues }: { leagues: LeagueSummary[] }): JSX.Element {
   const navigate = useNavigate()

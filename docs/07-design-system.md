@@ -179,6 +179,10 @@ Stretta e bassa. La misura di lavoro è 13px, non i 14 del default di shadcn.
 
 Archivo entra dai 20px in su. Sotto, le sue cifre tabulari sulla matrice peso × larghezza non sono garantite, e il posto dove servono davvero è la colonna a 13px.
 
+**Dove vivono questi nomi, aggiunto in T23.** I quattro `--num-*` stanno in un `:root` nudo e si consumano con `text-[length:var(--num-md)]`, che è l'idioma già in uso per le taglie della proiezione. In `@theme` non genererebbero niente: `--num-*` non è uno spazio dei nomi di Tailwind, e la build li scarterebbe in silenzio — la trappola del `--radius` nudo. E i nomi non si possono prestare a `--text-*`: quel prefisso **è** lo spazio delle taglie, quindi un `--text-sm` dichiarato qui sovrascriverebbe quello di Tailwind e rimpicciolirebbe a 12px le 283 utility `text-sm` già scritte, senza che nessuno le abbia rilette. Per la stessa ragione `--text-sm` e `--text-base` di questa tabella restano **non mappati**: i 12 e i 13 si scrivono per ora come valore arbitrario, ed è T25 a chiudere la scala.
+
+**E un token della scala va insegnato a `tailwind-merge`.** `text-micro`, `text-body`, `text-title` e `text-heading` non somigliano a niente che la libreria riconosca come una taglia, quindi finiscono nel gruppo dei *colori*: `cn('text-micro', 'text-chalk-dim')` restituisce il solo colore, e invertendo gli argomenti restituisce la sola taglia. Nessun errore, la classe scritta, la regola generata, e l'elemento della taglia che aveva. La dichiarazione sta in `lib/utils.ts` ed è sotto test.
+
 ### Ruoli
 
 | Ruolo | Famiglia | Peso | Larghezza | Altezza riga |
@@ -365,34 +369,59 @@ Niente `tailwind.config.js`: con Tailwind v4 i token vivono in `@theme` dentro i
 
 Solo quelli che shadcn non copre o che qui hanno regole proprie.
 
-### Sigla
+### Abbr — la sigla
 
-L'interfaccia è piena di abbreviazioni, ed è inevitabile: una colonna larga 40px non può avere "Fantamedia" come intestazione. `Pv Mv Fm Qt FVM Gf Gs Rp Rc Ass Amm Esp Au`, i ruoli `P D C A`, gli undici ruoli Mantra, i codici delle squadre di Serie A. Chi gioca solo a Classic non ha mai visto un `Pc`, e chi entra nell'app la prima volta non ne conosce metà.
+> **Rivisto in T23, applicandolo.** I nomi dei componenti sono in inglese come chiede il `CLAUDE.md` («codice, identificatori, commenti e nomi di file in inglese»): `Abbr`, `Figure`, `DataTable`, `FilterChip`, `RoleBadge`, e il glossario sta in `src/shared/glossary.ts`. L'italiano in `src/shared` sopravvive solo dove nomina una cosa della fonte che non ha nome inglese — `listone`, `quotazione` — e questi non sono quel caso.
+
+L'interfaccia è piena di abbreviazioni, ed è inevitabile: una colonna larga 40px non può avere "Fantamedia" come intestazione. `Pv MV FM qt. FVM bon tit. min CS`, i ruoli `P D C A`, i dodici ruoli Mantra, i codici delle squadre di Serie A. Chi gioca solo a Classic non ha mai visto un `Pc`, e chi entra nell'app la prima volta non ne conosce metà.
+
+**I ruoli Mantra sono dodici, non undici.** `MANTRA_ROLES` in `domain.ts` li elenca tutti e dodici e il suo commento avverte che `B` (braccetto) «compare nei file e in nessun riassunto dell'insieme»: misurati sul dataset 2026-27, compaiono tutti, e `B` è il più raro con undici giocatori. È esattamente quello che il commento diceva che sarebbe successo.
+
+**L'elenco `Gf Gs Rp Rc Ass Amm Esp Au` descriveva lo schema, non lo schermo.** Quelle sigle hanno **zero** occorrenze nel renderer: esistono come commenti di colonna in `schema.ts` e come costanti della pipeline offline. All'utente quei dati arrivano solo aggregati, come `bon`, `malus` e `gol subiti`.
 
 **La regola che rende la cosa praticabile: una sigla si spiega dove è definita, mai dove è usata.** L'intestazione di colonna, il badge, l'etichetta: sì. Le seicento celle sotto quell'intestazione: no. Un popover su ogni cella di una tabella lunga sarebbe la cosa peggiore che possiamo fare a questa interfaccia.
 
-**Una sola fonte di verità**, in `src/shared/glossario.ts`:
+**Una sola fonte di verità**, in `src/shared/glossary.ts`:
 
 ```ts
-export const glossario = {
-  Pv:  { esteso: 'Partite a voto',  spiega: 'Giornate in cui ha preso un voto in pagella' },
-  Mv:  { esteso: 'Media voto',      spiega: 'Media dei voti, senza bonus né malus' },
-  Fm:  { esteso: 'Fantamedia',      spiega: 'Media dei voti con bonus e malus inclusi' },
-  Qt:  { esteso: 'Quotazione',      spiega: 'Prezzo base al quale parte in asta' },
-  FVM: { esteso: 'Fantavalore di mercato', spiega: 'Quanto conviene spendere al massimo' },
-  Pc:  { esteso: 'Punta centrale',  spiega: 'Ruolo Mantra: attaccante che gioca al centro' },
+export const glossary = {
+  Pv:  { full: 'Partite a voto',  explains: 'In quante giornate ha preso un voto in pagella…' },
+  MV:  { full: 'Media voto',      explains: 'La media dei voti in pagella, senza bonus né malus.' },
+  FM:  { full: 'Fantamedia',      explains: 'La media dei voti con bonus e malus già conteggiati.' },
+  'qt.': { full: 'Quotazione attuale', explains: 'Quanto vale oggi sul listone…' },
+  FVM: { full: 'Fantavalore di mercato', explains: 'Quanto dovrebbe costare all’asta…' },
 } as const
 
-export type Sigla = keyof typeof glossario
+export type Abbr = keyof typeof glossary
 ```
 
 Il componente accetta solo chiavi del glossario:
 
 ```tsx
-<Sigla nome="Fm" />
+<Abbr name="FM" />
 ```
 
-Siccome `nome` è tipizzato come `Sigla`, **una sigla senza voce nel glossario non compila.** È la stessa disciplina dei contratti IPC: il compilatore impedisce la divergenza invece di sperare che qualcuno se ne accorga.
+Siccome `name` è tipizzato come `Abbr`, **una sigla senza voce nel glossario non compila.** È la stessa disciplina dei contratti IPC: il compilatore impedisce la divergenza invece di sperare che qualcuno se ne accorga.
+
+#### La chiave è la stringa disegnata, e non il nome di colonna
+
+T23 lasciava la scelta aperta: o la chiave è l'etichetta mostrata, o è il nome della colonna della fonte e la voce prende un terzo campo per l'etichetta. **È l'etichetta**, e le prove sono a senso unico.
+
+- **`Qt` non è il nome di nessuna colonna.** I quattro listoni sono stati aperti e la loro riga d'intestazione letta: è `Id | R | RM | Nome | Squadra | Qt.A | Qt.I | Diff. | Qt.A M | Qt.I M | Diff.M | FVM | FVM M`, identica in tutti e quattro gli anni. La chiave d'esempio qui sopra sarebbe diventata quattro chiavi.
+- **Sei voci su diciassette non hanno nessuna colonna.** `bon`, `pt.`, `pr.`, `tit.`, `cr` e `max` sono calcoli di `domain.ts`: la loro chiave andrebbe **inventata**, cioè il tipo smetterebbe di essere onesto verso i dati proprio dove pretende di esserlo.
+- **`CS` e `min` porterebbero il nome di una colonna FBref mentre la cella mostra un rapporto** (`CS/Starts`, `Min/MP`): la chiave direbbe una cosa e il numero un'altra.
+- **Il precedente del progetto è unanime.** `ROLE_LABELS`, `TEAM_COLORS` e i quattro `*_LABELS` della lega chiavano tutti sul **valore memorizzato** e tengono la parola dell'utente in un campo a parte. E il documento 1 §8, fra le decisioni chiuse, aveva già sciolto la domanda gemella: «`matches_rated` internamente, `Pv` nell'interfaccia».
+
+Costo della strada scelta: tre righe di questo documento — `Mv`→`MV`, `Fm`→`FM`, `Qt`→`qt.` — e zero righe di codice, perché il codice già scriveva così.
+
+#### Cosa il glossario **non** contiene
+
+Le lettere di ruolo e i codici squadra restano fuori, e non per ordine:
+
+- **`C` e `A` stanno in tutti e due i vocabolari di ruolo** con significati diversi. Misurato sul dataset 2026-27, il Mantra `A` è portato da 33 attaccanti Classic **e da 19 centrocampisti Classic** — Zaccagni, Orsolini e Pulisic leggono `ruo C` e Mantra `W;A` sulla stessa riga. Un oggetto non può avere due `A`. Vivono in `ROLE_LABELS` e `MANTRA_LABELS`, che li scrivono per esteso.
+- **I venti codici squadra sono dati.** Si derivano a build dal nome del club e cambiano a ogni promozione e retrocessione; il dataset installato porta ancora FRO, MON e VEN. Scritti a mano sarebbero tre chiavi che non corrispondono a niente e tre squadre senza voce, e niente fallirebbe.
+
+Il pannello di riferimento li elenca comunque tutti e tre gli insiemi — ruoli e codici letti dai dati — perché un pannello può mostrare quello che un tipo non può promettere.
 
 **Espansione e spiegazione sono due cose diverse.** Sapere che `Fm` sta per "fantamedia" non dice cosa sia una fantamedia. Per questo le voci hanno due campi, e il popover li mostra entrambi.
 
@@ -413,7 +442,9 @@ Popover su `--surface-panel`, raggio 6px, l'unica ombra dell'applicazione. Estes
 
 **Niente attributo `title`.** Sembra la scelta ovvia ed è la sbagliata: ha un ritardo che non si controlla, non compare al fuoco da tastiera, e lo disegna il sistema operativo con uno stile che sfugge al design system. Si usa il Tooltip di shadcn, che è costruito su Radix e gestisce `aria-describedby` e il fuoco da tastiera, più un'espansione nascosta visivamente per i lettori di schermo.
 
-**Il pannello di riferimento.** `?` apre già l'elenco delle scorciatoie. Diventa un pannello a due sezioni, scorciatoie e sigle, e la seconda elenca tutto il glossario. Un tasto, completo, senza cercare. È anche la risposta al fatto che a riposo la sigla non ha nessuna decorazione: chi non scopre il passaggio del mouse trova tutto lì.
+**Il pannello di riferimento.** `?` apre un pannello a più sezioni, e le sigle elencano tutto il glossario. Un tasto, completo, senza cercare. È anche la risposta al fatto che a riposo la sigla non ha nessuna decorazione: chi non scopre il passaggio del mouse trova tutto lì.
+
+> **Rivisto in T23.** Questa riga diceva «`?` apre già l'elenco delle scorciatoie, e diventa un pannello a due sezioni»: le due sezioni c'erano già dal T14, `Reference.tsx` le aveva affiancate. Il lavoro vero era un altro — far leggere la seconda dal glossario condiviso invece che da una copia locale a quindici voci e a un campo solo, e aggiungere le sezioni dei ruoli, che nel glossario non possono stare. Il commento di quel file dichiarava «every abbreviation the interface prints»: misurato, ne mancavano sedici.
 
 **E dove c'è spazio, non si abbrevia.** L'intestazione di colonna della board scrive `218 crediti · max 205`, non `218 cr · max 205`. La sigla migliore è quella che non serve.
 
@@ -446,9 +477,11 @@ Questo risolve quello che una lista di righe non risolve: si vede a colpo d'occh
 
 **Fallback a finestra stretta**: sotto i 1100px la board diventa una lista di righe con i pallini degli slot, come nella revisione 1. Non è la vista principale, è il ripiego.
 
-### Tabella dati
+### DataTable — la tabella dati
 
 Per consultazione, obiettivi, piani, revisione.
+
+**Parti e non un componente solo.** Una delle tre tabelle dell'app è virtualizzata e possiede il proprio contenitore che scorre, il proprio `tbody` e due righe distanziatrici: un involucro con `overflow-x-auto`, che è quello che dava la primitiva di shadcn, gliele toglie tutte e tre. Le parti vestono allo stesso modo una tabella che scorre da sé e una che non lo fa.
 
 | Proprietà | Valore |
 |---|---|
@@ -460,28 +493,36 @@ Per consultazione, obiettivi, piani, revisione.
 | Padding cella | 8px orizzontale |
 | Allineamento | testo a sinistra, numeri a destra, sempre tabulari |
 
+**Le righe alterne si contano dall'indice logico, non con `odd:`.** Nella tabella virtualizzata la prima riga è una distanziatrice, quindi la parità CSS conta dal piede sbagliato e le strisce si invertono scorrendo. L'indice ce l'ha già chi disegna la riga.
+
 Stati di riga:
 
-- **Già acquistato**: opacità 45%, nessun hover, non selezionabile. Barra del colore della squadra che l'ha preso.
+- **Già acquistato**: attenuato con un **colore proprio** e non con `opacity` — il §12 lo spiega: `--chalk-100` al 45% scende a 3.58:1 e l'ambra a 2.85:1, sotto il pavimento. Nessun hover, non selezionabile. Barra del colore della squadra che l'ha preso. *Non implementato in T23, e non per dimenticanza: la vista Giocatori non sa ancora niente degli acquisti — un residuo di T13, dove il commento prometteva lo stato e nessun `owners` è mai arrivato. Uno stato di riga che nessun chiamante può raggiungere è una guardia che non scatta mai.*
 - **Nella tua lista**: punto `--targeted` di 6px prima del nome.
 - **Indisponibile**: icona prima del nome, rientro previsto nel tooltip. Mai colorare tutta la riga.
 - **Selezionata**: fondo `--surface-raised`, bordo sinistro 2px `--focus`.
 
 Niente colonna di caselle di selezione: in questa app non esistono azioni di massa.
 
-### Cifra
+### Figure — la cifra
 
 Componente dedicato, perché i numeri sono il contenuto.
 
+```tsx
+<Figure value={218} kind="money" size="md" />
 ```
-<Cifra valore={218} tipo="denaro" dimensione="md" />
-```
 
-Sceglie la famiglia in base alla dimensione: Plex sotto i 20px, Archivo espanso sopra. Cifre tabulari sempre. Colore `--money` se `tipo="denaro"`. Anima il conteggio al cambio di valore in 200ms, non al primo montaggio.
+Sceglie la famiglia in base alla dimensione: Plex sotto i 20px, Archivo espanso sopra. Cifre tabulari sempre. Colore `--money` se `kind="money"`. Anima il conteggio al cambio di valore in 200ms, non al primo montaggio — e **solo per il denaro**, che è l'unica cifra che il §7 nomina nella sua lista chiusa di quattro animazioni. Non potrebbe essere altrimenti: il conteggio arrotonda ogni fotogramma, e una fantamedia che attraversa i numeri interi mentirebbe più di una che sta ferma.
 
-Nessun numero dell'applicazione si scrive a mano dentro un `<span>`.
+`value` accetta anche `null`, e allora scrive un trattino lungo: mai uno zero, mai «NaN». Una metrica che non si può calcolare non vale zero.
 
-### Chip di filtro
+**La taglia predefinita è `inherit`, ed è deliberato.** La maggioranza dei siti non dichiara nessuna taglia e la eredita dalla riga; imporre `--num-sm` a ognuno li sposterebbe di un paio di pixel contro un testo che non si è ancora mosso, perché la misura di lavoro resta i 14px di Tailwind finché T25 non la porta ai 13 del §4. `inherit` cambia famiglia, peso e cifre tabulari — la parte che oggi è sbagliata — e lascia la taglia dov'era.
+
+**I tre ruoli del §4 sono tre, e `.figures` ne indossava uno.** La classe che T22 ha lasciato in piedi metteva Archivo 600 espanso a 125 — il ruolo della *proiezione* — in tutti e 63 i suoi siti, colonne a 12 e 14px comprese, che è esattamente ciò che il §15 vieta. T22 non poteva dividerla senza toccare 63 componenti, che il suo criterio escludeva: è questo il lavoro che `Figure` fa.
+
+Nessun numero dell'applicazione si scrive a mano dentro un `<span>` — con una metà che il componente non può coprire: **i numeri dentro una frase**. «524 giocatori», «12 di 524», e tutto quello che le funzioni che contano in italiano di `shared/errors.ts` producono, sono testo, non cifre in un elemento loro. Quelli tengono la stringa e prendono `figure-column`, che è il ruolo tipografico senza il componente.
+
+### FilterChip — il chip di filtro
 
 Altezza 24px, raggio pieno, 11px peso 500.
 Attivo: fondo `--surface-raised`, testo `--text`, x per rimuoverlo.
@@ -489,9 +530,9 @@ Inattivo: fondo trasparente, bordo `--line`, testo `--text-muted`.
 
 Il filtro dei titolari è un campo numerico di Pv minime con un chip preimpostato a 25, non un interruttore con una soglia nascosta.
 
-### Badge di ruolo
+### RoleBadge — il badge di ruolo
 
-18px quadrati, 11px peso 600, fondo `--surface-raised`, testo `--text`. **Neutri.**
+18px quadrati, 11px peso 600, fondo `--surface-raised`, testo `--text`. **Neutri.** La lettera si porta la propria parola per i lettori di schermo, e la prende da `ROLE_LABELS_ONE` e non da `ROLE_LABELS`: il badge nomina il ruolo di **un** giocatore, e la lista plurale gli farebbe leggere «portieri».
 
 Valutata e scartata l'idea di usare i colori di dominio del Mantra (portiere giallo, difesa verde, centrocampo blu, trequarti viola, attacco rosso). È una convenzione reale che i giocatori già leggono sul listone, ma sono cinque colori in più che competono con le dieci tinte delle squadre e con l'ambra, in una tabella dove il ruolo è già filtrato e già scritto. La convenzione non vale il rumore.
 
@@ -572,7 +613,7 @@ L'ordine conta, perché i primi due passi cambiano tutto senza toccare quasi nie
 
 **Passo 1 — I token.** Primitivi, semantici, blocco `@theme` con la mappatura shadcn, e le due famiglie. A questo punto l'applicazione ha l'aspetto giusto ovunque **senza che un componente sia stato modificato**. È il passo col miglior rapporto tra risultato e rischio, e va verificato da solo.
 
-**Passo 2 — I primitivi dell'app.** `Cifra`, `TabellaDati`, `ChipFiltro`, `BadgeRuolo`. Quattro componenti che coprono la maggior parte delle superfici.
+**Passo 2 — I primitivi dell'app.** `Figure`, `DataTable`, `FilterChip`, `RoleBadge`, e con loro `Abbr`. Cinque componenti che coprono la maggior parte delle superfici.
 
 **Passo 3 — La board.** È l'unico cambiamento strutturale, non solo di aspetto, quindi va isolato dal resto e provato con dati veri di dieci squadre a rose piene.
 
@@ -588,7 +629,7 @@ L'ordine conta, perché i primi due passi cambiano tutto senza toccare quasi nie
 - emoji usate come icone
 - transizioni al passaggio del mouse su righe di tabella
 - `outline: none` senza sostituto
-- numeri scritti a mano invece che con `Cifra`
+- numeri scritti a mano invece che con `Figure`
 - primitivi citati direttamente nei componenti
 
 ---

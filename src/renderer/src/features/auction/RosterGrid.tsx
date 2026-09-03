@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useCountUp } from '@/lib/motion'
+import Abbr from '@/components/Abbr'
+import Figure from '@/components/Figure'
 import { CLASSIC_ROLES, type ClassicRole } from '@shared/domain'
 import { notices } from '@shared/errors'
 import type { AuctionState, AuctionTeam } from '@shared/types'
@@ -33,6 +34,10 @@ import type { AuctionState, AuctionTeam } from '@shared/types'
  *
  * Class names are written out whole. `text-${n}xl` interpolated is not emitted
  * by Tailwind at all and disappears in silence.
+ *
+ * The two `figureRole*` fields are the one exception to "character for
+ * character", and a deliberate one: T23 gives the figures the family §4 asks
+ * for, which in `normal` they did not have. No size moves, so nothing reflows.
  */
 type Band = {
   team: string
@@ -47,6 +52,22 @@ type Band = {
   bar: string
   rosterRole: string
   rosterPrice: string
+  /**
+   * Which of §4's three figure roles the numbers of this band wear. `Figure`
+   * derives the role from its `size`, and neither band gives it one: `normal`
+   * inherits the size of the row it sits in, `projected` reads a custom
+   * property that a media query steps by window height. So the role is named
+   * here, next to the size that decides it.
+   */
+  figureRole: 'column' | 'projection'
+  /**
+   * And the maximum bid of the team on turn, which is the one figure of this
+   * grid that carries a row on its own. In `normal` it renders at 24px — over
+   * §4's 20px boundary — so it is a *large* figure, Archivo 600 at width 112,
+   * and not a column one: sending it to Plex would shrink the signature element
+   * of document 2 §2 into the same type as the labels beside it.
+   */
+  figureRoleOnTurn: 'large' | 'projection'
 }
 
 const SIZES: Record<'normal' | 'projected', Band> = {
@@ -61,6 +82,8 @@ const SIZES: Record<'normal' | 'projected', Band> = {
     bar: 'h-7',
     rosterRole: 'w-4',
     rosterPrice: 'w-8',
+    figureRole: 'column',
+    figureRoleOnTurn: 'large',
   },
   projected: {
     team: 'text-[length:var(--proj-team)] leading-tight',
@@ -77,6 +100,23 @@ const SIZES: Record<'normal' | 'projected', Band> = {
     // lining up when the figures in them are three times taller.
     rosterRole: 'w-[2ch]',
     rosterPrice: 'w-[4ch]',
+    // Every figure of the projection wears the projection role, on turn or not:
+    // its sizes come from `--proj-*` and not from §4's four tokens, so `Figure`
+    // has nothing to derive the family from.
+    //
+    // Not a pure rename: `.figures` was Archivo 600 at width 125, and §4's
+    // projection role is 700 at 125 with leading 1. The family and the width
+    // are the ones the projection already had; the weight moves and the leading
+    // arrives. Neither reflows — every wrapper here sets a taller strut of its
+    // own (`leading-tight`, and `leading-none` on the on-turn row, where the
+    // two are equal).
+    //
+    // What the role does not fix: `--proj-credits` starts at 18px and
+    // `--proj-small` at 13, both under the 20px floor §15 gives Archivo. That
+    // debt predates T23 — `.figures` was Archivo here too — and it is T24's,
+    // which rewrites this as the board of §11.
+    figureRole: 'projection',
+    figureRoleOnTurn: 'projection',
   },
 }
 
@@ -153,9 +193,6 @@ function Row({
   onToggle: () => void
   flashToken: number | null
 }): JSX.Element {
-  const credits = useCountUp(team.credits)
-  const max = useCountUp(team.maxBid)
-
   return (
     <li className="relative border-b border-line">
       {/*
@@ -201,15 +238,45 @@ function Row({
           <Dots slots={slots} filled={team.filled} band={band} />
         </span>
 
-        <span className={`figures shrink-0 text-right ${band.credits} text-credit`}>
-          {credits} <span className={`label ${band.small} text-chalk-dim`}>cr</span>
+        {/*
+          `cr` and `max` are two of the seventeen, so they come from the
+          glossary and carry their expansion with them. The render prop and not
+          the plain form: both sit inside the row's own `<button>`, and `Abbr`'s
+          default trigger is a `tabIndex={0}` span — a tab stop inside a tab
+          stop, on one word. Nothing is lost by it. §10 turns the popover off in
+          the auction, which is the only place this grid is drawn, so what the
+          abbreviation is really carrying here is the hidden expansion, and that
+          stays either way.
+
+          The `title="puntata massima"` that used to sit on the second one is
+          gone: it was the one place in the app where a native `title` glossed an
+          abbreviation, which §10 and §15 both forbid. The popover says it now,
+          wherever the popover is lit.
+
+          The two `useCountUp` calls went with it: `Figure` counts a `money`
+          figure itself, which is the one animation §7 gives a number.
+        */}
+        <span className={`shrink-0 text-right ${band.credits}`}>
+          <Figure value={team.credits} kind="money" role={band.figureRole} />{' '}
+          <Abbr name="cr">
+            {(label, trigger) => (
+              <span className={`${trigger} label ${band.small} text-chalk-dim`}>{label}</span>
+            )}
+          </Abbr>
         </span>
-        <span
-          className={`figures shrink-0 text-right text-credit ${onTurn ? band.maxOnTurn : band.max}`}
-          title="puntata massima"
-        >
-          <span className={`label align-middle ${band.small} text-chalk-dim`}>max </span>
-          {max}
+        <span className={`shrink-0 text-right ${onTurn ? band.maxOnTurn : band.max}`}>
+          <Abbr name="max">
+            {(label, trigger) => (
+              <span className={`${trigger} label align-middle ${band.small} text-chalk-dim`}>
+                {label}
+              </span>
+            )}
+          </Abbr>{' '}
+          <Figure
+            value={team.maxBid}
+            kind="money"
+            role={onTurn ? band.figureRoleOnTurn : band.figureRole}
+          />
         </span>
       </button>
 
@@ -275,6 +342,13 @@ function Roster({ team, band }: { team: AuctionTeam; band: Band }): JSX.Element 
         .sort((a, b) => CLASSIC_ROLES.indexOf(a.slotRole) - CLASSIC_ROLES.indexOf(b.slotRole) || b.price - a.price)
         .map((bought) => (
           <li key={bought.purchaseId} className={`flex items-baseline gap-2 ${band.small}`}>
+            {/* Text and not a `RoleBadge`, for the reason `FreeTargets` gives:
+                §10 makes the badge a *shape*, and an 18px square is both the
+                heaviest thing in a 12px row and a fixed size inside a column
+                (`rosterRole`) that the projection scales by media query.
+                `review/Row.tsx` draws the same `slotRole` as a badge because
+                its row is 40px and stands still — the primitive is right
+                there, the density is what differs. */}
             <span className={`label ${band.rosterRole} shrink-0 text-chalk-dim`}>
               {bought.slotRole}
             </span>
@@ -285,10 +359,20 @@ function Roster({ team, band }: { team: AuctionTeam; band: Band }): JSX.Element 
                 fuori listone
               </span>
             )}
+            {/* The club code is data — all twenty are derived from the club
+                name and change with every promotion — so it is not in the
+                glossary and does not get a popover. The column that would
+                explain it is `squa`, and this list has no headings. */}
             <span className="label shrink-0 text-chalk-dim">{bought.teamCode}</span>
-            <span className={`figures ${band.rosterPrice} shrink-0 text-right text-credit`}>
-              {bought.price}
-            </span>
+            {/* Money, so amber and tabular, and `Figure` brings both. The
+                count-up it brings with them never runs: a price paid does not
+                change, and the hook starts on the value it is given. */}
+            <Figure
+              value={bought.price}
+              kind="money"
+              role={band.figureRole}
+              className={`${band.rosterPrice} shrink-0 text-right`}
+            />
           </li>
         ))}
     </ul>

@@ -1,3 +1,5 @@
+import Abbr from '@/components/Abbr'
+import Figure from '@/components/Figure'
 import { useAuctionStore } from '@/stores/auction'
 import type { PlayerRow } from '@shared/types'
 
@@ -62,7 +64,52 @@ export default function CalledPlayer({ players }: { players: readonly PlayerRow[
             </span>
             <span className="label shrink-0 text-[length:var(--proj-small)] text-chalk-dim">
               {player.roleClassic} · {player.teamCode ?? player.teamName}
-              {player.qtClassicCurrent !== null && ` · qt. ${player.qtClassicCurrent}`}
+              {/*
+                The one figure on this screen that had not even tabular digits:
+                interpolated into a string, it wore whatever the label around it
+                happened to wear. `role="projection"` is Archivo at width 125,
+                which §11 asks for — and the family has to come from the role
+                rather than from a size, because `--proj-small` is not one of
+                §4's four number tokens: it is this screen's own step, moved by
+                the `min-height` media queries in `base.css`.
+
+                That step is 13px in the window as it opens, 15 at 760 and 17 at
+                1080, so this is Archivo under §4's 20px floor and it is chosen
+                rather than overlooked: every figure of the projection band wears
+                the projection role — `RosterGrid` says as much beside its own
+                `figureRole`, and its roster prices are Archivo at this very
+                size — and one Plex figure among them would read as a piece of a
+                different screen. T24 rewrites the projection scale, and the
+                floor is its problem to settle for the whole band at once.
+
+                `money`, because a quotazione is a price in credits; the amber
+                lands on the figure and never on the word, §15.
+
+                `animate={false}`: the number changes only when the called player
+                changes, so a count-up would travel between two different men's
+                quotazioni — a movement document 2 §2 does not list, three metres
+                wide, describing nothing that happened.
+
+                `Abbr` draws no popover here, and that is right rather than
+                lucky: this component is mounted only by the auction screen, at
+                `/lega/:id/asta` with the league in `auction`, which is exactly
+                what `useDense()` answers true to — so it goes quiet, and §11
+                keeps its "nessun elemento interattivo visibile". The hidden
+                expansion stays either way, which is the half a screen reader
+                needs.
+              */}
+              {player.qtClassicCurrent !== null && (
+                <>
+                  {' · '}
+                  <Abbr name="qt." />{' '}
+                  <Figure
+                    value={player.qtClassicCurrent}
+                    kind="money"
+                    role="projection"
+                    animate={false}
+                  />
+                </>
+              )}
             </span>
           </>
         )}

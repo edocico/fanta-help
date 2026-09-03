@@ -17,6 +17,10 @@ import {
 } from '@shared/domain'
 import type { PlayerRow, SeasonStats, TargetRow } from '@shared/types'
 import PriceField from '@/components/PriceField'
+import Abbr from '@/components/Abbr'
+import Figure from '@/components/Figure'
+import { show } from '@/lib/format'
+import { glossary, type Abbr as AbbrName } from '@shared/glossary'
 import type { Objectives } from '@/features/targets/objectives'
 
 /**
@@ -142,7 +146,7 @@ export default function PlayerDetail({
           <Fact term="FVM" value={player.fvmClassic} money />
           {player.qtClassicInitial !== null &&
             player.qtClassicInitial !== player.qtClassicCurrent && (
-              <Fact term="qt. iniziale" value={player.qtClassicInitial} />
+              <Fact term="qt." qualifier="iniziale" value={player.qtClassicInitial} />
             )}
         </dl>
 
@@ -233,38 +237,41 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
+/**
+ * `qualifier` is how "qt. iniziale" is drawn without becoming a glossary key of
+ * its own: the abbreviation is `qt.` and "iniziale" is an ordinary word beside
+ * it. A composed label as a key would be a key no popover could explain, because
+ * half of it is not an abbreviation.
+ */
 function Fact({
   term,
+  qualifier,
   value,
   money = false,
 }: {
-  term: string
+  term: AbbrName
+  qualifier?: string
   value: number | null
   money?: boolean
 }): JSX.Element {
   return (
     <div>
-      <dt className="label text-sm text-chalk-dim">{term}</dt>
-      <dd className={`figures text-lg ${money ? 'text-credit' : ''}`}>
-        {value === null ? '—' : whole.format(value)}
+      <dt className="label text-sm text-chalk-dim">
+        <Abbr name={term} />
+        {qualifier !== undefined && ` ${qualifier}`}
+      </dt>
+      <dd>
+        <Figure value={value} kind={money ? 'money' : 'whole'} size="md" />
       </dd>
     </div>
   )
 }
 
-const whole = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 0 })
-const dec1 = new Intl.NumberFormat('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-const dec2 = new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const signed = new Intl.NumberFormat('it-IT', {
-  signDisplay: 'exceptZero',
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1,
-})
-const pct = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 0 })
-
-function show(value: number | null | undefined, format: Intl.NumberFormat): string {
-  return value === null || value === undefined ? '—' : format.format(value)
-}
+/*
+ * I cinque formattatori e `show()` stavano qui, copia identica di quelli in
+ * fondo a `PlayersView.tsx` — 667 byte per parte, con i commenti da una parte
+ * sola. Ora stanno in `lib/format.ts`, che è anche dove `Figure` li legge.
+ */
 
 /**
  * Season by season, oldest first, so the eye reads the career left to right the
@@ -289,10 +296,20 @@ function HistoryTable({
       <thead>
         <tr className="label text-chalk-dim">
           <th className="border-b border-line py-1 text-left">stagione</th>
-          <th className="border-b border-line py-1 text-right">Pv</th>
-          <th className="border-b border-line py-1 text-right">MV</th>
-          <th className="border-b border-line py-1 text-right">FM</th>
-          {showMinutes && <th className="border-b border-line py-1 text-right">min</th>}
+          <th className="border-b border-line py-1 text-right">
+            <Abbr name="Pv" />
+          </th>
+          <th className="border-b border-line py-1 text-right">
+            <Abbr name="MV" />
+          </th>
+          <th className="border-b border-line py-1 text-right">
+            <Abbr name="FM" />
+          </th>
+          {showMinutes && (
+            <th className="border-b border-line py-1 text-right">
+              <Abbr name="min" />
+            </th>
+          )}
         </tr>
       </thead>
       <tbody>
@@ -301,12 +318,18 @@ function HistoryTable({
           return (
             <tr key={season} className="border-b border-line/50">
               <td className="py-1">{season}</td>
-              <td className="figures py-1 text-right">{show(row.matchesRated, whole)}</td>
-              <td className="figures py-1 text-right">{show(row.avgVote, dec2)}</td>
-              <td className="figures py-1 text-right">{show(row.fantaAvg, dec2)}</td>
+              <td className="py-1 text-right">
+                <Figure value={row.matchesRated} />
+              </td>
+              <td className="py-1 text-right">
+                <Figure value={row.avgVote} kind="average" />
+              </td>
+              <td className="py-1 text-right">
+                <Figure value={row.fantaAvg} kind="average" />
+              </td>
               {showMinutes && (
-                <td className="figures py-1 text-right">
-                  {show(minutesPerMatch(row.minutes, row.matchesPlayed), dec1)}
+                <td className="py-1 text-right">
+                  <Figure value={minutesPerMatch(row.minutes, row.matchesPlayed)} kind="decimal" />
                 </td>
               )}
             </tr>
@@ -360,7 +383,9 @@ function Chart({
         viewBox={`0 0 ${CHART_W} ${CHART_H}`}
         className="w-full"
         role="img"
-        aria-label={`Andamento di FM e MV dal ${seasons[0]} al ${seasons[seasons.length - 1]}`}
+        /* Per esteso e non le sigle: un'etichetta per lettori di schermo è una
+           frase, e il §10 vuole l'espansione dove c'è spazio per scriverla. */
+        aria-label={`Andamento di ${glossary.FM.full.toLowerCase()} e ${glossary.MV.full.toLowerCase()} dal ${seasons[0]} al ${seasons[seasons.length - 1]}`}
       >
         <Line values={mv} x={x} y={y} className="text-chalk-dim" dashed />
         <Line values={fm} x={x} y={y} className="text-chalk" />
@@ -371,7 +396,10 @@ function Chart({
             by weight and dash instead — and the legend says which is which
             rather than relying on the colour alone. */}
         <span>
-          <span className="text-chalk">FM piena</span>, MV tratteggiata
+          <span className="text-chalk">
+            <Abbr name="FM" /> piena
+          </span>
+          , <Abbr name="MV" /> tratteggiata
         </span>
         <span>
           {seasons[0]}
@@ -464,68 +492,56 @@ function Indicators({
   }
 
   const pv = stats.matchesRated
-  const rows: { term: string; value: string; note: string }[] = [
+  const rows: IndicatorRow[] = [
+    { abbr: 'bon', value: show(bonusIndex(stats.fantaAvg, stats.avgVote), 'signed') },
     {
-      term: 'bon',
-      value: show(bonusIndex(stats.fantaAvg, stats.avgVote), signed),
-      note: 'Quanto aggiunge al voto in gol e assist. Sotto zero i malus pesano più dei bonus.',
-    },
-    {
-      term: 'affidabilità',
-      value: show(reliability(pv), pct),
+      word: 'affidabilità',
+      value: show(reliability(pv), 'percent'),
       note: `In quante delle ${MATCHDAYS} giornate ha preso un voto. Chi è arrivato a gennaio scende, anche se ha giocato sempre.`,
     },
     {
-      term: 'malus',
-      value: show(
-        malusRate(stats.yellowCards, stats.redCards, stats.ownGoals, pv),
-        dec2,
-      ),
+      word: 'malus',
+      value: show(malusRate(stats.yellowCards, stats.redCards, stats.ownGoals, pv), 'average'),
       note: 'Cartellini e autogol per partita a voto. Il rosso pesa il doppio del giallo.',
     },
   ]
 
   if (role === 'P') {
     rows.push({
-      term: 'gol subiti',
-      value: show(concededPerMatch(stats.goalsConceded, pv), dec2),
+      word: 'gol subiti',
+      value: show(concededPerMatch(stats.goalsConceded, pv), 'average'),
       note: 'Reti incassate per partita a voto. Conta col modificatore di difesa.',
     })
   }
 
   if (hasFbref) {
     rows.push(
-      {
-        term: 'tit.',
-        value: show(startShare(stats.starts, stats.matchesPlayed), pct),
-        note: 'Quante delle sue presenze sono da titolare. Il resto sono ingressi dalla panchina.',
-      },
-      {
-        term: 'min',
-        value: show(minutesPerMatch(stats.minutes, stats.matchesPlayed), dec1),
-        note: 'Minuti medi quando scende in campo.',
-      },
+      { abbr: 'tit.', value: show(startShare(stats.starts, stats.matchesPlayed), 'percent') },
+      { abbr: 'min', value: show(minutesPerMatch(stats.minutes, stats.matchesPlayed), 'decimal') },
     )
     if (role === 'P') {
-      rows.push({
-        term: 'CS',
-        value: show(cleanSheetRate(stats.cleanSheets, stats.starts), pct),
-        note: 'Porte inviolate sulle partite iniziate da titolare.',
-      })
+      rows.push({ abbr: 'CS', value: show(cleanSheetRate(stats.cleanSheets, stats.starts), 'percent') })
     }
   }
 
   return (
     <dl className="space-y-3">
-      {rows.map((row) => (
-        <div key={row.term}>
-          <div className="flex items-baseline justify-between gap-3">
-            <dt className="label text-sm">{row.term}</dt>
-            <dd className="figures">{row.value}</dd>
+      {rows.map((row) => {
+        const key = 'abbr' in row ? row.abbr : row.word
+        return (
+          <div key={key}>
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="label text-sm">
+                {'abbr' in row ? <Abbr name={row.abbr} /> : row.word}
+              </dt>
+              <dd className="figure-column">{row.value}</dd>
+            </div>
+            <p className="mt-0.5 text-sm text-chalk-dim">
+              {'abbr' in row ? glossary[row.abbr].explains : row.note}
+            </p>
           </div>
-          <p className="mt-0.5 text-sm text-chalk-dim">{row.note}</p>
-        </div>
-      ))}
+        )
+      })}
       {pv !== null && pv > 0 && pv < 10 && (
         /* Document 2 §9: what is thin shows what it has, with Pv beside it to
            qualify it. Not a threshold that hides — that is the hidden threshold
@@ -533,12 +549,35 @@ function Indicators({
         <p className="pt-1 text-sm text-chalk-dim">
           {pv === 1
             ? 'Tutto qui sopra riposa su una partita a voto.'
-            : `Tutto qui sopra riposa su ${whole.format(pv)} partite a voto.`}
+            : `Tutto qui sopra riposa su ${show(pv)} partite a voto.`}
         </p>
       )}
     </dl>
   )
 }
+
+/**
+ * Una riga di indicatore: o una sigla, e allora la spiegazione è quella del
+ * glossario, o una parola intera, e allora se la porta.
+ *
+ * È il punto dove due specifiche si toccavano e nessuna delle due si diceva
+ * superata. Il documento 2 §4.5 vuole che ogni indicatore derivato abbia «una
+ * riga di spiegazione in linguaggio piano» **in loco**; il documento 7 §10 vuole
+ * che «una sigla si spiega dove è definita, mai dove è usata». Qui vincono
+ * entrambe: la riga resta — è l'unico posto dell'app con lo spazio per scriverla,
+ * e la regola del §10 punta alle tabelle da seicento celle, che nomina per
+ * esteso — ma il testo non è più una seconda copia. Era: `bon` aveva «quanto la
+ * fantamedia supera la media voto» nel pannello di riferimento e «quanto aggiunge
+ * al voto in gol e assist» qui, e nessuna delle due sapeva dell'altra.
+ *
+ * Un'unione discriminata e non un campo facoltativo, per la stessa ragione per
+ * cui `Violation` in `domain.ts` lo è: con `note?: string` una riga con una sigla
+ * potrebbe portarsi comunque un testo proprio, e la divergenza tornerebbe da
+ * dove è appena stata tolta.
+ */
+type IndicatorRow =
+  | { abbr: AbbrName; value: string }
+  | { word: string; value: string; note: string }
 
 /**
  * Il blocco obiettivo del §4.5: «fascia, prezzo massimo, rating, note. Si compila

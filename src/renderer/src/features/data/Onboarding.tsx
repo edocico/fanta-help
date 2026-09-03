@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Figure from '@/components/Figure'
 import { call, IpcError } from '@/lib/ipc'
 import { errorMessages } from '@shared/errors'
 import type { Output } from '@shared/contracts'
@@ -135,28 +136,40 @@ export default function Onboarding({ onDone }: { onDone: () => void }): JSX.Elem
           )}
 
           <dl className="mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[10rem_1fr]">
+            {/* None of the three lists below is a figure, though they are text for two
+                different reasons: `recognised` and `unrecognised` are header strings as
+                the chosen workbook spells them, while `missing` are the names this app
+                asks for and did not find — `QUOTAZIONI_COLUMNS` in `shared/listone.ts`,
+                so `Nome`, `Qt.A`. Either way `.figures` had to go, and nothing replaces
+                it: `figure-column` aligns digits under one another and here there is no
+                column. `.figures` was wrong on its own terms too — it is Archivo, at the
+                14px of this `dl`, which §15 forbids. */}
             <dt className="label text-chalk-dim">colonne riconosciute</dt>
-            <dd className="figures">{preview.recognised.join(', ') || '—'}</dd>
+            <dd>{preview.recognised.join(', ') || '—'}</dd>
 
             {preview.missing.length > 0 && (
               <>
                 <dt className="label text-chalk-dim">colonne mancanti</dt>
-                <dd className="figures text-taken">{preview.missing.join(', ')}</dd>
+                <dd className="text-taken">{preview.missing.join(', ')}</dd>
               </>
             )}
 
             {preview.unrecognised.length > 0 && (
               <>
                 <dt className="label text-chalk-dim">colonne ignorate</dt>
-                <dd className="figures text-chalk-dim">{preview.unrecognised.join(', ')}</dd>
+                <dd className="text-chalk-dim">{preview.unrecognised.join(', ')}</dd>
               </>
             )}
 
             {preview.rejectedTotal > 0 && (
               <>
                 <dt className="label text-chalk-dim">righe scartate</dt>
-                <dd className="figures text-chalk-dim">
-                  {preview.rejectedTotal}
+                <dd className="text-chalk-dim">
+                  {/* A count, alone in its element, so it is a figure — `whole` and not
+                      `money`: rows are not credits, and the amber is money and nothing
+                      else (§15). The lines beneath it are the service's own sentences
+                      and stay text. */}
+                  <Figure value={preview.rejectedTotal} />
                   <ul className="mt-1 space-y-0.5">
                     {preview.rejected.map((line) => (
                       <li key={line}>{line}</li>
@@ -174,9 +187,13 @@ export default function Onboarding({ onDone }: { onDone: () => void }): JSX.Elem
               <label className="label block text-chalk-dim" htmlFor="season">
                 stagione
               </label>
+              {/* `2026-27` is a label, not a figure: §4 gives family and weight to
+                  numbers, and this is a code someone types. Not `figure-column` either
+                  — there is nothing to align in a one-line field — so the field now reads
+                  like the season buttons below it, which never wore a figure class. */}
               <input
                 id="season"
-                className="figures mt-1 w-32 rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+                className="mt-1 w-32 rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
                 value={seasonId}
                 onChange={(e) => setSeasonId(e.target.value.trim())}
                 placeholder="2026-27"
