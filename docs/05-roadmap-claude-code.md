@@ -294,7 +294,13 @@ Con `Sigla` arriva anche il pannello di riferimento: `?` passa da elenco delle s
 **Fatto quando:** nessun numero dell'applicazione è più scritto a mano dentro un `<span>`, e nessuna sigla compare fuori dal componente. Il tipo `Sigla = keyof typeof glossario` deve impedire che una sigla senza voce nel glossario compili.
 
 ### T24 · La board delle rose
-**Documenti:** 7 (§10, §11)
+**Documenti:** 7 (§3, §10, §11)
+
+**Debito da T22.** I dieci colori squadra. `TEAM_COLORS` in `src/shared/domain.ts` porta ancora le tinte del documento 2 §4.3 — una passeggiata sulla ruota, dal corallo al magenta — mentre il §3 del documento 7 ne dà **dieci diverse**: le prime sei derivate da Okabe-Ito, con un pavimento misurato di ΔE 14,7 sotto protanopia e deuteranopia, e un ordine di assegnazione che fa parte del sistema. Sono due insiemi disgiunti, non due grafie della stessa cosa.
+
+T22 non li ha toccati di proposito: sono un **dato**, salvato in `fanta_team.color` di leghe già giocate, non un token: cambiare la lista lascerebbe le squadre esistenti con colori fuori tavolozza, che il selettore non mostra più come scelte e la cui etichetta cade sull'esadecimale grezzo. Va deciso qui, dove la board esiste e si può guardare — ed è anche dove il §3 manda il proprio debito su `--team-10`, a ΔE 3,8 dal grigio-verde delle etichette.
+
+Due cose da verificare insieme: la guardia di `domain.test.ts` che tiene i colori squadra lontani dai tre esagoni riservati va estesa, perché T22 ha aggiunto `--crimson #D06058` e `--moss #6FB584` ai semantici e nella lista attuale ci sono `#F2564D` corallo e `#5FC46B` prato, che nessun test separa da quelli.
 
 Sostituisce il pannello a righe con una board a colonne: squadre in colonna, slot in riga raggruppati per ruolo. È l'unico cambiamento **strutturale** del refactoring, non solo di aspetto, quindi va isolato dagli altri.
 
@@ -303,7 +309,13 @@ Sostituisce il pannello a righe con una board a colonne: squadre in colonna, slo
 **Fatto quando:** funziona con dieci squadre a rose piene, e la proiezione è la stessa board a scala doppia senza la striscia di assegnazione — non un secondo layout.
 
 ### T25 · Viste e passata finale
-**Documenti:** 7 (§10, §14)
+**Documenti:** 7 (§4, §10, §14, §15)
+
+**Debito da T22**, due voci che vanno insieme e che nessuna delle due si può fare da sola.
+
+**I titoli di vista.** La riga di T22 chiede «Archivo per titoli» e il §4 li vuole a 24px. T22 ha dichiarato `--font-display` e `--text-heading` ma non li ha applicati: i dieci `<h1>` portano `text-lg`, cioè 18px, e il §15 vieta Archivo sotto i 20. Le due cose sono un cambiamento solo — famiglia **e** taglia — e per farlo da `base.css` servirebbe una regola globale che vince sul `text-lg` dichiarato nel componente, cioè esattamente la regola discendente che il blocco della proiezione argomenta di non scrivere. Si fa qui, vista per vista, che è già il modo di lavorare di questo task.
+
+**La misura base.** Non c'è nessuna `font-size` su `html` né su `body`, quindi tutto ciò che non porta una classe `text-*` rende a **16px** — non ai 14 di shadcn che la lista dei tic del §14 va a cercare, e non ai 13 che il §15 fissa come tetto. La riga da aggiungere a quella lista è «la misura base a 16px», e questo è il task che la esaurisce.
 
 Vista per vista, l'asta per prima. Poi la lista dei tic della sezione 14.
 

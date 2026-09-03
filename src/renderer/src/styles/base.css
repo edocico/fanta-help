@@ -1,32 +1,191 @@
-/* Design tokens of document 2 §2. Tailwind v4 has no JS config: everything
-   declared in @theme becomes both a CSS custom property and a utility class. */
+/* I token del documento 7, §3 e §4, e la doppia mappatura del §9.
+ *
+ * Tailwind v4 non ha una configurazione JavaScript: quello che sta in `@theme`
+ * diventa insieme una proprietà personalizzata e una famiglia di utility. Le
+ * mappature sono **due**, e saltare la seconda è il modo più facile di rompere
+ * il refactoring senza vedere un errore.
+ *
+ * La prima è il namespace delle utility dell'app: Tailwind genera `bg-pitch-800`
+ * e `text-chalk-dim` solo da variabili dichiarate sotto il prefisso `--color-`.
+ * I primitivi qui sotto stanno in un `:root` nudo, dove Tailwind non guarda. Il
+ * §9 contava 71 occorrenze di quelle utility; oggi sono **594 in 24 file**, e
+ * senza il blocco `@theme` smetterebbero di risolvere in silenzio, lasciando
+ * l'elemento senza colore invece di dare errore.
+ *
+ * La seconda è il vocabolario di shadcn/ui, che scrive i suoi componenti contro
+ * un insieme fisso di nomi: definire i nostri e ignorare i suoi vorrebbe dire
+ * sovrascrivere ogni componente a mano. */
 
+@import '@fontsource-variable/ibm-plex-sans/standard.css';
 @import '@fontsource-variable/archivo/standard.css';
 @import 'tailwindcss';
 
-@theme {
-  /* Palette. Green-black, the pitch at night. Team colours are the only other
-     source of colour in the app, and they carry information. */
-  --color-pitch-900: #0e1512; /* application background */
-  --color-pitch-800: #161f1a; /* panels */
-  --color-pitch-700: #1f2c25; /* raised surfaces, alternating rows */
-  --color-line: #2b3a32; /* hairline borders */
-  --color-chalk: #e9efe9; /* primary text */
-  --color-chalk-dim: #8b9c92; /* secondary text, labels */
-  --color-credit: #e8b33d; /* credits, prices, maximum bid */
-  --color-taken: #a8483e; /* player no longer available */
-  --color-target: #4fb8a8; /* player is on your target list */
+/* ── I primitivi del §3 ─────────────────────────────────────────────────────
+   La tavolozza grezza. Nessun componente li cita mai: è la disciplina che tiene
+   aperta la porta al tema chiaro del §13, e costa zero mantenerla.
 
-  /* One family, three roles. The variable file carries both axes:
-     wdth 62-125 and wght 100-900. */
-  --font-sans: 'Archivo Variable', system-ui, -apple-system, sans-serif;
+   Il fondo resta verde-nero e non grigio neutro — è il campo di sera, e la
+   differenza è di pochi punti di tinta che si notano su tre ore. Il testo non è
+   bianco pieno: `--chalk-100` su `--pitch-900` dà circa 13:1, alto ma non
+   massimo, perché il contrasto estremo del bianco su nero fa sanguinare il testo
+   a chi ha astigmatismo.
+
+   I dieci colori squadra del §3 **non sono qui**, ed è deliberato: vivono in
+   `TEAM_COLORS` di `src/shared/domain.ts`, che è un dato salvato nel database
+   delle leghe già create. Dichiararli anche qui darebbe due fonti di verità per
+   la stessa cosa. Si riconciliano in T24, dove il §3 stesso manda il suo debito
+   su `--team-10`: «da risolvere quando la board esiste e si può guardare». */
+:root {
+  /* superfici — alzate dal nero puro */
+  --pitch-950: #0b100e; /* solo proiezione */
+  --pitch-900: #121a16; /* sfondo applicazione */
+  --pitch-800: #18221d; /* pannelli, barra laterale */
+  --pitch-700: #212e27; /* superfici elevate, righe alterne, hover */
+  --pitch-600: #2c3b33; /* bordi, separatori */
+  --pitch-500: #3c4e44; /* bordi enfatizzati */
+
+  /* testo — non bianco pieno */
+  --chalk-50: #e4eae5; /* cifre grandi, anello di fuoco */
+  --chalk-100: #d6ded8; /* testo primario */
+  --chalk-400: #8fa096; /* secondario, etichette di colonna */
+  --chalk-600: #62716a; /* disabilitato, segnaposto */
+
+  /* significati — due soli sono cromatici davvero: l'ambra è denaro, il rosso
+     è un problema. Non esiste un colore d'avviso: un ambra d'avviso e un ambra
+     di denaro si confondono, e la confusione cadrebbe proprio sui numeri che
+     devono restare inequivocabili. */
+  --gold: #e8b33d; /* denaro, e solo denaro */
+  --gold-deep: #8a6e2a; /* bordi e fondi legati al denaro */
+  --rust: #a8483e; /* non più disponibile */
+  --teal: #4fb8a8; /* è un tuo obiettivo */
+  --crimson: #d06058; /* violazione bloccante */
+  --moss: #6fb584; /* conferma, reparto completo */
 }
 
-/* 4px on controls; table rows keep 0, applied where they are declared.
-   Tailwind's radius namespace is --radius-*: a bare --radius feeds no utility
-   and is dropped from the build, which would silently leave shadcn components
-   on Tailwind's 6px default. The base value stays on :root because shadcn
-   components reference var(--radius) directly. */
+/* ── I semantici del §3 ─────────────────────────────────────────────────────
+   I nomi che i componenti usano.
+
+   **Restano in `:root` e non vanno spostati in `@theme`**, per quanto sembri il
+   posto giusto. Quattro di loro — `--text`, `--text-strong`, `--text-muted`,
+   `--text-disabled` — cadono nello spazio dei nomi che Tailwind riserva alle
+   **taglie del testo**, e lì dentro un valore viene letto come una taglia
+   qualunque cosa sia. Provato: `--text-provacolore: var(--chalk-400)` dentro
+   `@theme` genera `.text-provacolore { font-size: var(--text-provacolore) }`,
+   cioè `font-size: #8fa096`. Il browser scarta la dichiarazione, l'elemento
+   resta della taglia che aveva, e non c'è niente da vedere: la classe esiste, la
+   regola esiste, e non fa nulla. Sono colori, e i colori passano solo da
+   `--color-*`. */
+:root {
+  --surface: var(--pitch-900);
+  --surface-panel: var(--pitch-800);
+  --surface-raised: var(--pitch-700);
+  --line: var(--pitch-600);
+  --line-strong: var(--pitch-500);
+
+  --text: var(--chalk-100);
+  --text-strong: var(--chalk-50);
+  --text-muted: var(--chalk-400);
+  --text-disabled: var(--chalk-600);
+
+  --money: var(--gold);
+  --unavailable: var(--rust);
+  --targeted: var(--teal);
+  --blocking: var(--crimson);
+  --confirmed: var(--moss);
+  --focus: var(--chalk-50);
+
+  /* Il ponte verso i nomi che l'app usa già, e senza il quale il criterio di
+     T22 — «l'aspetto nuovo ovunque senza che un componente sia modificato» —
+     fallirebbe contro sé stesso: il §9 rinomina `chalk` in `chalk-100` e
+     `credit` in `money`, ma sono 594 le utility scritte coi nomi vecchi.
+     Restano finché T25 non passa vista per vista. Le tre citate come variabile
+     dentro un componente sono `--line`, `--chalk-dim` e `--taken`. */
+  --chalk: var(--chalk-100);
+  --chalk-dim: var(--chalk-400);
+  --credit: var(--gold);
+  --taken: var(--rust);
+  --target: var(--teal);
+}
+
+/* ── Prima mappatura: il namespace delle utility dell'app ────────────────── */
+@theme {
+  --color-pitch-950: var(--pitch-950);
+  --color-pitch-900: var(--pitch-900);
+  --color-pitch-800: var(--pitch-800);
+  --color-pitch-700: var(--pitch-700);
+  --color-pitch-600: var(--pitch-600);
+  --color-pitch-500: var(--pitch-500);
+
+  --color-chalk-50: var(--chalk-50);
+  --color-chalk-100: var(--chalk-100);
+  --color-chalk-400: var(--chalk-400);
+  --color-chalk-600: var(--chalk-600);
+
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-money: var(--money);
+  --color-taken: var(--unavailable);
+  --color-target: var(--targeted);
+  --color-blocking: var(--blocking);
+  --color-confirmed: var(--confirmed);
+
+  /* L'altra metà del ponte, per le utility. `text-chalk`, `text-chalk-dim` e
+     `text-credit` sono 310 delle 594. */
+  --color-chalk: var(--chalk-100);
+  --color-chalk-dim: var(--chalk-400);
+  --color-credit: var(--money);
+
+  /* ── Le due famiglie del §4 ───────────────────────────────────────────────
+     Ognuna con un lavoro che l'altra non fa. **IBM Plex Sans** per interfaccia,
+     tabelle e numeri in colonna: ha cifre tabulari vere e distingue nettamente
+     1/l/I e 0/O, ed è disegnata per la densità. **Archivo** per titoli, cifre
+     grandi e proiezione: è variabile con asse di larghezza, ed è quell'asse a
+     rendere la proiezione la stessa schermata ingrandita invece che un layout
+     separato. Una sola non basta, tre sarebbero una di troppo. */
+  --font-sans: 'IBM Plex Sans Variable', system-ui, -apple-system, sans-serif;
+  --font-display: 'Archivo Variable', system-ui, -apple-system, sans-serif;
+
+  /* ── I nomi nuovi della scala del §4 ──────────────────────────────────────
+     Solo quelli che non collidono. `--text-sm` e `--text-base` esistono già in
+     Tailwind con altri valori (14 e 16 contro i 12 e 13 del §4), e ridefinirli
+     cambierebbe la taglia di 283 utility già scritte senza che nessuno abbia
+     riletto la vista in cui stanno. Il §14 dice che non è compito di questo
+     passo: il passo 1 elenca «i token e le due famiglie», non la scala. Questi
+     quattro nomi sono qui perché T23 e T25 li citino quando i primitivi
+     dell'app esisteranno.
+
+     Quello che resta indietro va detto per quello che è, e **non** è «il testo
+     a 14px lasciato dal default di shadcn» che il passo 5 va a cercare: qui non
+     c'è nessuna `font-size` né su `html` né su `body`, quindi tutto ciò che non
+     porta una classe `text-*` esplicita rende a **16px**. Il §15 dice «non
+     alzare la misura base sopra 13px», e a quei 16 non arriva né la caccia del
+     passo 5 né questo blocco. È il debito di T25, ed è la misura base.
+
+     Archivo entra dai 20px in su, quindi `--text-heading` è l'unico dei quattro
+     che potrà portarla: sotto, le sue cifre tabulari sulla matrice peso ×
+     larghezza non sono garantite. Ed è il motivo per cui i titoli di vista sono
+     rimasti su Plex: portarli ad Archivo senza portarli anche a 24px violerebbe
+     il §15, e una regola globale che sovrascriva il `text-lg` che il componente
+     dichiara sarebbe la stessa regola discendente che il blocco della proiezione
+     più sotto argomenta di non scrivere — nel componente si leggerebbe una
+     taglia e sullo schermo se ne vedrebbe un'altra. Le due cose vanno insieme,
+     vista per vista, ed è T25. */
+  --text-micro: 11px; /* etichette di colonna, badge, pastiglie */
+  --text-micro--line-height: 1.4;
+  --text-body: 15px; /* prosa, spiegazioni nella scheda giocatore */
+  --text-body--line-height: 1.5;
+  --text-title: 18px; /* intestazioni di pannello */
+  --text-title--line-height: 1.3;
+  --text-heading: 24px; /* titolo di vista */
+  --text-heading--line-height: 1.1;
+}
+
+/* 4px sui controlli; le righe di tabella restano a 0, applicato dove sono
+   dichiarate. Lo spazio dei nomi dei raggi è `--radius-*`: un `--radius` nudo
+   non alimenta nessuna utility e viene scartato dalla build, quindi il difetto
+   non si vede — si vede solo che ogni `rounded-md` è tornato ai 6px di default.
+   Il valore base resta su `:root` perché i componenti di shadcn citano
+   `var(--radius)` direttamente. */
 :root {
   --radius: 4px;
 }
@@ -38,52 +197,42 @@
   --radius-xl: calc(var(--radius) + 6px);
 }
 
-/* The document writes its tokens without the --color- prefix Tailwind requires.
-   These aliases keep document 2 literally executable: a component written from
-   the document with var(--pitch-700) resolves instead of silently falling back. */
-:root {
-  --pitch-900: var(--color-pitch-900);
-  --pitch-800: var(--color-pitch-800);
-  --pitch-700: var(--color-pitch-700);
-  --line: var(--color-line);
-  --chalk: var(--color-chalk);
-  --chalk-dim: var(--color-chalk-dim);
-  --credit: var(--color-credit);
-  --taken: var(--color-taken);
-  --target: var(--color-target);
-}
+/* ── Seconda mappatura: il vocabolario di shadcn/ui ──────────────────────────
+   `inline` sostituisce i valori invece di emettere un'altra indirezione.
 
-/* shadcn/ui components are written against a semantic vocabulary. Mapping it
-   onto the palette above means generated components inherit the project's look
-   with no edits, and document 2 stays the single source of truth.
-   `inline` substitutes the values instead of emitting another indirection. */
+   **Il bottone primario non è ambra, ed è la decisione da non ribaltare.** Se lo
+   fosse, l'ambra smetterebbe di significare denaro nel giro di una schermata, e
+   cadrebbe l'unica convenzione cromatica che l'app chiede di imparare. Un'azione
+   primaria si distingue per contrasto e posizione. L'ambra tocca un elemento
+   interattivo in un punto solo di tutta l'applicazione: il campo del prezzo nel
+   pannello di assegnazione, perché lì il valore digitato **è** denaro. */
 @theme inline {
-  --color-background: var(--color-pitch-900);
-  --color-foreground: var(--color-chalk);
-  --color-card: var(--color-pitch-800);
-  --color-card-foreground: var(--color-chalk);
-  --color-popover: var(--color-pitch-800);
-  --color-popover-foreground: var(--color-chalk);
-  /* NOT credit. Amber is reserved for money — document 2: "Nient'altro usa quel
-     colore, mai per decorazione." Mapping it here would make every default
-     shadcn button amber the moment one is generated. Use text-credit explicitly
-     on a figure instead; never reach amber through a semantic name. */
-  --color-primary: var(--color-pitch-700);
-  --color-primary-foreground: var(--color-chalk);
-  --color-secondary: var(--color-pitch-700);
-  --color-secondary-foreground: var(--color-chalk);
-  --color-muted: var(--color-pitch-700);
-  --color-muted-foreground: var(--color-chalk-dim);
-  --color-accent: var(--color-pitch-700);
-  --color-accent-foreground: var(--color-chalk);
-  --color-destructive: var(--color-taken);
-  --color-destructive-foreground: var(--color-chalk);
-  --color-border: var(--color-line);
-  --color-input: var(--color-line);
-  /* Not target either: teal means "on your target list" in the players table,
-     and a focus ring wearing it would read as data. Destructive keeps `taken`
-     because red is the palette's only red and document 2 reserves amber alone. */
-  --color-ring: var(--color-chalk-dim);
+  --color-background: var(--pitch-900);
+  --color-foreground: var(--chalk-100);
+  --color-card: var(--pitch-800);
+  --color-card-foreground: var(--chalk-100);
+  --color-popover: var(--pitch-800);
+  --color-popover-foreground: var(--chalk-100);
+
+  --color-primary: var(--chalk-100);
+  --color-primary-foreground: var(--pitch-900);
+  --color-secondary: var(--pitch-700);
+  --color-secondary-foreground: var(--chalk-100);
+
+  --color-muted: var(--pitch-700);
+  --color-muted-foreground: var(--chalk-400);
+  --color-accent: var(--pitch-700);
+  --color-accent-foreground: var(--chalk-100);
+
+  /* `--crimson` e non `--rust`: il §3 li tiene distinti, e la distinzione è
+     esattamente questa. Il ruggine dice «non più disponibile», che è uno stato
+     del dato; il cremisi dice «violazione bloccante», che è una risposta a
+     un'azione. `destructive` di shadcn è la seconda. */
+  --color-destructive: var(--crimson);
+  --color-destructive-foreground: var(--chalk-100);
+  --color-border: var(--pitch-600);
+  --color-input: var(--pitch-600);
+  --color-ring: var(--focus);
 }
 
 @layer base {
@@ -101,9 +250,12 @@
     border-color: var(--color-line);
   }
 
+  /* Semantici e non primitivi, come chiede il §3: «nessun componente cita mai
+     un primitivo». Vale anche per questo foglio, che è il posto dove i due
+     livelli si incontrano e quindi quello dove è più facile confonderli. */
   body {
-    background-color: var(--color-pitch-900);
-    color: var(--color-chalk);
+    background-color: var(--surface);
+    color: var(--text);
     font-family: var(--font-sans);
     font-weight: 400;
   }
@@ -116,16 +268,22 @@
      ne dimentica rimette il blu in mezzo allo schermo. */
   input[type='checkbox'],
   input[type='radio'] {
-    accent-color: var(--color-chalk-dim);
+    accent-color: var(--text-muted);
   }
 
   /* Il fuoco: l'anello predefinito di Chromium è un doppio bordo bianco e nero,
      pensato per una pagina chiara e su questo fondo sembra un errore di
-     rendering. Un filo di gesso a un pixel dice la stessa cosa con la palette
-     del documento 2 §2. `:focus-visible` e non `:focus`, così chi clicca non
-     vede niente e chi arriva col tab sì. */
+     rendering. `:focus-visible` e non `:focus`, così chi clicca non vede niente
+     e chi arriva col tab sì.
+
+     Passa da `--chalk-dim` a `--focus`, cioè al gesso più chiaro della
+     tavolozza: è il §1 del documento 7, dove il giallo aveva tre pretendenti —
+     il denaro, l'informazione neutra e il fuoco — e il conflitto è stato risolto
+     **togliendo un pretendente**. L'ambra resta il denaro, e il fuoco diventa un
+     anello ad alto contrasto, che su queste superfici è altrettanto
+     inequivocabile e non ruba un significato. */
   :focus-visible {
-    outline: 1px solid var(--color-chalk-dim);
+    outline: 1px solid var(--focus);
     outline-offset: 1px;
   }
 }
@@ -138,8 +296,20 @@
  * @layer utilities, and in the cascade an unlayered rule beats a layered one,
  * so `font-medium` on the same element can no longer drop the 600 in silence.
  * The signature element of document 2 — the maximum bid — is exactly where that
- * would have happened, and it would have looked merely a little wrong. */
+ * would have happened, and it would have looked merely a little wrong.
+ *
+ * The family is now spelled out, and it has to be: until T22 this class simply
+ * inherited Archivo from `body`, and `body` is IBM Plex Sans from here on.
+ *
+ * That it stays Archivo is a decision and not an omission. Document 7 §4 splits
+ * figures into two roles — Plex 500 for a column, Archivo 600 expanded for a
+ * large one — and this single class is worn by both, sixty-five times over.
+ * Splitting it means touching sixty-five call sites, which is the one thing the
+ * criterion of T22 forbids, and it is exactly what `Cifra` exists to do in T23.
+ * Until then the whole class keeps the role it has: the projection numbers, read
+ * from across a room, are the ones that would have paid for the other choice. */
 .figures {
+  font-family: var(--font-display);
   font-variation-settings: 'wdth' 125;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
