@@ -293,7 +293,7 @@ Con `Abbr` arriva anche il glossario condiviso, e con lui il pannello di riferim
 
 - *«Le sigle sono scritte a mano in due file.»* Sono **otto** file del renderer per le sole sigle di metrica, **dodici** contando le lettere di ruolo e i codici squadra, più `src/shared/domain.ts` e `src/shared/workbook.ts`. Quello che la riga non nominava e conta più di tutti è `Reference.tsx`, che portava già un glossario di quindici voci.
 - *«`?` passa da elenco delle scorciatoie a due sezioni.»* Le due sezioni c'erano dal T14. Il lavoro era far leggere la seconda dal glossario condiviso, e aggiungere le sezioni dei ruoli.
-- *«La decisione aperta fra chiave-etichetta e chiave-colonna.»* Sciolta a favore dell'**etichetta**, con le prove nel §10 del documento 7: `Qt` non è il nome di nessuna colonna dei quattro listoni, sei voci su diciassette non hanno nessuna colonna su cui chiavare, e il documento 1 §8 aveva già chiuso la domanda gemella con «`matches_rated` internamente, `Pv` nell'interfaccia».
+- *«La decisione aperta fra chiave-etichetta e chiave-colonna.»* Sciolta a favore dell'**etichetta**, con le prove nel §10 del documento 7: `Qt` non è il nome di nessuna colonna dei quattro listoni, sei voci su diciotto non hanno nessuna colonna su cui chiavare, e il documento 1 §8 aveva già chiuso la domanda gemella con «`matches_rated` internamente, `Pv` nell'interfaccia».
 
 **Fatto quando:** nessun numero dell'applicazione è più scritto a mano dentro un `<span>`, e nessuna sigla compare fuori dal componente. Il tipo `Abbr = keyof typeof glossary` deve impedire che una sigla senza voce nel glossario compili.
 

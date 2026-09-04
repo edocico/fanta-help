@@ -408,11 +408,13 @@ Siccome `name` è tipizzato come `Abbr`, **una sigla senza voce nel glossario no
 T23 lasciava la scelta aperta: o la chiave è l'etichetta mostrata, o è il nome della colonna della fonte e la voce prende un terzo campo per l'etichetta. **È l'etichetta**, e le prove sono a senso unico.
 
 - **`Qt` non è il nome di nessuna colonna.** I quattro listoni sono stati aperti e la loro riga d'intestazione letta: è `Id | R | RM | Nome | Squadra | Qt.A | Qt.I | Diff. | Qt.A M | Qt.I M | Diff.M | FVM | FVM M`, identica in tutti e quattro gli anni. La chiave d'esempio qui sopra sarebbe diventata quattro chiavi.
-- **Sei voci su diciassette non hanno nessuna colonna.** `bon`, `pt.`, `pr.`, `tit.`, `cr` e `max` sono calcoli di `domain.ts`: la loro chiave andrebbe **inventata**, cioè il tipo smetterebbe di essere onesto verso i dati proprio dove pretende di esserlo.
+- **Sei voci su diciotto non hanno nessuna colonna.** `bon`, `pt.`, `pr.`, `tit.`, `cr` e `max` sono calcoli di `domain.ts`: la loro chiave andrebbe **inventata**, cioè il tipo smetterebbe di essere onesto verso i dati proprio dove pretende di esserlo.
 - **`CS` e `min` porterebbero il nome di una colonna FBref mentre la cella mostra un rapporto** (`CS/Starts`, `Min/MP`): la chiave direbbe una cosa e il numero un'altra.
 - **Il precedente del progetto è unanime.** `ROLE_LABELS`, `TEAM_COLORS` e i quattro `*_LABELS` della lega chiavano tutti sul **valore memorizzato** e tengono la parola dell'utente in un campo a parte. E il documento 1 §8, fra le decisioni chiuse, aveva già sciolto la domanda gemella: «`matches_rated` internamente, `Pv` nell'interfaccia».
 
 Costo della strada scelta: tre righe di questo documento — `Mv`→`MV`, `Fm`→`FM`, `Qt`→`qt.` — e zero righe di codice, perché il codice già scriveva così.
+
+> **La diciottesima voce, aggiunta rivedendo T23.** `qt. iniziale` era stata disegnata come `qt.` più la parola «iniziale» accanto, fuori dal componente, per non farne una chiave composta. La regola appena decisa dice però che la chiave **è la stringa disegnata**, e la stringa disegnata lì è «qt. iniziale»: col qualificatore fuori, il popover apriva su «Quotazione attuale» sopra l'unico numero del pannello che attuale non è — e la riga compare **solo** quando i due valori differiscono, quindi la contraddizione si presentava esattamente quando contava. A un lettore di schermo diceva «qt. — Quotazione attuale iniziale». È una chiave, e `Qt.I` è per giunta una colonna vera del listone, quindi le sei senza colonna restano sei.
 
 #### Cosa il glossario **non** contiene
 
