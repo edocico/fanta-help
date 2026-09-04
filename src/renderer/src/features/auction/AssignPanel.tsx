@@ -745,7 +745,7 @@ function Results({
               aria-disabled={owner !== undefined}
               className={`flex items-baseline gap-2 px-2 py-1 text-base ${
                 i === highlight ? 'bg-surface-raised' : ''
-              } ${owner ? 'opacity-45' : ''}`}
+              } ${owner ? 'text-fg-disabled' : ''}`}
               onClick={() => {
                 if (!owner) onPick(p)
               }}

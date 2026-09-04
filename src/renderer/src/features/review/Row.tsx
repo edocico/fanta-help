@@ -143,7 +143,7 @@ export default function Row({
               }}
             />
             {query.trim() !== '' && (
-              <div className="absolute left-2 right-2 z-20 mt-1 overflow-hidden rounded-md border border-line bg-surface-raised shadow-lg">
+              <div className="absolute left-2 right-2 z-20 mt-1 overflow-hidden rounded-lg border border-line bg-surface-raised shadow-overlay">
                 {results.length === 0 ? (
                   <p className="px-2 py-1 text-base text-fg-muted">
                     {notices.NO_SEARCH_RESULTS()}
@@ -296,7 +296,7 @@ export default function Row({
           ⋯
         </button>
         {menu && (
-          <div className="absolute right-2 top-8 z-20 rounded-md border border-line bg-surface-raised shadow-lg">
+          <div className="absolute right-2 top-8 z-20 rounded-lg border border-line bg-surface-raised shadow-overlay">
             <button
               className="whitespace-nowrap px-3 py-1.5 text-base text-blocking hover:bg-surface-panel"
               onClick={() => {

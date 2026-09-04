@@ -288,7 +288,7 @@ function Report({
 
         <ul className="flex flex-col gap-3">
           {report.teams.map((team) => (
-            <li key={team.uuid} className="rounded-md border border-line bg-surface-panel">
+            <li key={team.uuid} className="border-b border-line pb-2">
               <header className="flex flex-wrap items-baseline gap-x-3 border-b border-line px-3 py-1.5">
                 <h2 className="min-w-0 truncate text-base">{team.name}</h2>
                 {team.manager !== null && (
@@ -321,7 +321,7 @@ function Report({
               </header>
 
               {/* «Spesa per reparto per squadra.» */}
-              <ul className="flex flex-wrap gap-x-5 border-b border-line/60 px-3 py-1 text-sm text-fg-muted">
+              <ul className="flex flex-wrap gap-x-5 border-b border-line px-3 py-1 text-sm text-fg-muted">
                 {/*
                   La spesa, e non anche il numero di giocatori. Il §4.11 chiede
                   «spesa per reparto per squadra» e i giocatori sono elencati due

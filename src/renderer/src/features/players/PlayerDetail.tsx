@@ -328,7 +328,7 @@ function HistoryTable({
         {seasons.map((season) => {
           const row = stats[season]
           return (
-            <tr key={season} className="border-b border-line/50">
+            <tr key={season} className="border-b border-line">
               <td className="py-1">{season}</td>
               <td className="py-1 text-right">
                 <Figure value={row.matchesRated} />

@@ -51,7 +51,7 @@ export default function Controls({
           {groups.map(({ team, anomalies }) => {
             const open = !closed.has(team.id)
             return (
-              <li key={team.id} className="border-b border-line/60">
+              <li key={team.id} className="border-b border-line">
                 <button
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-base hover:bg-surface-raised"
                   aria-expanded={open}

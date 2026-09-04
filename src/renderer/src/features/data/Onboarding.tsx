@@ -99,8 +99,8 @@ export default function Onboarding({ onDone }: { onDone: () => void }): JSX.Elem
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         {/* Present and honest about itself, rather than absent. T7b turns it on. */}
-        <section className="rounded-md border border-line bg-surface-panel p-4 opacity-60">
-          <h2 className="text-title font-medium">Scarica il listone</h2>
+        <section className="rounded-md border border-line bg-surface-panel p-4">
+          <h2 className="text-title font-medium text-fg-muted">Scarica il listone</h2>
           <p className="mt-1 text-base text-fg-muted">
             Non ancora disponibile: arriva col collegamento alla repo del listone. Intanto usa il
             file XLSX di Fantacalcio.it.

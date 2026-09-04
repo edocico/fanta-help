@@ -157,7 +157,7 @@ function LeagueSections(): JSX.Element {
         ) : (
           <span
             key={section.label}
-            className="px-2 py-1.5 text-base text-fg-muted opacity-40"
+            className="px-2 py-1.5 text-base text-fg-disabled"
             aria-disabled="true"
             title="Non ancora disponibile"
           >

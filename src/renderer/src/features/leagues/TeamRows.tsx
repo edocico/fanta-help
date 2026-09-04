@@ -234,7 +234,7 @@ function Swatch({
       />
 
       {open && (
-        <div className="absolute left-0 top-6 z-10 flex w-40 flex-wrap gap-1 rounded-md border border-line bg-surface-panel p-2">
+        <div className="absolute left-0 top-6 z-10 flex w-40 flex-wrap gap-1 rounded-lg border border-line bg-surface-panel p-2 shadow-overlay">
           {TEAM_COLORS.map((tint) => (
             <button
               key={tint.value}
