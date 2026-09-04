@@ -46,8 +46,14 @@ run_tests() {
   node_modules/.bin/vitest run ${TESTFILE:+"$TESTFILE"} 2>&1 |
     grep -E '^ *Tests +' | tail -1
 }
-totale() { printf '%s' "$1" | sed -n 's/.*(\([0-9]\+\)).*/\1/p'; }
-falliti() { printf '%s' "$1" | sed -n 's/.*Tests *\([0-9]\+\) failed.*/\1/p'; }
+# `sed -E`, e non `\+`: il `\+` di GNU su BSD è un `+` letterale, quindi su macOS
+# le due estrazioni tornavano vuote e lo script moriva con «non riesco a leggere
+# il totale dei test» stampando sotto una riga che il totale ce l'aveva. È la
+# riga «niente piattaforma cablata negli strumenti» del CLAUDE.md, nel senso
+# peggiore: lo strumento che dice se una guardia esiste non partiva su una delle
+# due macchine, e il messaggio non nominava sed.
+totale() { printf '%s' "$1" | sed -nE 's/.*\(([0-9]+)\).*/\1/p'; }
+falliti() { printf '%s' "$1" | sed -nE 's/.*Tests *([0-9]+) failed.*/\1/p'; }
 
 base=$(run_tests)
 BASE_TOT=$(totale "$base")
