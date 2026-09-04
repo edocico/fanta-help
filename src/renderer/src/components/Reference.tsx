@@ -101,7 +101,7 @@ export default function Reference(): JSX.Element | null {
                   term={abbr}
                   definition={
                     <>
-                      <span className="text-chalk">{glossary[abbr].full}</span>{' '}
+                      <span className="block text-chalk">{glossary[abbr].full}</span>
                       {glossary[abbr].explains}
                     </>
                   }
@@ -274,7 +274,9 @@ const SHORTCUTS: ReadonlyArray<readonly [string, string]> = [
  * arrivi allo schermo.
  *
  * Il commento che stava qui dichiarava «every abbreviation the interface
- * prints»: misurato, ne mancavano sedici — le quattordici lettere di ruolo,
- * `qt. iniziale` e `#`. Le lettere di ruolo hanno adesso due sezioni proprie, per
+ * prints»: misurato, ne mancavano diciassette — le quattordici lettere di
+ * ruolo, `qt. iniziale`, `#` e `★`, che era già l'intestazione di una colonna.
+ * L'app ne disegna trentadue: le diciotto del glossario e le quattordici
+ * lettere. Le lettere di ruolo hanno adesso due sezioni proprie, per
  * la collisione fra `C` e `A` che nessun oggetto solo può tenere.
  */

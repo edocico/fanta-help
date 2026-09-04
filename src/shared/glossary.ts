@@ -42,7 +42,7 @@
  *   is carried by 33 Classic attaccanti **and by 19 Classic centrocampisti** —
  *   Zaccagni, Orsolini, Pulisic read `ruo C` and Mantra `W;A` on the same row.
  *   An object cannot hold two `A`. They keep living in `ROLE_LABELS` and
- *   `MANTRA_ROLES`, which already spell them out.
+ *   `MANTRA_LABELS`, which already spell them out.
  * - **The club codes are data.** All twenty are derived at build time from the
  *   club name and change with every promotion and relegation; the installed
  *   dataset still carries FRO, MON and VEN. Written out here they would be three
@@ -75,7 +75,18 @@ export const glossary = {
   },
   'qt.': {
     full: 'Quotazione attuale',
-    explains: 'Quanto vale oggi sul listone. È il prezzo da cui parte in asta.',
+    explains:
+      'Quanto vale oggi sul listone. Non è il prezzo da cui parte l’asta: quello è la puntata minima della lega.',
+  },
+  /* Disegnata solo nel pannello di dettaglio, e solo quando è diversa
+     dall’attuale. È una chiave e non un qualificatore appiccicato a `qt.`
+     perché la decisione del §10 è che la chiave sia **la stringa
+     disegnata**: con `qt.` più la parola «iniziale» accanto, il popover
+     apriva su «Quotazione attuale» sopra il numero che attuale non è, e a
+     un lettore di schermo diceva «qt. — Quotazione attuale iniziale». */
+  'qt. iniziale': {
+    full: 'Quotazione iniziale',
+    explains: 'Quanto valeva a inizio stagione, prima che il listone la aggiornasse.',
   },
   FVM: {
     full: 'Fantavalore di mercato',
@@ -95,7 +106,8 @@ export const glossary = {
   },
   bon: {
     full: 'Indice bonus',
-    explains: 'Quanto aggiunge al voto in gol e assist. Sotto zero i malus pesano più dei bonus.',
+    explains:
+      'Di quanto la fantamedia supera la media voto: il saldo fra bonus e malus. Sotto zero i malus pesano di più.',
   },
   'pt.': {
     full: 'Punteggio',
@@ -124,7 +136,8 @@ export const glossary = {
   },
   max: {
     full: 'Puntata massima',
-    explains: 'Il più che può offrire tenendo un credito per ogni slot ancora libero.',
+    explains:
+      'Il massimo che può offrire tenendo da parte la puntata minima per ogni slot ancora libero.',
   },
   '#': {
     full: 'Numero d’ordine',
@@ -132,7 +145,8 @@ export const glossary = {
   },
   '★': {
     full: 'Obiettivo',
-    explains: 'I giocatori che hai segnato, con la priorità da una a cinque stelle.',
+    explains:
+      'I giocatori che hai messo fra gli obiettivi, col rating da una a cinque stelle. La fascia è un’altra cosa: l’ordine con cui li vuoi.',
   },
 } as const satisfies Record<string, GlossaryEntry>
 
@@ -146,6 +160,11 @@ export const glossary = {
  */
 export type Abbr = keyof typeof glossary
 
-/** In the order they are declared, which is the order the players table draws
- *  its columns in: the reference panel reads the same way the screen does. */
+/** In the order they are declared, which the reference panel renders in.
+ *
+ *  The metrics come first, in the order the players table draws its columns,
+ *  with `qt. iniziale` beside the `qt.` it qualifies; then the four the table
+ *  has no column for — `cr` and `max` from the roster grid, `#` from the
+ *  history — and `★` last, which the table does draw but which belongs with
+ *  the objectives rather than with the numbers. */
 export const ABBREVIATIONS = Object.keys(glossary) as readonly Abbr[]

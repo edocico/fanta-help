@@ -56,7 +56,7 @@ import {
   type ClassicRole,
   type PricedPlayer,
 } from '@shared/domain'
-import { errorMessages } from '@shared/errors'
+import { errorMessages, notices } from '@shared/errors'
 import type { PlayerRow, SeasonStats, TargetRow } from '@shared/types'
 
 /**
@@ -396,13 +396,23 @@ export default function PlayersView(): JSX.Element {
   const virtualizer = useVirtualizer({
     count: sorted.length,
     getScrollElement: () => scroller.current,
-    // Measured, not guessed. Every player in a real listone carries at least one
-    // Mantra role, so the name cell is always two lines and a row is ~59px, not
-    // the 44 a single line suggests. With a wrong estimate the spacers lie about
-    // the total height: the scrollbar changes size as you drag it and the bottom
-    // of the list moves out from under the pointer. The estimate below is only
-    // what a row is worth before it has been seen once.
-    estimateSize: () => 59,
+    // Measured in the running app with `getBoundingClientRect()`, not guessed —
+    // and re-measured after T23, because T23 is what changed the answer.
+    //
+    // It used to be 59, and 59 was right at the time: nothing declared a row
+    // height, every player in a real listone carries at least one Mantra role, so
+    // the name cell was two lines and the row grew to fit them. `DataTableRow`
+    // now pins the row at `h-10`, the §5 forty, and the Mantra line went from an
+    // inherited 16px to `text-micro`. Measured: **40.00px**, on all 40 rows
+    // sampled at the top of the list and 60% down, with no second value.
+    //
+    // Leaving 59 was not cosmetic. A wrong estimate makes the spacers lie about
+    // the total: with 524 rows the scroller claimed 30,321px against a true
+    // 20,960, so the scrollbar shrank as you dragged it and the bottom of the
+    // list moved out from under the pointer. Only the ~20 mounted rows get
+    // corrected by `measureElement`, so the lie is repaired a screenful at a
+    // time, in front of you.
+    estimateSize: () => 40,
     measureElement: (el) => el.getBoundingClientRect().height,
     overscan: 12,
   })
@@ -709,16 +719,17 @@ function buildColumns(
               adesso c'è per tutti e due i lettori. */}
           {c.row.original.penaltyTaker && <Glyph mark="◉" says="rigorista" />}
           {c.row.original.delisted && (
-            <Glyph mark="fuori" says="non è più nel listone" className="text-taken" />
+            <Glyph mark="fuori" says={notices.DELISTED()} className="text-taken" />
           )}
           {c.row.original.rolesMantra.length > 0 && (
             /* 11px, come chiede il §10: «i ruoli Mantra stanno sotto il nome
                come testo a 11px in `--text-muted`, non come badge — sono fino a
                tre e riempirebbero la riga». Senza taglia esplicita rendevano a
                **16px**, perché `label` porta peso e spaziatura e non una
-               misura, e nessun antenato ne dichiara una. Misurato nell'app: è
-               quella riga a tenere la riga della tabella a 42,5px invece dei 40
-               del §5. */
+               misura, e nessun antenato ne dichiara una, quindi la riga cresceva
+               oltre i 40 del §5. Rimisurato dopo che `DataTableRow` ha fissato
+               `h-10`: la riga sta a 40,00px esatti e questa ci entra dentro. La
+               stima del virtualizzatore è stata rifatta con lo stesso numero. */
             <div className="label mt-0.5 text-micro text-chalk-dim">
               {c.row.original.rolesMantra.join(' · ')}
             </div>
@@ -903,9 +914,16 @@ function num(
     header: abbr,
     sortUndefined: 'last',
     meta: { numeric: true, abbr },
-    cell: (c) => <Figure value={c.getValue() as number | undefined} kind={kind} />,
+    cell: (c) => (
+      <Figure value={c.getValue() as number | undefined} kind={kind} animate={false} />
+    ),
   })
 }
+
+/** Il chip dice la sigla e non la spiega: il §10 la spiega dove è definita —
+ *  l'intestazione di colonna venti righe più su — e mai dove è usata. Passa
+ *  comunque dal tipo, così è l'unica grafia in circolazione. */
+const PV = 'Pv' satisfies AbbrName
 
 type ActiveChip = { label: string; clear?: Partial<Filters>; clearQuery?: boolean }
 
@@ -916,7 +934,8 @@ function describeFilters(filters: Filters, query: string): ActiveChip[] {
   if (filters.role) chips.push({ label: filters.role, clear: { role: null } })
   if (filters.team) chips.push({ label: filters.team, clear: { team: null } })
   if (filters.mantra) chips.push({ label: filters.mantra, clear: { mantra: null } })
-  if (filters.minPv !== null) chips.push({ label: `Pv ≥ ${filters.minPv}`, clear: { minPv: null } })
+  if (filters.minPv !== null)
+    chips.push({ label: `${PV} ≥ ${filters.minPv}`, clear: { minPv: null } })
   if (filters.penaltyTakers) chips.push({ label: 'rigoristi', clear: { penaltyTakers: false } })
   return chips
 }

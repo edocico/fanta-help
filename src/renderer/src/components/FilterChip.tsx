@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ComponentProps } from 'react'
 import { cn } from '@/lib/utils'
 
 /**
@@ -24,14 +24,14 @@ export default function FilterChip({
   onToggle,
   children,
   className,
-}: {
+  ...rest
+}: Omit<ComponentProps<'button'>, 'onClick'> & {
   active: boolean
   onToggle: () => void
-  children: ReactNode
-  className?: string
 }): JSX.Element {
   return (
     <button
+      {...rest}
       className={cn(
         'label inline-flex h-6 items-center gap-1 rounded-full px-2.5 text-micro',
         active

@@ -157,8 +157,8 @@ function Board({
 
       {over && (
         <p className="mt-2 text-sm text-chalk">
-          I tuoi obiettivi di fascia 1 valgono <Figure value={over.total} kind="money" /> crediti e
-          il budget è <Figure value={over.budget} kind="money" />.
+          La fascia 1 vale <Figure value={over.total} kind="money" /> crediti e il budget è{' '}
+          <Figure value={over.budget} kind="money" />.
         </p>
       )}
 

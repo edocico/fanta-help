@@ -322,8 +322,8 @@
      | Cifre in proiezione | Archivo  | 700  | 125       | 1.0        |
 
    La `.figures` qui sotto ne indossava **uno solo** — quello della proiezione —
-   in tutti e 65 i suoi siti, colonne a 13px comprese. Non era una svista: T22
-   non poteva dividerla senza toccare 65 componenti, che è la cosa che il suo
+   in tutti e 63 i suoi siti, colonne a 12 e 14px comprese. Non era una svista:
+   T22 non poteva dividerla senza toccare 63 componenti, che è la cosa che il suo
    criterio vietava, e lo dice nel proprio commento rimandando qui. È questo il
    lavoro che `Figure` fa.
 

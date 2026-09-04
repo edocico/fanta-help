@@ -146,7 +146,7 @@ export default function PlayerDetail({
           <Fact term="FVM" value={player.fvmClassic} money />
           {player.qtClassicInitial !== null &&
             player.qtClassicInitial !== player.qtClassicCurrent && (
-              <Fact term="qt." qualifier="iniziale" value={player.qtClassicInitial} />
+              <Fact term="qt. iniziale" value={player.qtClassicInitial} />
             )}
         </dl>
 
@@ -238,19 +238,32 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 /**
- * `qualifier` is how "qt. iniziale" is drawn without becoming a glossary key of
- * its own: the abbreviation is `qt.` and "iniziale" is an ordinary word beside
- * it. A composed label as a key would be a key no popover could explain, because
- * half of it is not an abbreviation.
+ * A `<dt>` that is an abbreviation and a `<dd>` that is its number.
+ *
+ * There used to be a `qualifier` prop here, so that "qt. iniziale" could be
+ * drawn as `qt.` plus an ordinary word beside it rather than becoming a key of
+ * its own. It did not work, and it failed in the way §10 exists to prevent:
+ * the word sat *outside* `Abbr`, so the popover over "qt. iniziale" opened on
+ * "Quotazione attuale" — over the one number on the panel that is not the
+ * current one — and a screen reader heard "qt. — Quotazione attuale iniziale".
+ * Worse, the row is drawn *only* when initial and current differ, so the lie
+ * appeared exactly when it mattered, two elements from the `qt.` it belonged
+ * to. It is a glossary key now, which is also what the decision the key is the
+ * string on screen already said it should be.
+ *
+ * `animate={false}` for the same reason `AssignPanel` gives: a Fact's number
+ * changes when the *player* changes, never on its own. The panel is mounted
+ * without a `key` (`PlayersView`), so walking from one player to the next
+ * reuses these instances, and a count-up would travel from the previous
+ * player's quotazione to this one's — a movement document 2 §2 does not list,
+ * and a number that is briefly neither player's.
  */
 function Fact({
   term,
-  qualifier,
   value,
   money = false,
 }: {
   term: AbbrName
-  qualifier?: string
   value: number | null
   money?: boolean
 }): JSX.Element {
@@ -258,10 +271,9 @@ function Fact({
     <div>
       <dt className="label text-sm text-chalk-dim">
         <Abbr name={term} />
-        {qualifier !== undefined && ` ${qualifier}`}
       </dt>
       <dd>
-        <Figure value={value} kind={money ? 'money' : 'whole'} size="md" />
+        <Figure value={value} kind={money ? 'money' : 'whole'} size="md" animate={false} />
       </dd>
     </div>
   )

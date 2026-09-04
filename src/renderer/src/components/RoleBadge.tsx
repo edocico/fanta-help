@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import { ROLE_LABELS_ONE } from '@shared/domain'
+import { ROLE_LABELS_ONE, type ClassicRole } from '@shared/domain'
 
 /**
  * A Classic role, document 7 §10: an 18px square, 11px at weight 600, on
@@ -30,10 +30,14 @@ export default function RoleBadge({
   role,
   className,
 }: {
-  role: string
+  /** `ClassicRole` and not `string`: with `string` the lookup needed a cast and
+   *  left a branch for a letter with no word, which neither caller can reach —
+   *  a guard that never fires. Typed, a Mantra role does not compile here, which
+   *  is what §10 asks this component to prevent. */
+  role: ClassicRole
   className?: string
 }): JSX.Element {
-  const spelled = ROLE_LABELS_ONE[role as keyof typeof ROLE_LABELS_ONE]
+  const spelled = ROLE_LABELS_ONE[role]
   return (
     <span
       className={cn(
@@ -42,7 +46,7 @@ export default function RoleBadge({
       )}
     >
       <span aria-hidden>{role}</span>
-      {spelled !== undefined && <span className="sr-only">{spelled}</span>}
+      <span className="sr-only">{spelled}</span>
     </span>
   )
 }

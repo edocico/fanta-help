@@ -11,13 +11,15 @@ import { ABBREVIATIONS, glossary } from '@shared/glossary'
  * golden value is the contract, and adding or removing an abbreviation is meant
  * to be a deliberate act that shows up in a diff of this line.
  *
- * The order is the contract too: the reference panel renders in it, and it is
- * the order the players table draws its columns in.
+ * The order is the contract too: the reference panel renders in it, and the
+ * metrics follow the players table's own column order — see the note on
+ * `ABBREVIATIONS`, which says where the four that are not columns sit.
  */
 const GOLDEN = [
   'ruo',
   'squa',
   'qt.',
+  'qt. iniziale',
   'FVM',
   'FM',
   'MV',
@@ -35,7 +37,7 @@ const GOLDEN = [
 ]
 
 describe('the glossary', () => {
-  it('holds exactly the seventeen abbreviations the app draws, in screen order', () => {
+  it('holds exactly the eighteen abbreviations the app draws, in screen order', () => {
     expect(ABBREVIATIONS).toEqual(GOLDEN)
   })
 
