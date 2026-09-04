@@ -10,9 +10,11 @@
  * I primitivi qui sotto stanno in un `:root` nudo, dove Tailwind non guarda —
  * e in T25 sono stati tolti anche dal blocco `@theme`, quindi `bg-pitch-700`
  * non è più una classe che funziona, che è il divieto del §3 reso meccanico.
- * Il §9 contava 71 occorrenze di queste utility; oggi sono **594 in 32 file**,
- * e senza il blocco `@theme` smetterebbero di risolvere in silenzio, lasciando
- * l'elemento senza colore invece di dare errore.
+ * Il §9 contava 71 occorrenze di queste utility; oggi sono **596 in 32 file** —
+ * misurate a fine T25 sull'alternanza dei sedici nomi semantici sotto i prefissi
+ * `text|bg|border|outline|ring|fill`, e destinate a crescere con ogni vista che
+ * si scrive. Senza il blocco `@theme` smetterebbero di risolvere in silenzio,
+ * lasciando l'elemento senza colore invece di dare errore.
  *
  * La seconda è il vocabolario di shadcn/ui, che scrive i suoi componenti contro
  * un insieme fisso di nomi: definire i nostri e ignorare i suoi vorrebbe dire
