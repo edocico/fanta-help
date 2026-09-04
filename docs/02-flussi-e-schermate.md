@@ -382,7 +382,7 @@ Tre `Invio` e il nome del giocatore. Nel caso migliore, quando la squadra di tur
 | `Ctrl/Cmd+K` | Vai alla ricerca | ovunque |
 | `/` | Vai alla ricerca | fuori dai campi di testo |
 | `↑` `↓` | Naviga i risultati | ricerca |
-| `Invio` | Conferma il passo corrente | assegnazione |
+| `Invio` | Conferma il passo corrente, o il risultato evidenziato | assegnazione, ricerca |
 | `Esc` | Svuota e ricomincia l'inserimento | asta |
 | `Tab` `Shift+Tab` | Campo successivo o precedente | assegnazione |
 | `1`–`9` | Scegli la squadra n-esima | campo squadra |

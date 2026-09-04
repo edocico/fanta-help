@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { call, IpcError } from '@/lib/ipc'
@@ -7,6 +7,7 @@ import PriceField from '@/components/PriceField'
 import { haystack, search as fuzzy } from '@/features/players/search'
 import {
   CLASSIC_ROLES,
+  normalizeName,
   planCells,
   planTotals,
   ROLE_LABELS,
@@ -14,7 +15,7 @@ import {
   type ClassicRole,
   spelledOut,
 } from '@shared/domain'
-import { errorMessages } from '@shared/errors'
+import { errorMessages, notices } from '@shared/errors'
 import type { LeagueDetail, PlanDetail, PlayerRow } from '@shared/types'
 
 /**
@@ -476,6 +477,43 @@ function Cell({
 }
 
 /**
+ * How many rows a *typed* search shows. Named rather than a bare `8` in the
+ * slice, which is what stood here: of the four searches in this app three cut,
+ * the other two of those declare their number (`MAX_RESULTS` in the auction
+ * panel, 6 in the review row) and this was the only one nobody could find or
+ * argue with. The fourth, the table of §4.4, does not cut at all — it is
+ * virtualised, so there is nothing to declare.
+ *
+ * It caps the search and not the browse. A browse has nothing to protect the
+ * reader from — it is the list of a role, and cutting it silently at eight was
+ * the whole of the defect this file was opened for: 8 rows out of 187
+ * centrocampisti, presented as if that were all of them.
+ */
+const MAX_RESULTS = 8
+
+/**
+ * Keeps the highlighted row inside the box that scrolls.
+ *
+ * The auction panel carries its twin and explains it for `Invio` landing on a
+ * row that scrolled past the fold. Here the reason is bigger by two orders: the
+ * browse list is the whole role — 63 portieri, 186 difensori, 187
+ * centrocampisti, 88 attaccanti in the 2026-27 listone — so without this the
+ * arrows would walk a highlight the reader cannot see almost immediately.
+ *
+ * `block: 'nearest'` so a row already in view does not jerk the list, and no
+ * `behavior: 'smooth'`: document 2 §2 closes its list of movements with
+ * "nient'altro si anima", and a smooth scroll rides the same frame loop that
+ * stops when the window is occluded.
+ */
+function useScrollIntoView<T extends HTMLElement>(highlight: number): React.RefObject<T> {
+  const ref = useRef<T>(null)
+  useEffect(() => {
+    ref.current?.scrollIntoView({ block: 'nearest' })
+  }, [highlight])
+  return ref
+}
+
+/**
  * "Le caselle vuote sono cliccabili e aprono la ricerca filtrata sul ruolo
  * giusto" — and it opens here, inside the plan, rather than sending anyone to
  * Giocatori. The grid is the reason the screen exists; a picker that made you
@@ -498,6 +536,7 @@ function Picker({
   onClose: () => void
 }): JSX.Element {
   const [query, setQuery] = useState('')
+  const [highlight, setHighlight] = useState(0)
   // La stessa chiave della vista Giocatori — l'oggetto, come lo scrive il
   // documento 3 §3 — o non e' la stessa voce di cache: il selettore riscaricherebbe
   // le seicento righe che sono gia' in memoria, e le due copie invecchierebbero
@@ -514,13 +553,70 @@ function Picker({
     return { rows, index: haystack(rows) }
   }, [players.data, role, taken])
 
-  const results = useMemo(() => {
-    const found = query.trim() === '' ? pool.rows : fuzzy(pool.index, query)
-    // Dearest first: a plan is built from the top of the market down.
-    return [...found]
-      .sort((a, b) => (b.qtClassicCurrent ?? 0) - (a.qtClassicCurrent ?? 0))
-      .slice(0, 8)
-  }, [pool, query])
+  /**
+   * Whether this is a browse, decided by the *same* rule the search uses.
+   *
+   * Not `query.trim() === ''`, which is the obvious one and is wrong by exactly
+   * one character: `search()` returns the whole list when `normalizeName(query)`
+   * is empty, and `normalizeName` drops punctuation before trimming. So a lone
+   * `.` is non-empty to `trim` and empty to the search — the picker took the
+   * search branch, `fuzzy` handed back all 88 attaccanti in listone order,
+   * eight of them survived the cut in that order, and under them sat «altri 80:
+   * scrivi qualche lettera in più», advising more letters at the one moment the
+   * letter typed is what broke the list. Reproduced in the running app before
+   * this line existed.
+   *
+   * Two conditions asking the same question have to ask it with the same words.
+   */
+  const browsing = normalizeName(query) === ''
+
+  /**
+   * The rows, and how many the cut left behind.
+   *
+   * Two modes, and the first is not the second shortened. With the field empty
+   * this is a **browse**: the whole role, dearest first, because a plan is built
+   * from the top of the market down — the same default order §4.4 gives
+   * Giocatori. With something typed it is a **search**, and there uFuzzy's own
+   * ranking is the answer.
+   *
+   * Sorting by price before the cut, which is what stood here, let the price
+   * decide *who exists* instead of in what order they appear. Measured on the
+   * 2026-27 listone that is not a hypothetical: `ma` matches ten attaccanti and
+   * the price sort dropped two of them, Lisman and De Martis at qt 1, before
+   * anyone could see them — a search that cannot find a player it plainly
+   * matches. The auction panel already cuts in the right order
+   * (`matches.slice(0, MAX_RESULTS)`).
+   *
+   * `matched` is the count *before* the cut, so the line under the list and the
+   * list itself are two readings of one answer. A browse never cuts, so it
+   * reports no remainder and the line stays away.
+   */
+  const { rows, matched } = useMemo(() => {
+    if (browsing) {
+      const all = [...pool.rows].sort(
+        (a, b) => (b.qtClassicCurrent ?? 0) - (a.qtClassicCurrent ?? 0),
+      )
+      return { rows: all, matched: all.length }
+    }
+    const found = fuzzy(pool.index, query)
+    return { rows: found.slice(0, MAX_RESULTS), matched: found.length }
+  }, [browsing, pool, query])
+
+  /**
+   * Where `Invio` would land.
+   *
+   * Clamped when read rather than kept right when written: the list shrinks
+   * under the highlight at every keystroke, and a stored index that outran it
+   * would point past the end for a render. Unlike the auction there is nothing
+   * to skip — `pool` already dropped whoever the plan has taken and whoever
+   * left the listone, so every row is a destination and the `nextSelectable`
+   * this would otherwise mirror has no work to do here.
+   *
+   * `-1` when the list is empty, and `rows[-1]` is `undefined`: the two places
+   * that read it both check.
+   */
+  const at = Math.min(highlight, rows.length - 1)
+  const highlighted = useScrollIntoView<HTMLLIElement>(at)
 
   return (
     <div className="mt-2 rounded-md border border-line bg-surface p-2">
@@ -530,8 +626,33 @@ function Picker({
           className="min-w-0 flex-1 rounded-md border border-line bg-surface-panel px-2 py-1 text-base"
           placeholder={`Cerca un ${ROLE_LABELS_ONE[role]}`}
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === 'Escape' && onClose()}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            // Back to the top at every keystroke: the list under the highlight
+            // is a different list now, and keeping the index would point it at
+            // a row the reader never chose.
+            setHighlight(0)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              onClose()
+              return
+            }
+            // Document 2 §6 scopes `↑ ↓ Naviga i risultati` to "ricerca", not to
+            // the auction — the column beside it says "asta", "assegnazione",
+            // "giocatori" where it means one screen. This is a ricerca, and it
+            // handled Escape alone.
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+              e.preventDefault()
+              setHighlight(nextHighlight(at, e.key === 'ArrowDown' ? 1 : -1, rows.length))
+              return
+            }
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              const player = rows[at]
+              if (player) onPick(player)
+            }
+          }}
         />
         <button className="text-base text-fg-muted hover:text-fg" onClick={onClose}>
           chiudi
@@ -548,16 +669,52 @@ function Picker({
         </p>
       )}
 
-      {!players.isPending && !players.isError && results.length === 0 && (
-        // La riga del documento 2 §7 per una ricerca senza risultati.
-        <p className="mt-2 text-base text-fg-muted">Nessun giocatore. Prova con meno lettere.</p>
+      {!players.isPending && !players.isError && rows.length === 0 && (
+        // Due vuoti diversi, e la riga del documento 2 §7 ne copre uno solo.
+        // «Prova con meno lettere» presuppone delle lettere: sfogliando non ce
+        // ne sono, e il vuoto vuol dire che il piano ha preso tutto il ruolo.
+        //
+        // Quel secondo caso era stato dichiarato irraggiungibile, con dentro un
+        // massimo di slot che non esiste: `SLOT_COUNT` è `min(0)` senza tetto e
+        // `domain.ts` scrive per esteso che una lega con più slot che giocatori
+        // è «entirely legal». Serve una lega assurda per arrivarci, non un dato
+        // impossibile — e la differenza fra le due cose era un riquadro bianco.
+        <p className="mt-2 text-base text-fg-muted">
+          {browsing
+            ? notices.ROLE_EXHAUSTED({ role: ROLE_LABELS_ONE[role] })
+            : notices.NO_SEARCH_RESULTS()}
+        </p>
       )}
 
-      <ul className="mt-1">
-        {results.map((player) => (
-          <li key={player.id}>
+      {/*
+        Il contenitore che scorre, e la ragione per cui questa schermata è stata
+        riaperta. `max-h-48` sono 192px — i `rem` si radicano sul `font-size` di
+        `html`, che resta 16px perché `base.css` porta a 13 il solo `body` — e la
+        riga è di 22,2px esatti — misurati con `getBoundingClientRect()` nell'app in
+        esecuzione, passo uniforme su otto righe, non sommati a mente; che poi
+        coincidano con l'interlinea 1,4 del `text-base` da 13px più i 4 del
+        `py-0.5` qui sotto dice solo da cosa dipendono. Fanno 8,65 righe, ed è una
+        taglia scelta e non trovata: una ricerca scritta ne produce al massimo 8
+        e quindi non scorre mai né viene tagliata, mentre una sfogliata mostra la
+        nona a metà, che è il modo in cui una lista dice di continuare. Chi tocca
+        `py-0.5`, il `text-base` o la sua interlinea rimisuri.
+
+        `overscroll-contain` perché sotto c'è un'altra cosa che scorre — `Frame`,
+        e dietro di lui `main` — e questa lista è l'unica dell'applicazione
+        annidata dentro uno scroller di pagina. La proprietà dice cosa
+        *impedisce*, non cosa è stato visto: che un gesto arrivato in fondo a
+        187 righe prosegua sul documento sotto. Scritto come impedimento e non
+        come misura, perché una rotella non si emette con un evento sintetico —
+        Chromium scarta lo scorrimento da eventi non fidati — e quindi la
+        conseguenza non l'ho riprodotta.
+      */}
+      <ul className="mt-1 max-h-48 overflow-auto overscroll-contain">
+        {rows.map((player, i) => (
+          <li key={player.id} ref={i === at ? highlighted : undefined}>
             <button
-              className="flex w-full items-baseline gap-2 rounded-md px-1 py-0.5 text-left text-base hover:bg-surface-raised"
+              className={`flex w-full items-baseline gap-2 rounded-md px-1 py-0.5 text-left text-base hover:bg-surface-raised ${
+                i === at ? 'bg-surface-raised' : ''
+              }`}
               onClick={() => onPick(player)}
             >
               {/* Same reason as the auction panel: this list searches both names
@@ -580,8 +737,45 @@ function Picker({
           </li>
         ))}
       </ul>
+
+      {/*
+        Quante corrispondenze il taglio ha lasciato fuori. Fuori dall'`ul`, e non
+        come ultima riga dentro com'è nel pannello d'asta: là il riquadro alto
+        `max-h-44` ne mostra sei di otto, quindi l'avviso che esiste per dire che
+        c'è dell'altro sta esso stesso sotto la piega e va scoperto scorrendo.
+        Qui è sempre visibile, che è tutto il suo mestiere.
+      */}
+      {matched > rows.length && (
+        <p className="mt-1 px-1 text-sm text-fg-muted">
+          {notices.MORE_RESULTS({ n: matched - rows.length })}
+        </p>
+      )}
     </div>
   )
+}
+
+/**
+ * Dove va il fuoco virtuale premendo `↑` o `↓`.
+ *
+ * `from` è la riga corrente (`-1` a lista vuota), `delta` vale `1` o `-1`, e
+ * `count` è quante righe ci sono — fino a 187, perché a campo vuoto la lista è
+ * il ruolo intero.
+ *
+ * Trattiene ai bordi: `↓` sull'ultima riga resta sull'ultima, `↑` sulla prima
+ * resta sulla prima. È la scelta onesta delle due — la lista finisce davvero, e
+ * un ciclo silenzioso dentro 187 righe farebbe saltare la riga evidenziata da un
+ * capo all'altro senza che niente lo annunci, che in una lista lunga si legge
+ * come «ho perso il segno» e non come «sono tornato in cima».
+ *
+ * Il prezzo è che dal fondo del ruolo non si risale con un tasto. Sfogliando i
+ * 187 centrocampisti quello non è il gesto: si scrivono due lettere, e la lista
+ * torna corta.
+ *
+ * Regge `count === 0`, che il bacino vuoto produrrebbe: torna `0`, e chi legge
+ * lo riporta a `-1` col suo `Math.min`, quindi mai `NaN`.
+ */
+function nextHighlight(from: number, delta: number, count: number): number {
+  return Math.max(0, Math.min(from + delta, count - 1))
 }
 
 function Frame({ children }: { children: React.ReactNode }): JSX.Element {

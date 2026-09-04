@@ -233,7 +233,7 @@ const SHORTCUTS: ReadonlyArray<readonly [string, string]> = [
   ['Ctrl/Cmd+K', 'vai alla ricerca'],
   ['/', 'vai alla ricerca, fuori dai campi di testo'],
   ['↑ ↓', 'naviga i risultati'],
-  ['Invio', 'conferma il passo corrente dell’assegnazione'],
+  ['Invio', 'conferma il passo corrente, o il risultato evidenziato in una ricerca'],
   ['Esc', 'svuota e ricomincia l’inserimento'],
   ['Tab / Shift+Tab', 'campo successivo o precedente'],
   ['1–9', 'scegli la squadra n-esima, nel campo squadra'],

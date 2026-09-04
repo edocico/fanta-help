@@ -794,9 +794,7 @@ function Results({
       })}
       {matched > results.length && (
         <li className="px-2 py-1 text-sm text-fg-muted">
-          {matched - results.length === 1
-            ? 'un altro giocatore: scrivi qualche lettera in più'
-            : `altri ${matched - results.length}: scrivi qualche lettera in più`}
+          {notices.MORE_RESULTS({ n: matched - results.length })}
         </li>
       )}
     </ul>

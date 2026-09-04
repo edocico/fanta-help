@@ -453,6 +453,37 @@ export const notices = {
    * della lega e la revisione, e quindi una frase sola.
    */
   CRYSTALLISED: () => 'Il resoconto è cristallizzato. Riaprirlo riporta in revisione.',
+  /**
+   * Quante corrispondenze il taglio ha lasciato fuori, e cosa fare per vederle.
+   *
+   * Qui e non in linea nei componenti, che è la regola già scritta sopra per
+   * `ANOMALIES_OPEN` e `CLOSE_WITH_FREE_SLOTS`: questa frase ha due lettori — il
+   * pannello d'asta del §4.8 e il selettore dei piani del §4.7 — e scritta due
+   * volte è la premessa esatta dei difetti di concordanza che quei due docblock
+   * raccontano. Il ramo a uno perde il numero e prende il sostantivo: «altri 1»
+   * non si può leggere, e «1 altro giocatore» accosta la cifra a un aggettivo
+   * che dovrebbe concordarci. Nessun ramo per lo zero: chi la chiama la mostra
+   * solo quando qualcosa è rimasto fuori, e un ramo che nessun dato raggiunge è
+   * una riga che finge di esserci.
+   */
+  /**
+   * Il ruolo è finito: il piano ha già preso tutti quelli che il listone porta.
+   *
+   * Serve una lega assurda — `SLOT_COUNT` è `z.number().int().min(0)` e non ha
+   * un massimo, quindi 64 slot da portiere sono legali e `coherenceWarnings`
+   * avvisa senza vietare — ma «assurdo» non è «impossibile», ed è la differenza
+   * che separa una riga in più da un riquadro bianco. Il selettore non può
+   * scrivere qui la riga del §7, che dice «Prova con meno lettere» a chi non ne
+   * ha scritta nessuna.
+   *
+   * Nomina il ruolo al singolare perché lo stato lo è: `ROLE_LABELS_ONE`, mai
+   * `ROLE_LABELS`, che direbbe «nessun portieri».
+   */
+  ROLE_EXHAUSTED: (p: { role: string }) => `Nessun ${p.role} libero: li hai presi tutti.`,
+  MORE_RESULTS: (p: { n: number }) =>
+    p.n === 1
+      ? 'un altro giocatore: scrivi qualche lettera in più'
+      : `altri ${p.n}: scrivi qualche lettera in più`,
 } as const
 
 function capitalize(sentence: string): string {
