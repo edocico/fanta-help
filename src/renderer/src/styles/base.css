@@ -101,6 +101,10 @@
      nome del ruolo, perché la regola del §3 non ammette eccezioni che i
      componenti possano vedere. */
   --surface-deep: var(--pitch-950);
+
+  /* §7: «Curva unica». Scritta una volta, perché finora non era scritta da
+     nessuna parte e le due animazioni esistenti usavano `ease-out`. */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* ── Prima mappatura: il namespace delle utility dell'app ──────────────────
@@ -664,12 +668,19 @@
 }
 
 .flash-row {
-  animation: flash-row 400ms ease-out 1;
+  animation: flash-row 400ms var(--ease) 1;
 }
 
-/* Lo stesso lampeggio, in `taken`, per la tessera di un obiettivo che qualcun
-   altro si è appena preso. Sfuma anche l'opacità perché quella riga sta uscendo
-   dall'elenco, non cambiando stato: è l'ultima cosa che se ne vede. */
+/* Lo stesso lampeggio, in `--unavailable`, per la tessera di un obiettivo che
+   qualcun altro si è appena preso. Sfuma anche l'opacità perché quella riga sta
+   uscendo dall'elenco, non cambiando stato: è l'ultima cosa che se ne vede.
+
+   **Ed è per quella metà che l'esenzione non vale.** Il commento qui sopra
+   rivendica per tutti e due il «tranne il cambio di colore» del §7: giusto per
+   `flash-row`, mezzo giusto per questo, che al colore aggiunge una dissolvenza,
+   e una dissolvenza è movimento. Sotto `prefers-reduced-motion: reduce` resta il
+   solo cambio di colore; la riga sparisce comunque a 400ms per il timer di
+   `useLeaving`, quindi togliere la dissolvenza non lascia niente appeso. */
 @keyframes flash-lost {
   from {
     background-color: color-mix(in srgb, var(--unavailable) 45%, transparent);
@@ -682,5 +693,72 @@
 }
 
 .flash-lost {
-  animation: flash-lost 400ms ease-out 1 forwards;
+  animation: flash-lost 400ms var(--ease) 1 forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes flash-lost {
+    from {
+      background-color: color-mix(in srgb, var(--unavailable) 45%, transparent);
+    }
+    to {
+      background-color: transparent;
+    }
+  }
+}
+
+/* ── Le altre due delle quattro del §7 ──────────────────────────────────────
+   La tabella del §7 ne elenca quattro e ne esistevano due: il lampeggio qui
+   sopra e il conteggio dei crediti in `lib/motion.ts`. Una lista chiusa si può
+   sbagliare in tutti e due i versi, e la caccia del §14 passo 5 guarda solo da
+   una parte — cerca le animazioni **di troppo**, non quelle che non ci sono.
+
+   La curva è quella e una sola, `cubic-bezier(0.2, 0, 0, 1)`. Non compariva da
+   nessuna parte nel sorgente: i due lampeggi qui sopra scrivevano `ease-out`.
+
+   Le due animazioni nuove sono movimento vero, non cambio di colore, quindi
+   `prefers-reduced-motion: reduce` le spegne del tutto. Si spengono azzerando la
+   durata e non con `animation: none`, così l'elemento atterra comunque sul
+   fotogramma finale invece di restare dove il `from` lo aveva messo. */
+@keyframes panel-in {
+  from {
+    transform: translateX(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* §7: «Pannello di dettaglio che entra da destra · 150ms · apertura», che è il
+   debito che T10 aveva lasciato. **Il pannello della cronologia non la porta**,
+   ed è una scelta e non una dimenticanza: il §7 nomina il pannello di dettaglio,
+   che il documento 2 §4.5 identifica, e stendere il movimento a un secondo
+   pannello sarebbe aggiungerne uno senza toglierne un altro (§15). */
+.panel-in {
+  animation: panel-in 150ms var(--ease) 1;
+}
+
+/* §7: «Toast che sale dal basso · 120ms · comparsa». */
+@keyframes toast-in {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.toast-in {
+  animation: toast-in 120ms var(--ease) 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-in,
+  .toast-in {
+    animation-duration: 0s;
+  }
 }

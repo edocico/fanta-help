@@ -48,9 +48,14 @@ export default function Toast({
   return (
     <div
       role="status"
-      className="pointer-events-auto flex items-center gap-4 rounded-md border border-line bg-surface-raised px-4 py-2 text-base shadow-none"
+      className="toast-in pointer-events-auto flex items-center gap-4 rounded-md border border-line bg-surface-raised px-4 py-2 text-base shadow-none"
     >
-      <span className="text-fg">{message}</span>
+      {/* `figure-column` e non `Figure`: il messaggio e' una frase e la cifra ne
+          e' una parola — «Dimarco → Real Fanta, 31 crediti». Il §10 esclude per
+          nome i numeri dentro una frase e da' loro il ruolo tipografico senza il
+          componente, che e' quello che serve: cifre tabulari, cosi' due toast di
+          fila non ballano. */}
+      <span className="figure-column text-fg">{message}</span>
       {/*
         Not `text-money`. Document 2 §2: "L'ambra è riservata al denaro. Se un
         numero è ambra è un credito. Nient'altro usa quel colore, mai per

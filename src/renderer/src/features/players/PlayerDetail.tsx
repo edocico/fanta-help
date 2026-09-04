@@ -113,7 +113,7 @@ export default function PlayerDetail({
     <aside
       ref={panel}
       aria-label={`Dettaglio di ${player.name}`}
-      className="flex w-[420px] shrink-0 flex-col overflow-auto border-l border-line bg-surface-panel"
+      className="panel-in flex w-[420px] shrink-0 flex-col overflow-auto border-l border-line bg-surface-panel"
     >
       <header className="sticky top-0 border-b border-line bg-surface-panel px-5 py-4">
         <div className="flex items-start justify-between gap-3">
