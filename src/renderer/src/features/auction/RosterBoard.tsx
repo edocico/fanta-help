@@ -55,7 +55,7 @@ export default function RosterBoard({
   return (
     <section
       className={`board flex min-h-0 min-w-0 flex-1 flex-col overflow-auto ${
-        projected ? 'projection-scale bg-pitch-950' : ''
+        projected ? 'projection-scale bg-surface-deep' : ''
       }`}
       /* Same reasoning as the row panel: on a screen with one section the
          heading is the first thing to cut for a reader three metres away, but
@@ -63,7 +63,7 @@ export default function RosterBoard({
       aria-label={projected ? 'Rose' : undefined}
     >
       {!projected && (
-        <h2 className="label shrink-0 border-b border-line px-3 py-2 text-micro text-chalk-dim">Rose</h2>
+        <h2 className="label shrink-0 border-b border-line px-3 py-2 text-micro text-fg-muted">Rose</h2>
       )}
 
       <table className="w-full table-fixed border-separate border-spacing-0">
@@ -76,7 +76,7 @@ export default function RosterBoard({
 
         <thead>
           <tr>
-            <th className={`sticky top-0 z-10 ${projected ? 'bg-pitch-950' : 'bg-pitch-900'}`} />
+            <th className={`sticky top-0 z-10 ${projected ? 'bg-surface-deep' : 'bg-surface'}`} />
             {state.teams.map((team) => (
               <ColumnHead
                 key={team.id}
@@ -159,7 +159,7 @@ function ColumnHead({
     <th
       scope="col"
       className={`sticky top-0 z-10 border-b border-line px-1 pb-1 text-left align-bottom ${
-        onTurn ? 'bg-pitch-700' : projected ? 'bg-pitch-950' : 'bg-pitch-900'
+        onTurn ? 'bg-surface-raised' : projected ? 'bg-surface-deep' : 'bg-surface'
       } ${team.isMine ? 'border-l border-l-line-strong' : ''}`}
     >
       <span
@@ -171,7 +171,7 @@ function ColumnHead({
         }}
       />
       <span
-        className={`block truncate ${team.isMine ? 'font-semibold text-chalk' : 'font-normal text-chalk'}`}
+        className={`block truncate ${team.isMine ? 'font-semibold text-fg' : 'font-normal text-fg'}`}
         style={{ fontSize: 'var(--board-name)' }}
         title={team.name}
       >
@@ -280,7 +280,7 @@ type Bought = AuctionTeam['roster'][number]
  * "Celle piene: cognome a 12px e prezzo a destra in ambra a 11px. Celle vuote:
  * un trattino in `--text-disabled`, nessun bordo."
  *
- * `text-chalk-600` and not a `--text-disabled` utility: the semantic text names
+ * `text-fg-disabled` and not a `--text-disabled` utility: the semantic text names
  * deliberately stay out of `@theme`, because `--text-*` is Tailwind's namespace
  * for *sizes* and a colour declared there generates `font-size: #62716a`. The
  * bridge is in `base.css`, and T25 is the pass that renames these.
@@ -306,7 +306,7 @@ function Cell({
 }): JSX.Element {
   return (
     <td
-      className={`relative overflow-hidden px-1 ${onTurn ? 'bg-pitch-700' : ''} ${
+      className={`relative overflow-hidden px-1 ${onTurn ? 'bg-surface-raised' : ''} ${
         first ? 'border-t border-line' : ''
       } ${mine ? 'border-l border-l-line-strong' : ''}`}
       style={{
@@ -332,12 +332,12 @@ function Cell({
         <span
           aria-hidden="true"
           className="flash-row pointer-events-none absolute inset-0"
-          style={{ ['--flash' as string]: color ?? 'var(--chalk-dim)' }}
+          style={{ ['--flash' as string]: color ?? 'var(--text-muted)' }}
         />
       )}
 
       {bought === null ? (
-        <span className="text-chalk-600" style={{ fontSize: 'var(--board-name)' }} aria-hidden="true">
+        <span className="text-fg-disabled" style={{ fontSize: 'var(--board-name)' }} aria-hidden="true">
           —
         </span>
       ) : (
@@ -352,7 +352,7 @@ function Cell({
             heading keeps its own because there are ten of those, which is the
             size the rest of the app already uses this idiom at.
 
-            `text-chalk-dim` and not `text-taken` for a player past his role's
+            `text-fg-muted` and not `text-blocking` for a player past his role's
             quota: §12 puts `--unavailable` at 3,09:1 on `--pitch-900` and 2,47:1
             on the column on turn, and says in as many words that it "resta un
             colore da riempimento e da icona, mai da testo". §3 says what a
@@ -362,7 +362,7 @@ function Cell({
             the league's own slots, in every column at once.
           */}
           <span
-            className={`min-w-0 flex-1 truncate ${beyond ? 'text-chalk-dim' : 'text-chalk'}`}
+            className={`min-w-0 flex-1 truncate ${beyond ? 'text-fg-muted' : 'text-fg'}`}
             style={{ fontSize: 'var(--board-name)' }}
           >
             {bought.name}
@@ -383,7 +383,7 @@ function Cell({
             interactive element on the screen §11 says must have none.
           */}
           {bought.delisted && (
-            <span className="shrink-0 text-taken" style={{ fontSize: 'var(--board-price)' }}>
+            <span className="shrink-0 text-unavailable" style={{ fontSize: 'var(--board-price)' }}>
               <span aria-hidden="true">•</span>
               <span className="sr-only"> {notices.DELISTED()}</span>
             </span>

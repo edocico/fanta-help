@@ -370,7 +370,7 @@ export default function AssignPanel({
 
   return (
     <section className="flex min-h-0 shrink-0 flex-col gap-2 border-b border-line p-3">
-      <h2 className="label text-micro text-chalk-dim">
+      <h2 className="label text-micro text-fg-muted">
         {aggiunta ? 'Aggiungi un acquisto' : 'Assegna'}
       </h2>
 
@@ -379,7 +379,7 @@ export default function AssignPanel({
         value={query}
         aria-label="cerca un giocatore"
         placeholder="Cerca un giocatore"
-        className="w-full rounded-md border border-line bg-pitch-900 px-2 py-1.5 text-base"
+        className="w-full rounded-md border border-line bg-surface px-2 py-1.5 text-base"
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={(e) => {
           // `Esc` is not here: §6 scopes it to the whole auction, not to the
@@ -405,7 +405,7 @@ export default function AssignPanel({
         every letter — the §7 line for "hai scritto troppo", said on the one
         screen with no time to investigate, while the channel is down.
       */}
-      {playersError !== null && <p className="text-sm text-taken">{playersError}</p>}
+      {playersError !== null && <p className="text-sm text-blocking">{playersError}</p>}
 
       {playersError === null && step === 'player' && query.trim() !== '' && (
         <Results
@@ -423,14 +423,14 @@ export default function AssignPanel({
               row below: this line truncates too, and what an ellipsis eats is the
               end of the *second* name. */}
           <p
-            className="truncate pt-1 text-body text-chalk"
+            className="truncate pt-1 text-body text-fg"
             title={chosenSpelled === null ? chosen.name : `${chosen.name} · ${chosenSpelled}`}
           >
             {chosen.name}{' '}
             {chosenSpelled !== null && (
-              <span className="text-body text-chalk-dim">· {chosenSpelled} </span>
+              <span className="text-body text-fg-muted">· {chosenSpelled} </span>
             )}
-            <span className="label text-micro text-chalk-dim">
+            <span className="label text-micro text-fg-muted">
               {chosen.roleClassic} {chosen.teamCode ?? chosen.teamName}
               {/*
                 The abbreviation and its figure in the same breath, which is what
@@ -462,7 +462,7 @@ export default function AssignPanel({
             </span>
           </p>
           {chosen.delisted && (
-            <p className="text-sm text-taken">{notices.DELISTED()}</p>
+            <p className="text-sm text-unavailable">{notices.DELISTED()}</p>
           )}
           {/*
             The injury notice of §4.8 — "Infortunato · rientro previsto a novembre
@@ -478,7 +478,7 @@ export default function AssignPanel({
       )}
 
       <div className="flex items-center gap-2 pt-1">
-        <label className="label w-16 shrink-0 text-micro text-chalk-dim" htmlFor="asta-prezzo">
+        <label className="label w-16 shrink-0 text-micro text-fg-muted" htmlFor="asta-prezzo">
           prezzo
         </label>
         <input
@@ -493,7 +493,7 @@ export default function AssignPanel({
              family changes — `figure-column` rather than `Figure`, because a
              field is not a figure to wrap: its value is a string being edited,
              and it has to stay editable. */
-          className="figure-column w-20 rounded-md border border-line bg-pitch-900 px-2 py-1 text-right text-base text-credit disabled:opacity-40"
+          className="figure-column w-20 rounded-md border border-line bg-surface px-2 py-1 text-right text-base text-money disabled:opacity-40"
           onChange={(e) => setPrice(e.target.value.replace(/\D/g, ''))}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
@@ -506,7 +506,7 @@ export default function AssignPanel({
       </div>
 
       <div className="flex items-center gap-2">
-        <label className="label w-16 shrink-0 text-micro text-chalk-dim" htmlFor="asta-squadra">
+        <label className="label w-16 shrink-0 text-micro text-fg-muted" htmlFor="asta-squadra">
           squadra
         </label>
         <input
@@ -515,7 +515,7 @@ export default function AssignPanel({
           value={teamDraft}
           disabled={chosen === null}
           placeholder="Squadra acquirente"
-          className="min-w-0 flex-1 rounded-md border border-line bg-pitch-900 px-2 py-1 text-base disabled:opacity-40"
+          className="min-w-0 flex-1 rounded-md border border-line bg-surface px-2 py-1 text-base disabled:opacity-40"
           onChange={(e) => setTeam(e.target.value)}
           onKeyDown={(e) => {
             /**
@@ -577,7 +577,7 @@ export default function AssignPanel({
                 ref={i === teamAt && !needsTeam ? teamRow : undefined}
                 type="button"
                 className={`flex w-full items-center gap-2 px-2 py-1 text-left text-base ${
-                  i === teamAt && !needsTeam ? 'bg-pitch-700' : ''
+                  i === teamAt && !needsTeam ? 'bg-surface-raised' : ''
                 }`}
                 onClick={() => {
                   setTeam(t.name)
@@ -590,7 +590,7 @@ export default function AssignPanel({
                   rather than a dash, there being no key past `9`. It keeps the
                   tabular column so the names line up under it.
                 */}
-                <span className="figure-column w-4 text-sm text-chalk-dim">
+                <span className="figure-column w-4 text-sm text-fg-muted">
                   {t.orderIndex < 9 ? t.orderIndex + 1 : ''}
                 </span>
                 <span className="min-w-0 flex-1 truncate">{t.name}</span>
@@ -602,7 +602,7 @@ export default function AssignPanel({
                   hidden expansion is read out as part of its name.
 
                   The amber moved off the word and onto the figure alone, §15 —
-                  and the word then takes the `label text-chalk-dim` that the
+                  and the word then takes the `label text-fg-muted` that the
                   other six labels of this panel wear, and that the identical
                   `max` wears in `RosterGrid`. Left to inherit it would come out
                   at the brightness of the team name, louder than the figure it
@@ -619,7 +619,7 @@ export default function AssignPanel({
                 <span className="text-sm">
                   <Abbr name="max">
                     {(label, trigger) => (
-                      <span className={`${trigger} label text-micro text-chalk-dim`}>{label}</span>
+                      <span className={`${trigger} label text-micro text-fg-muted`}>{label}</span>
                     )}
                   </Abbr>{' '}
                   <Figure value={t.maxBid} kind="money" />
@@ -632,11 +632,11 @@ export default function AssignPanel({
 
       <button
         type="button"
-        className="w-full rounded-md border border-line bg-pitch-700 px-3 py-2 text-base disabled:opacity-40"
+        className="w-full rounded-md border border-line bg-surface-raised px-3 py-2 text-base disabled:opacity-40"
         disabled={blocked}
         onClick={() => void submit()}
       >
-        {aggiunta ? 'Aggiungi' : 'Assegna'} <span className="text-chalk-dim">⏎</span>
+        {aggiunta ? 'Aggiungi' : 'Assegna'} <span className="text-fg-muted">⏎</span>
       </button>
 
       {/*
@@ -646,17 +646,17 @@ export default function AssignPanel({
         moved between them, and §1 leaves no room for a paragraph.
       */}
       {violation !== null && chosen !== null && team !== null ? (
-        <p className="text-sm text-taken">
+        <p className="text-sm text-blocking">
           {violationMessage(violation, team.name, chosen.roleClassic as ClassicRole)}
         </p>
       ) : full !== null ? (
-        <p className="text-sm text-taken">{notices.ROSTER_COMPLETE({ team: full.name })}</p>
+        <p className="text-sm text-blocking">{notices.ROSTER_COMPLETE({ team: full.name })}</p>
       ) : refusal !== null ? (
-        <p className="text-sm text-taken">{refusal}</p>
+        <p className="text-sm text-blocking">{refusal}</p>
       ) : (
         // Not `taken`: an empty box is not a refusal, it is the step the reader
         // is standing on. It exists because the field no longer guesses.
-        needsTeam && <p className="text-sm text-chalk-dim">{notices.PICK_A_TEAM()}</p>
+        needsTeam && <p className="text-sm text-fg-muted">{notices.PICK_A_TEAM()}</p>
       )}
     </section>
   )
@@ -728,7 +728,7 @@ function Results({
   const chosenRow = useScrollIntoView<HTMLDivElement>(highlight)
 
   if (results.length === 0) {
-    return <p className="px-1 py-2 text-base text-chalk-dim">{notices.NO_SEARCH_RESULTS()}</p>
+    return <p className="px-1 py-2 text-base text-fg-muted">{notices.NO_SEARCH_RESULTS()}</p>
   }
 
   return (
@@ -744,7 +744,7 @@ function Results({
               tabIndex={-1}
               aria-disabled={owner !== undefined}
               className={`flex items-baseline gap-2 px-2 py-1 text-base ${
-                i === highlight ? 'bg-pitch-700' : ''
+                i === highlight ? 'bg-surface-raised' : ''
               } ${owner ? 'opacity-45' : ''}`}
               onClick={() => {
                 if (!owner) onPick(p)
@@ -765,13 +765,13 @@ function Results({
                 exactly the half that never gets cut.
               */}
               <span
-                className="min-w-0 flex-1 truncate text-chalk"
+                className="min-w-0 flex-1 truncate text-fg"
                 title={spelled === null ? p.name : `${p.name} · ${spelled}`}
               >
                 {p.name}
-                {spelled !== null && <span className="pl-1.5 text-chalk-dim">· {spelled}</span>}
+                {spelled !== null && <span className="pl-1.5 text-fg-muted">· {spelled}</span>}
               </span>
-              <span className="label shrink-0 text-micro text-chalk-dim">
+              <span className="label shrink-0 text-micro text-fg-muted">
                 {p.roleClassic} {p.teamCode ?? p.teamName}
               </span>
               {/*
@@ -787,7 +787,7 @@ function Results({
               />
             </div>
             {owner && (
-              <p className="px-2 pb-1 text-sm text-taken">
+              <p className="px-2 pb-1 text-sm text-blocking">
                 {errorMessages.PLAYER_ALREADY_OWNED({ team: owner.team, price: owner.price })}
               </p>
             )}
@@ -795,7 +795,7 @@ function Results({
         )
       })}
       {matched > results.length && (
-        <li className="px-2 py-1 text-sm text-chalk-dim">
+        <li className="px-2 py-1 text-sm text-fg-muted">
           {matched - results.length === 1
             ? 'un altro giocatore: scrivi qualche lettera in più'
             : `altri ${matched - results.length}: scrivi qualche lettera in più`}

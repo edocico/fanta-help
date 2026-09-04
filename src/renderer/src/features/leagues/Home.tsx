@@ -31,7 +31,7 @@ export default function Home(): JSX.Element {
           {importer.button}
           <Link
             to="/lega/nuova"
-            className="rounded-md bg-pitch-700 px-3 py-1.5 text-base text-chalk hover:bg-line"
+            className="rounded-md bg-surface-raised px-3 py-1.5 text-base text-fg hover:bg-line"
           >
             Nuova lega
           </Link>
@@ -41,7 +41,7 @@ export default function Home(): JSX.Element {
       {importer.panel}
 
       {leagues.isError && (
-        <p className="mt-6 text-base text-taken">
+        <p className="mt-6 text-base text-blocking">
           {leagues.error instanceof IpcError
             ? leagues.error.message
             : errorMessages.IPC_UNAVAILABLE()}
@@ -50,7 +50,7 @@ export default function Home(): JSX.Element {
 
       {leagues.data?.length === 0 && (
         // Document 2 §8, parola per parola.
-        <p className="mt-6 text-base text-chalk-dim">
+        <p className="mt-6 text-base text-fg-muted">
           Nessuna lega. Creane una per iniziare a preparare l’asta.
         </p>
       )}
@@ -71,7 +71,7 @@ function Row({ league }: { league: LeagueSummary }): JSX.Element {
     <li>
       <Link
         to={`/lega/${league.id}`}
-        className="flex items-center gap-4 px-2 py-2.5 hover:bg-pitch-800"
+        className="flex items-center gap-4 px-2 py-2.5 hover:bg-surface-panel"
       >
         <span className="w-64 truncate font-medium">{league.name}</span>
         {/* No figure class at all: `season.label` renders "Serie A 2026/27" —
@@ -80,15 +80,15 @@ function Row({ league }: { league: LeagueSummary }): JSX.Element {
             role would only set the words in Plex 500 beside two neighbouring
             columns at 400. And dropping `figures` drops Archivo at 12px,
             which §15 forbids. */}
-        <span className="w-20 text-base text-chalk-dim">{league.seasonLabel}</span>
-        <span className="w-24 text-base text-chalk-dim">{MODE_LABELS[league.mode]}</span>
-        <span className="w-28 text-base text-chalk-dim">{FORMAT_LABELS[league.auctionFormat]}</span>
+        <span className="w-20 text-base text-fg-muted">{league.seasonLabel}</span>
+        <span className="w-24 text-base text-fg-muted">{MODE_LABELS[league.mode]}</span>
+        <span className="w-28 text-base text-fg-muted">{FORMAT_LABELS[league.auctionFormat]}</span>
         {/* `teams()` counts in Italian — "1 squadra" / "12 squadre" — so the
             number never leaves the sentence and only the class changes. */}
-        <span className="figure-column w-20 text-base text-chalk-dim">{teams(league.teamCount)}</span>
+        <span className="figure-column w-20 text-base text-fg-muted">{teams(league.teamCount)}</span>
         <span className="ml-auto flex items-center gap-3">
           {league.status === 'auction' && <Progress league={league} />}
-          <span className="w-32 text-right text-base text-chalk-dim">
+          <span className="w-32 text-right text-base text-fg-muted">
             {STATUS_LABELS[league.status]}
           </span>
         </span>
@@ -114,12 +114,12 @@ function Progress({ league }: { league: LeagueSummary }): JSX.Element | null {
       {/* A sentence, per the note above, so §4's column role arrives as a class:
           two `Figure` halves around the "su" would be two elements where the
           reader sees one phrase. */}
-      <span className="figure-column text-base text-chalk-dim">
+      <span className="figure-column text-base text-fg-muted">
         {league.slotsFilled} su {league.slotsTotal}
       </span>
-      <span className="block h-1 w-24 rounded-sm bg-pitch-700">
+      <span className="block h-1 w-24 rounded-sm bg-surface-raised">
         <span
-          className="block h-1 rounded-sm bg-chalk-dim"
+          className="block h-1 rounded-sm bg-fg-muted"
           style={{ width: `${share * 100}%` }}
         />
       </span>

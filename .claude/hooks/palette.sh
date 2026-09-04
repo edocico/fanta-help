@@ -7,11 +7,17 @@
 # both times the review caught it, which means after the work was finished. No
 # test can: the palette is not arithmetic.
 #
-# The discriminator is `figures`. Money in this app is always a figure, so the
-# two classes travel together; the two real violations were both on a line with
-# `text-credit` and no `figures`. Measured on the codebase at the time this was
-# written: 13 correct uses, all with `figures`, and exactly one hit without —
-# the "rigorista" mark of T9, which is the open item the T13 review named.
+# The discriminator is `Figure`, the component. Money in this app is always a
+# figure, so the amber and the component travel together; the two real
+# violations were both on a line with the amber class and no figure.
+#
+# **Twice now the discriminator has rotted out from under this hook, and both
+# times it stopped guarding in silence.** It was `figures`, the class T22 left
+# standing — T23 deleted it, so from that day every amber line looked like a
+# violation. And it grepped `text-credit`, a bridge name T25 renamed to
+# `text-money` — from that day it matched nothing at all, which is the worse
+# half: a guard that never fires is indistinguishable from a codebase that never
+# offends. Whoever renames either of these two strings owns this file too.
 #
 # **Exit 0, always.** This does not block and must not: amber on money is
 # correct and frequent, and a guard that refuses it would be worked around
@@ -43,14 +49,14 @@ added=$(printf '%s' "$payload" | jq -r '
 # Comment lines are dropped: this file, and the comments that explain the rule,
 # name the class without using it.
 suspect=$(printf '%s' "$added" \
-  | grep -F 'text-credit' \
-  | grep -Fv 'figures' \
+  | grep -F 'text-money' \
+  | grep -Fv -e '<Figure' -e 'figure-column' \
   | sed 's/^[[:space:]]*//' \
   | grep -v '^\(//\|\*\|/\*\)' \
   | head -3)
 [ -n "$suspect" ] || exit 0
 
-note=$(printf 'Ambra su una riga senza `figures`, in %s:\n%s\n\nDocumento 2 §2: «Se un numero è ambra è un credito. Nient'"'"'altro usa quel colore, mai per decorazione.» Se è denaro va bene ed è probabile che sia già giusto — questa riga non blocca niente. Se non lo è, il colore giusto è `text-target` per gli obiettivi, `text-chalk` per un avviso.' "$rel" "$suspect")
+note=$(printf 'Ambra su una riga senza una `Figure`, in %s:\n%s\n\nDocumento 2 §2: «Se un numero è ambra è un credito. Nient'"'"'altro usa quel colore, mai per decorazione.» Se è denaro va bene ed è probabile che sia già giusto — questa riga non blocca niente. Se non lo è, il colore giusto è `text-targeted` per gli obiettivi, `text-fg-muted` per un avviso.' "$rel" "$suspect")
 
 jq -cn --arg note "$note" '{
   hookSpecificOutput: {

@@ -55,7 +55,7 @@ export default function LeagueView(): JSX.Element {
   if (league.isError) {
     return (
       <Frame>
-        <p className="text-base text-taken">
+        <p className="text-base text-blocking">
           {league.error instanceof IpcError ? league.error.message : errorMessages.IPC_UNAVAILABLE()}
         </p>
       </Frame>
@@ -65,7 +65,7 @@ export default function LeagueView(): JSX.Element {
   if (league.data === null) {
     return (
       <Frame>
-        <p className="text-base text-chalk-dim">{errorMessages.LEAGUE_MISSING()}</p>
+        <p className="text-base text-fg-muted">{errorMessages.LEAGUE_MISSING()}</p>
       </Frame>
     )
   }
@@ -154,21 +154,21 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
             this header wraps rather than aligning, so there is no column for
             tabular digits to hold. Document 7 §4 gives the numeric roles to
             numbers, and a label that happens to contain digits is not one. */}
-        <span className="text-base text-chalk-dim">{league.seasonLabel}</span>
-        <span className="text-base text-chalk-dim">
+        <span className="text-base text-fg-muted">{league.seasonLabel}</span>
+        <span className="text-base text-fg-muted">
           {MODE_LABELS[league.mode]} · {FORMAT_LABELS[league.auctionFormat]}
         </span>
-        <span className="ml-auto text-base text-chalk-dim">{STATUS_LABELS[league.status]}</span>
+        <span className="ml-auto text-base text-fg-muted">{STATUS_LABELS[league.status]}</span>
       </header>
 
-      {refusal && <p className="mt-4 text-base text-taken">{refusal}</p>}
+      {refusal && <p className="mt-4 text-base text-blocking">{refusal}</p>}
 
       <section className="mt-8">
         <h2 className="text-title font-medium">Squadre</h2>
 
         {league.teams.length === 0 ? (
           // Document 2 §8, parola per parola.
-          <p className="mt-2 text-base text-chalk-dim">
+          <p className="mt-2 text-base text-fg-muted">
             Aggiungi le squadre che partecipano all’asta.
           </p>
         ) : (
@@ -215,7 +215,7 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
         )}
 
         {listLocked && !readOnly && (
-          <p className="mt-3 text-base text-chalk-dim">{errorMessages.TEAMS_LOCKED()}</p>
+          <p className="mt-3 text-base text-fg-muted">{errorMessages.TEAMS_LOCKED()}</p>
         )}
       </section>
 
@@ -223,7 +223,7 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
         <h2 className="text-title font-medium">Regolamento</h2>
 
         {!rulesOpen && (
-          <p className="mt-2 text-base text-chalk-dim">
+          <p className="mt-2 text-base text-fg-muted">
             {readOnly ? errorMessages.LEAGUE_FROZEN() : errorMessages.RULES_LOCKED()}
           </p>
         )}
@@ -233,7 +233,7 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
             campo che si risincronizza solo quando quel valore *cambia* resta a
             mostrare il numero appena respinto, con l'errore stampato sopra. */}
         <dl key={resync} className="mt-3 grid gap-x-6 gap-y-2 text-base sm:grid-cols-[10rem_1fr]">
-          <dt className="label text-micro text-chalk-dim">budget</dt>
+          <dt className="label text-micro text-fg-muted">budget</dt>
           <dd>
             <Editable
               value={league.budget}
@@ -243,7 +243,7 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
             />
           </dd>
 
-          <dt className="label text-micro text-chalk-dim">puntata minima</dt>
+          <dt className="label text-micro text-fg-muted">puntata minima</dt>
           <dd>
             <Editable
               value={league.minBid}
@@ -253,11 +253,11 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
             />
           </dd>
 
-          <dt className="label text-micro text-chalk-dim">slot per ruolo</dt>
+          <dt className="label text-micro text-fg-muted">slot per ruolo</dt>
           <dd className="flex flex-wrap items-center gap-3">
             {CLASSIC_ROLES.map((role) => (
               <span key={role} className="flex items-center gap-1.5">
-                <span className="text-chalk-dim">{ROLE_LABELS[role]}</span>
+                <span className="text-fg-muted">{ROLE_LABELS[role]}</span>
                 <Editable
                   value={league.slots[role]}
                   min={0}
@@ -275,12 +275,12 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
                 any size under 20px, where Archivo starts. The `text-base` on the
                 `<dl>` above is still Tailwind's 14px, not §4's 13: the working
                 measure moves in T25, and the role does not move with it. */}
-            <span className="figure-column text-chalk-dim">
+            <span className="figure-column text-fg-muted">
               {totalSlots(league.slots)} per squadra · {league.slotsTotal} in tutto
             </span>
           </dd>
 
-          <dt className="label text-micro text-chalk-dim">modificatore di difesa</dt>
+          <dt className="label text-micro text-fg-muted">modificatore di difesa</dt>
           <dd>
             <label className="flex items-center gap-2">
               <input
@@ -291,18 +291,18 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
                   void patchLeague({ id: league.id, defenseModifier: e.target.checked })
                 }
               />
-              <span className="text-chalk-dim">
+              <span className="text-fg-muted">
                 {league.defenseModifier ? 'attivo' : 'non attivo'}
               </span>
             </label>
           </dd>
 
-          <dt className="label text-micro text-chalk-dim">questa installazione</dt>
+          <dt className="label text-micro text-fg-muted">questa installazione</dt>
           <dd>
             {/* Non è fra i campi che l'invariante 16 congela: si cambia anche a
                 asta avviata, perché decide solo come viene marcato l'export. */}
             <select
-              className="rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
+              className="rounded-md border border-line bg-surface px-2 py-1 text-base"
               value={league.instanceRole}
               disabled={readOnly}
               onChange={(e) =>
@@ -328,7 +328,7 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
                 key={warning.code + ('role' in warning ? warning.role : '')}
                 // Gesso e non ambra: metà di questi avvisi conta giocatori, e il
                 // documento 2 §2 riserva l'ambra al denaro. Vedi Wizard.tsx.
-                className="text-base text-chalk"
+                className="text-base text-fg"
               >
                 {warningMessage(warning)}
               </li>
@@ -338,7 +338,7 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
       </section>
 
       <section className="mt-10 border-t border-line pt-4">
-        <p className="text-base text-chalk-dim">
+        <p className="text-base text-fg-muted">
           {NEXT_STEP[league.status]}
           {/* Cortesia, non la regola: il servizio rifiuta comunque una lega con
               acquisti dentro, e in `closed` rifiuta e basta. */}
@@ -394,7 +394,7 @@ function DeleteLeague({
 
   if (!asked) {
     return (
-      <button className="underline underline-offset-2 hover:text-taken" onClick={() => setAsked(true)}>
+      <button className="underline underline-offset-2 hover:text-blocking" onClick={() => setAsked(true)}>
         Cancella la lega
       </button>
     )
@@ -404,7 +404,7 @@ function DeleteLeague({
     <span>
       Vanno via {league.teamCount} {league.teamCount === 1 ? 'squadra' : 'squadre'}.{' '}
       <button
-        className="underline underline-offset-2 text-taken disabled:opacity-40"
+        className="underline underline-offset-2 text-blocking disabled:opacity-40"
         disabled={pending}
         onClick={onConfirm}
       >
@@ -442,14 +442,14 @@ function AddTeam({ onAdd }: { onAdd: (name: string) => void }): JSX.Element {
   return (
     <div className="mt-3 flex items-center gap-2">
       <input
-        className="w-48 rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
+        className="w-48 rounded-md border border-line bg-surface px-2 py-1 text-base"
         value={name}
         placeholder="nome squadra"
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && add()}
       />
       <button
-        className="rounded-md border border-line px-3 py-1.5 text-base text-chalk-dim hover:text-chalk disabled:opacity-40"
+        className="rounded-md border border-line px-3 py-1.5 text-base text-fg-muted hover:text-fg disabled:opacity-40"
         disabled={name.trim() === ''}
         onClick={add}
       >
@@ -503,7 +503,7 @@ function Editable({
   return (
     <input
       type="number"
-      className="figure-column w-24 rounded-md border border-line bg-pitch-900 px-2 py-1 text-base disabled:opacity-50"
+      className="figure-column w-24 rounded-md border border-line bg-surface px-2 py-1 text-base disabled:opacity-50"
       value={draft}
       min={min}
       disabled={disabled}

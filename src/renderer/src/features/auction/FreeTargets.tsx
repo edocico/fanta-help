@@ -23,8 +23,8 @@ export default function FreeTargets({ targets }: { targets: readonly Free[] }): 
   if (targets.length === 0 && leaving.length === 0) {
     return (
       <section className="min-h-0 overflow-auto p-3">
-        <h2 className="label pb-2 text-micro text-chalk-dim">Obiettivi ancora liberi</h2>
-        <p className="text-base text-chalk-dim">
+        <h2 className="label pb-2 text-micro text-fg-muted">Obiettivi ancora liberi</h2>
+        <p className="text-base text-fg-muted">
           Nessun obiettivo ancora libero. Li prepari dalla scheda Obiettivi.
         </p>
       </section>
@@ -40,7 +40,7 @@ export default function FreeTargets({ targets }: { targets: readonly Free[] }): 
 
   return (
     <section className="min-h-0 overflow-auto p-3">
-      <h2 className="label pb-1 text-micro text-chalk-dim">Obiettivi ancora liberi</h2>
+      <h2 className="label pb-1 text-micro text-fg-muted">Obiettivi ancora liberi</h2>
 
       {/* The ones somebody just bought, still on screen for their 400ms. */}
       {leaving.map((row) => (
@@ -49,7 +49,7 @@ export default function FreeTargets({ targets }: { targets: readonly Free[] }): 
 
       {[...groups].map(([tier, rows]) => (
         <div key={tier ?? 'senza'}>
-          <h3 className="label pt-1 text-micro text-chalk-dim">
+          <h3 className="label pt-1 text-micro text-fg-muted">
             {tier === null ? 'senza fascia' : `fascia ${tier}`}
           </h3>
           {rows.map((row) => (
@@ -69,7 +69,7 @@ function Tile({ row, lost = false }: { row: Free; lost?: boolean }): JSX.Element
           first paragraph on the difference — an abbreviation explains itself
           where it is defined, never where it is used. Here the stars are the
           value, and the `aria-label` already says how many out of how many. */}
-      <span className="shrink-0 text-sm text-target" aria-label={`${row.rating ?? 0} su ${MAX_RATING}`}>
+      <span className="shrink-0 text-sm text-targeted" aria-label={`${row.rating ?? 0} su ${MAX_RATING}`}>
         {'★'.repeat(row.rating ?? 0)}
         <span className="text-line">{'☆'.repeat(MAX_RATING - (row.rating ?? 0))}</span>
       </span>
@@ -79,7 +79,7 @@ function Tile({ row, lost = false }: { row: Free; lost?: boolean }): JSX.Element
           data that changes with every promotion — and neither is a `RoleBadge`
           either: §10 gives the badge a shape, and a shape here would be the
           heaviest thing in a row that already carries five stars. Text. */}
-      <span className="label shrink-0 text-micro text-chalk-dim">
+      <span className="label shrink-0 text-micro text-fg-muted">
         {row.roleClassic} {row.teamCode}
       </span>
       {/*

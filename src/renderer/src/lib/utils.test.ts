@@ -7,17 +7,17 @@ import { cn } from './utils'
  * grants `search.ts` — it lives in the renderer and the guardrail of §5 does not
  * reach it.
  *
- * Without the extension, `cn('text-micro', 'text-chalk-dim')` returns
- * `'text-chalk-dim'` and the size is gone; reverse the arguments and the colour
+ * Without the extension, `cn('text-micro', 'text-fg-muted')` returns
+ * `'text-fg-muted'` and the size is gone; reverse the arguments and the colour
  * goes instead. Both directions are here on purpose, because a test written in
  * one order only would have passed against the broken version half the time.
  */
 describe('cn keeps the size tokens of document 7 §4', () => {
   it.each([
-    ['text-micro', 'text-chalk-dim'],
-    ['text-body', 'text-chalk'],
+    ['text-micro', 'text-fg-muted'],
+    ['text-body', 'text-fg'],
     ['text-title', 'text-money'],
-    ['text-heading', 'text-strong'],
+    ['text-heading', 'text-fg-strong'],
   ])('keeps %s next to %s, in both orders', (size, colour) => {
     expect(cn(size, colour).split(' ').sort()).toEqual([size, colour].sort())
     expect(cn(colour, size).split(' ').sort()).toEqual([size, colour].sort())
@@ -43,7 +43,7 @@ describe('cn still resolves the conflicts it is there for', () => {
   })
 
   it('keeps the last of two colours', () => {
-    expect(cn('text-chalk', 'text-chalk-dim')).toBe('text-chalk-dim')
+    expect(cn('text-fg', 'text-fg-muted')).toBe('text-fg-muted')
     expect(cn('text-money', 'text-blocking')).toBe('text-blocking')
   })
 })

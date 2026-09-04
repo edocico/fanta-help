@@ -42,13 +42,13 @@ export default function Glyph({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span tabIndex={0} className={cn('ml-1.5 text-chalk-dim', className)}>
+        <span tabIndex={0} className={cn('ml-1.5 text-fg-muted', className)}>
           <span aria-hidden>{mark}</span>
           <span className="sr-only">{says}</span>
         </span>
       </TooltipTrigger>
       <TooltipContent>
-        <p className="text-[13px] text-chalk">{says}</p>
+        <p className="text-[13px] text-fg">{says}</p>
       </TooltipContent>
     </Tooltip>
   )

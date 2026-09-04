@@ -136,7 +136,7 @@ export default function Wizard(): JSX.Element {
           <li key={n}>
             <button
               className={`rounded-md px-2.5 py-1 ${
-                n === step ? 'bg-pitch-700 text-chalk' : 'text-chalk-dim hover:text-chalk'
+                n === step ? 'bg-surface-raised text-fg' : 'text-fg-muted hover:text-fg'
               }`}
               onClick={() => setStep(n)}
             >
@@ -152,7 +152,7 @@ export default function Wizard(): JSX.Element {
           <section className="grid gap-4 sm:grid-cols-2">
             <Field label="nome della lega" className="sm:col-span-2">
               <input
-                className="w-full rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
+                className="w-full rounded-md border border-line bg-surface px-2 py-1 text-base"
                 value={name}
                 placeholder="Lega degli amici"
                 onChange={(e) => setName(e.target.value)}
@@ -161,7 +161,7 @@ export default function Wizard(): JSX.Element {
 
             <Field label="stagione">
               <select
-                className="w-full rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
+                className="w-full rounded-md border border-line bg-surface px-2 py-1 text-base"
                 value={season?.id ?? ''}
                 onChange={(e) => setSeasonId(e.target.value)}
               >
@@ -208,7 +208,7 @@ export default function Wizard(): JSX.Element {
 
         {step === 2 && (
           <section>
-            <p className="mb-3 text-base text-chalk-dim">
+            <p className="mb-3 text-base text-fg-muted">
               {teams.length < 2
                 ? 'Aggiungi le squadre che partecipano all’asta.'
                 : 'L’ordine è il turno: trascina una riga o usa le frecce.'}
@@ -223,7 +223,7 @@ export default function Wizard(): JSX.Element {
             />
 
             <button
-              className="mt-3 rounded-md border border-line px-3 py-1.5 text-base text-chalk-dim hover:text-chalk"
+              className="mt-3 rounded-md border border-line px-3 py-1.5 text-base text-fg-muted hover:text-fg"
               onClick={() => setTeams((rows) => [...rows, blankTeam(rows.length)])}
             >
               Aggiungi squadra
@@ -261,10 +261,10 @@ export default function Wizard(): JSX.Element {
             <div className="mt-8 border-t border-line pt-4">
               <h2 className="text-title font-medium">Riepilogo</h2>
               <dl className="mt-3 grid gap-x-6 gap-y-1.5 text-base sm:grid-cols-[10rem_1fr]">
-                <dt className="label text-micro text-chalk-dim">lega</dt>
-                <dd>{name.trim() || <span className="text-chalk-dim">senza nome</span>}</dd>
+                <dt className="label text-micro text-fg-muted">lega</dt>
+                <dd>{name.trim() || <span className="text-fg-muted">senza nome</span>}</dd>
 
-                <dt className="label text-micro text-chalk-dim">stagione</dt>
+                <dt className="label text-micro text-fg-muted">stagione</dt>
                 {/* The season reads `Serie A 2026/27` — `seasonLabel` in
                     `shared/listone.ts` — so it is a name, and the year inside
                     it is part of the name rather than a figure. The class goes
@@ -272,14 +272,14 @@ export default function Wizard(): JSX.Element {
                     up with. */}
                 <dd>{season?.label ?? '—'}</dd>
 
-                <dt className="label text-micro text-chalk-dim">regole</dt>
+                <dt className="label text-micro text-fg-muted">regole</dt>
                 <dd>
                   {MODE_LABELS[mode]}, {FORMAT_LABELS[auctionFormat]},{' '}
                   <Figure value={budget} kind="money" /> crediti, puntata minima{' '}
                   <Figure value={minBid} kind="money" />
                 </dd>
 
-                <dt className="label text-micro text-chalk-dim">rosa</dt>
+                <dt className="label text-micro text-fg-muted">rosa</dt>
                 {/* No Figure here, unlike the credits above: `3/8/8/6` is a
                     single string of four numbers, and the total reads inside a
                     sentence. Both only want the tabular figures of a column. */}
@@ -288,19 +288,19 @@ export default function Wizard(): JSX.Element {
                   squadra
                 </dd>
 
-                <dt className="label text-micro text-chalk-dim">squadre</dt>
+                <dt className="label text-micro text-fg-muted">squadre</dt>
                 <dd>
                   <ul className="space-y-0.5">
                     {teams.map((team, i) => (
                       <li key={team.key} className="flex items-center gap-2">
-                        <Figure value={i + 1} className="w-4 text-right text-chalk-dim" />
+                        <Figure value={i + 1} className="w-4 text-right text-fg-muted" />
                         <span
                           className="size-3 rounded-sm border border-line"
                           style={{ backgroundColor: team.color ?? 'transparent' }}
                         />
-                        <span>{team.name.trim() || <em className="text-taken">senza nome</em>}</span>
-                        {team.manager && <span className="text-chalk-dim">· {team.manager}</span>}
-                        {team.isMine && <span className="text-chalk-dim">· la mia</span>}
+                        <span>{team.name.trim() || <em className="text-fg-disabled">senza nome</em>}</span>
+                        {team.manager && <span className="text-fg-muted">· {team.manager}</span>}
+                        {team.isMine && <span className="text-fg-muted">· la mia</span>}
                       </li>
                     ))}
                   </ul>
@@ -312,14 +312,14 @@ export default function Wizard(): JSX.Element {
       </div>
 
       {create.isError && (
-        <p className="mt-4 text-base text-taken">
+        <p className="mt-4 text-base text-blocking">
           {create.error instanceof IpcError ? create.error.message : errorMessages.IPC_UNAVAILABLE()}
         </p>
       )}
 
       <div className="mt-8 flex items-center gap-2 border-t border-line pt-4">
         <button
-          className="rounded-md border border-line px-3 py-1.5 text-base text-chalk-dim hover:text-chalk disabled:opacity-40"
+          className="rounded-md border border-line px-3 py-1.5 text-base text-fg-muted hover:text-fg disabled:opacity-40"
           disabled={step === 1}
           onClick={() => setStep((s) => (s - 1) as Step)}
         >
@@ -328,14 +328,14 @@ export default function Wizard(): JSX.Element {
 
         {step < 3 ? (
           <button
-            className="rounded-md bg-pitch-700 px-3 py-1.5 text-base text-chalk hover:bg-line"
+            className="rounded-md bg-surface-raised px-3 py-1.5 text-base text-fg hover:bg-line"
             onClick={() => setStep((s) => (s + 1) as Step)}
           >
             Avanti
           </button>
         ) : (
           <button
-            className="rounded-md bg-pitch-700 px-3 py-1.5 text-base text-chalk hover:bg-line disabled:opacity-40"
+            className="rounded-md bg-surface-raised px-3 py-1.5 text-base text-fg hover:bg-line disabled:opacity-40"
             disabled={!canCreate}
             onClick={() => create.mutate()}
           >
@@ -344,7 +344,7 @@ export default function Wizard(): JSX.Element {
         )}
 
         {step === 3 && !canCreate && !create.isPending && (
-          <span className="text-base text-chalk-dim">{whatIsMissing(name, season, teams)}</span>
+          <span className="text-base text-fg-muted">{whatIsMissing(name, season, teams)}</span>
         )}
       </div>
     </div>
@@ -386,12 +386,12 @@ function Warnings({
    * Nient'altro usa quel colore, mai per decorazione.» Metà di questi avvisi
    * conta giocatori, non crediti, e una lista tutta ambra insegnerebbe a leggere
    * come denaro un numero che denaro non è. Il gesso pieno basta a farli
-   * risaltare, perché tutto quello che li circonda è `chalk-dim`.
+   * risaltare, perché tutto quello che li circonda è `text-fg-muted`.
    */
   return (
     <ul className="mt-4 space-y-1">
       {warnings.map((warning) => (
-        <li key={warning.code + ('role' in warning ? warning.role : '')} className="text-base text-chalk">
+        <li key={warning.code + ('role' in warning ? warning.role : '')} className="text-base text-fg">
           {warningMessage(warning)}
         </li>
       ))}
@@ -410,7 +410,7 @@ function Field({
 }): JSX.Element {
   return (
     <label className={`block ${className ?? ''}`}>
-      <span className="label block text-micro text-chalk-dim">{label}</span>
+      <span className="label block text-micro text-fg-muted">{label}</span>
       <span className="mt-1 block">{children}</span>
     </label>
   )
@@ -431,7 +431,7 @@ function NumberField({
     // it is read back in the summary.
     <input
       type="number"
-      className="figure-column w-24 rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
+      className="figure-column w-24 rounded-md border border-line bg-surface px-2 py-1 text-base"
       value={value}
       min={min}
       onChange={(e) => {
@@ -467,8 +467,8 @@ function Choice<T extends string>({
           key={option.value}
           className={`rounded-md border px-2.5 py-1 text-base ${
             option.value === value
-              ? 'border-line bg-pitch-700 text-chalk'
-              : 'border-line text-chalk-dim hover:text-chalk'
+              ? 'border-line bg-surface-raised text-fg'
+              : 'border-line text-fg-muted hover:text-fg'
           }`}
           aria-pressed={option.value === value}
           onClick={() => onChange(option.value)}

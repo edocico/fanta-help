@@ -425,7 +425,7 @@ export default function PlayersView(): JSX.Element {
   if (error) {
     return (
       <Shell>
-        <p className="p-6 text-base text-taken">
+        <p className="p-6 text-base text-blocking">
           {error instanceof IpcError ? error.message : errorMessages.IPC_UNAVAILABLE()}
         </p>
       </Shell>
@@ -435,7 +435,7 @@ export default function PlayersView(): JSX.Element {
   if (!list) {
     return (
       <Shell>
-        <p className="p-6 text-base text-chalk-dim">Carico i giocatori…</p>
+        <p className="p-6 text-base text-fg-muted">Carico i giocatori…</p>
       </Shell>
     )
   }
@@ -448,7 +448,7 @@ export default function PlayersView(): JSX.Element {
         <div className="flex items-baseline gap-4">
           <input
             ref={searchRef}
-            className="min-w-0 flex-1 rounded-md border border-line bg-pitch-800 px-3 py-1.5 text-base placeholder:text-chalk-dim"
+            className="min-w-0 flex-1 rounded-md border border-line bg-surface-panel px-3 py-1.5 text-base placeholder:text-fg-muted"
             placeholder="Cerca un giocatore"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -458,7 +458,7 @@ export default function PlayersView(): JSX.Element {
               cifra in un elemento suo, è una parola su tre. Prende la classe del
               ruolo — cifre tabulari, così «524 giocatori» e «12 di 524» non
               ballano mentre si digita — e non il componente. */}
-          <span className="figure-column shrink-0 text-base text-chalk-dim">
+          <span className="figure-column shrink-0 text-base text-fg-muted">
             {sorted.length === list.players.length
               ? `${list.players.length} giocatori`
               : `${sorted.length} di ${list.players.length}`}
@@ -469,7 +469,7 @@ export default function PlayersView(): JSX.Element {
             sulla riga: la riga può essere stata portata via da un filtro o dalla
             ricerca nel frattempo, e un messaggio che scompare con essa non è
             stato letto da nessuno. */}
-        {starRefusal && <p className="mt-2 text-base text-taken">{starRefusal}</p>}
+        {starRefusal && <p className="mt-2 text-base text-blocking">{starRefusal}</p>}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {/* La lettera resta la lettera: `ROLE_LABELS` la porta per chi legge con
@@ -504,7 +504,7 @@ export default function PlayersView(): JSX.Element {
 
           {/* Document 2 §4.4: a number you can type, not a switch someone else
               set. The threshold stays visible and stays editable. */}
-          <label className="label flex items-center gap-1.5 text-micro text-chalk-dim">
+          <label className="label flex items-center gap-1.5 text-micro text-fg-muted">
             <Abbr name="Pv" /> minime
             <input
               type="number"
@@ -544,7 +544,7 @@ export default function PlayersView(): JSX.Element {
               />
             )}
             {list.statsSeasons.length > 1 && (
-              <label className="label text-micro flex items-center gap-1.5 text-chalk-dim">
+              <label className="label text-micro flex items-center gap-1.5 text-fg-muted">
                 numeri della
                 <Select
                   value={statsSeason ?? ''}
@@ -571,7 +571,7 @@ export default function PlayersView(): JSX.Element {
               </FilterChip>
             ))}
             <button
-              className="label text-micro text-chalk-dim underline underline-offset-2 hover:text-chalk"
+              className="label text-micro text-fg-muted underline underline-offset-2 hover:text-fg"
               onClick={reset}
             >
               azzera
@@ -644,7 +644,7 @@ export default function PlayersView(): JSX.Element {
         </DataTable>
 
         {sorted.length === 0 && (
-          <p className="px-6 py-10 text-center text-base text-chalk-dim">
+          <p className="px-6 py-10 text-center text-base text-fg-muted">
             Nessun giocatore con questi filtri. Togline uno per allargare la ricerca.
           </p>
         )}
@@ -708,7 +708,7 @@ function buildColumns(
           {/* Not the whole row dimmed: document 2 §4.4 reserves "riga attenuata"
               for a player someone has already bought, which arrives with T13.
               Two different states wearing one signal is worse than either. */}
-          <span className={c.row.original.delisted ? 'text-chalk-dim line-through' : ''}>
+          <span className={c.row.original.delisted ? 'text-fg-muted line-through' : ''}>
             {c.getValue()}
           </span>
           {/* Non più ambra: il §15 la riserva al denaro, «nemmeno una volta», e
@@ -719,7 +719,7 @@ function buildColumns(
               adesso c'è per tutti e due i lettori. */}
           {c.row.original.penaltyTaker && <Glyph mark="◉" says="rigorista" />}
           {c.row.original.delisted && (
-            <Glyph mark="fuori" says={notices.DELISTED()} className="text-taken" />
+            <Glyph mark="fuori" says={notices.DELISTED()} className="text-unavailable" />
           )}
           {c.row.original.rolesMantra.length > 0 && (
             /* 11px, come chiede il §10: «i ruoli Mantra stanno sotto il nome
@@ -730,7 +730,7 @@ function buildColumns(
                oltre i 40 del §5. Rimisurato dopo che `DataTableRow` ha fissato
                `h-10`: la riga sta a 40,00px esatti e questa ci entra dentro. La
                stima del virtualizzatore è stata rifatta con lo stesso numero. */
-            <div className="label mt-0.5 text-micro text-chalk-dim">
+            <div className="label mt-0.5 text-micro text-fg-muted">
               {c.row.original.rolesMantra.join(' · ')}
             </div>
           )}
@@ -858,8 +858,8 @@ function Star({
             key={star}
             className={`text-base leading-none ${
               target?.rating != null && star <= target.rating
-                ? 'text-target'
-                : 'text-line hover:text-chalk-dim'
+                ? 'text-targeted'
+                : 'text-line hover:text-fg-muted'
             }`}
             aria-label={`${star} su ${MAX_RATING} a ${player.name}`}
             title={`${star} su ${MAX_RATING}`}
@@ -875,7 +875,7 @@ function Star({
           </button>
         ))}
       <button
-        className={`ml-0.5 text-base leading-none ${target ? 'text-target' : 'text-chalk-dim'}`}
+        className={`ml-0.5 text-base leading-none ${target ? 'text-targeted' : 'text-fg-muted'}`}
         aria-label={target ? `togli ${player.name} dagli obiettivi` : `aggiungi ${player.name} agli obiettivi`}
         title={target ? 'togli dagli obiettivi' : 'aggiungi agli obiettivi'}
         onFocus={() => setOpen(true)}
@@ -957,7 +957,7 @@ function SortableHeading({ header }: { header: Header<Row, unknown> }): JSX.Elem
 
   if (abbr === undefined) {
     return (
-      <button className="hover:text-chalk" onClick={sort}>
+      <button className="hover:text-fg" onClick={sort}>
         {flexRender(header.column.columnDef.header, header.getContext())}
         {arrow}
       </button>
@@ -967,7 +967,7 @@ function SortableHeading({ header }: { header: Header<Row, unknown> }): JSX.Elem
   return (
     <Abbr name={abbr}>
       {(label, className) => (
-        <button className={cn(className, 'hover:text-chalk')} onClick={sort}>
+        <button className={cn(className, 'hover:text-fg')} onClick={sort}>
           {label}
           {arrow}
         </button>
@@ -997,7 +997,7 @@ function Select({
 }): JSX.Element {
   return (
     <select
-      className="label text-micro rounded-md border border-line bg-pitch-800 px-2 py-1 text-chalk-dim"
+      className="label text-micro rounded-md border border-line bg-surface-panel px-2 py-1 text-fg-muted"
       value={value}
       onChange={(e) => onChange(e.target.value)}
     >
@@ -1012,5 +1012,5 @@ function Select({
 }
 
 function Shell({ children }: { children: React.ReactNode }): JSX.Element {
-  return <div className="flex h-screen flex-col bg-pitch-900 text-chalk">{children}</div>
+  return <div className="flex h-screen flex-col bg-surface text-fg">{children}</div>
 }

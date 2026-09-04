@@ -84,7 +84,7 @@ export default function TeamRows({
               carries the grab cursor and the hint, and neither of those is
               something a figure knows about. */}
           <span
-            className={`w-6 text-right text-base text-chalk-dim ${
+            className={`w-6 text-right text-base text-fg-muted ${
               locked || frozen ? '' : 'cursor-grab'
             }`}
             title={locked || frozen ? undefined : 'Trascina per cambiare il turno'}
@@ -116,7 +116,7 @@ export default function TeamRows({
             onCommit={(manager) => onPatch(index, { manager: manager === '' ? null : manager })}
           />
 
-          <label className="ml-auto flex items-center gap-1.5 text-base text-chalk-dim">
+          <label className="ml-auto flex items-center gap-1.5 text-base text-fg-muted">
             <input
               type="checkbox"
               checked={row.isMine}
@@ -140,7 +140,7 @@ export default function TeamRows({
               onClick={() => onMove(index, index + 1)}
             />
             <button
-              className="px-1.5 py-0.5 text-base text-chalk-dim hover:text-taken disabled:opacity-30 disabled:hover:text-chalk-dim"
+              className="px-1.5 py-0.5 text-base text-fg-muted hover:text-blocking disabled:opacity-30 disabled:hover:text-fg-muted"
               disabled={locked || frozen}
               title={locked ? 'Le squadre si tolgono prima dell’asta' : 'Togli la squadra'}
               aria-label={`Togli ${row.name || 'la squadra'}`}
@@ -188,7 +188,7 @@ function Text({
 
   return (
     <input
-      className={`rounded-md border border-line bg-pitch-900 px-2 py-1 text-base disabled:opacity-50 ${className ?? ''}`}
+      className={`rounded-md border border-line bg-surface px-2 py-1 text-base disabled:opacity-50 ${className ?? ''}`}
       value={draft}
       placeholder={placeholder}
       disabled={disabled}
@@ -234,12 +234,12 @@ function Swatch({
       />
 
       {open && (
-        <div className="absolute left-0 top-6 z-10 flex w-40 flex-wrap gap-1 rounded-md border border-line bg-pitch-800 p-2">
+        <div className="absolute left-0 top-6 z-10 flex w-40 flex-wrap gap-1 rounded-md border border-line bg-surface-panel p-2">
           {TEAM_COLORS.map((tint) => (
             <button
               key={tint.value}
               className={`size-5 rounded-sm border ${
-                tint.value === color ? 'border-chalk' : 'border-line'
+                tint.value === color ? 'border-fg' : 'border-line'
               }`}
               style={{ backgroundColor: tint.value }}
               aria-label={tint.label}
@@ -273,7 +273,7 @@ function Arrow({
 }): JSX.Element {
   return (
     <button
-      className="px-1 py-0.5 text-base text-chalk-dim hover:text-chalk disabled:opacity-30 disabled:hover:text-chalk-dim"
+      className="px-1 py-0.5 text-base text-fg-muted hover:text-fg disabled:opacity-30 disabled:hover:text-fg-muted"
       disabled={disabled}
       aria-label={label}
       title={label}

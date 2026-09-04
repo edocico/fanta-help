@@ -35,8 +35,8 @@ export default function FilterChip({
       className={cn(
         'label inline-flex h-6 items-center gap-1 rounded-full px-2.5 text-micro',
         active
-          ? 'bg-surface-raised text-chalk'
-          : 'border border-line text-chalk-dim hover:text-chalk',
+          ? 'bg-surface-raised text-fg'
+          : 'border border-line text-fg-muted hover:text-fg',
         className,
       )}
       onClick={onToggle}

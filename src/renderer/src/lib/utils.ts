@@ -9,8 +9,8 @@ import { extendTailwindMerge } from 'tailwind-merge'
  * t-shirt-size test and lands in the `font-size` group, while `text-micro`
  * matches nothing and falls through to `text-color`, which accepts anything.
  * Two classes in the same group are a conflict and the loser is dropped — so
- * `cn('text-micro', 'text-chalk-dim')` returns `text-chalk-dim` alone and
- * `cn('text-chalk-dim', 'text-micro')` returns `text-micro` alone. Measured on
+ * `cn('text-micro', 'text-fg-muted')` returns `text-fg-muted` alone and
+ * `cn('text-fg-muted', 'text-micro')` returns `text-micro` alone. Measured on
  * the installed package, both directions, before writing this.
  *
  * It is the worst shape of failure this codebase keeps meeting: the class is

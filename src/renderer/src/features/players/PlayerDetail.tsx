@@ -113,9 +113,9 @@ export default function PlayerDetail({
     <aside
       ref={panel}
       aria-label={`Dettaglio di ${player.name}`}
-      className="flex w-[420px] shrink-0 flex-col overflow-auto border-l border-line bg-pitch-800"
+      className="flex w-[420px] shrink-0 flex-col overflow-auto border-l border-line bg-surface-panel"
     >
-      <header className="sticky top-0 border-b border-line bg-pitch-800 px-5 py-4">
+      <header className="sticky top-0 border-b border-line bg-surface-panel px-5 py-4">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-title font-medium">{player.name}</h2>
@@ -125,9 +125,9 @@ export default function PlayerDetail({
               roster, report, snapshot — will keep calling him.
             */}
             {spelledOut(player.name, player.fullName) !== null && (
-              <p className="text-base text-chalk-dim">{spelledOut(player.name, player.fullName)}</p>
+              <p className="text-base text-fg-muted">{spelledOut(player.name, player.fullName)}</p>
             )}
-            <p className="mt-1 text-base text-chalk-dim">
+            <p className="mt-1 text-base text-fg-muted">
               {player.roleClassic} · {player.teamName}
               {player.rolesMantra.length > 0 && ` · ${player.rolesMantra.join(' ')}`}
             </p>
@@ -135,7 +135,7 @@ export default function PlayerDetail({
           <button
             onClick={onClose}
             aria-label="Chiudi"
-            className="label rounded-md border border-line px-2 py-1 text-micro text-chalk-dim hover:text-chalk"
+            className="label rounded-md border border-line px-2 py-1 text-micro text-fg-muted hover:text-fg"
           >
             Esc
           </button>
@@ -151,7 +151,7 @@ export default function PlayerDetail({
         </dl>
 
         {(player.penaltyTaker || player.delisted) && (
-          <p className="mt-3 text-base text-chalk-dim">
+          <p className="mt-3 text-base text-fg-muted">
             {player.penaltyTaker && 'Tira i rigori.'}
             {player.penaltyTaker && player.delisted && ' '}
             {/* Invariant 10: he left the listone, his purchases did not. */}
@@ -187,7 +187,7 @@ export default function PlayerDetail({
          * present rather than written by hand.
          */
         <>
-          <p className="px-5 py-8 text-base text-chalk-dim">
+          <p className="px-5 py-8 text-base text-fg-muted">
             {seasonWindow(past)
               ? `Nessuna presenza nelle stagioni disponibili (${seasonWindow(past)}).`
               : 'Nessuna presenza nelle stagioni disponibili.'}
@@ -231,7 +231,7 @@ export default function PlayerDetail({
 function Section({ title, children }: { title: string; children: React.ReactNode }): JSX.Element {
   return (
     <section className="border-b border-line px-5 py-4">
-      <h3 className="label mb-3 text-micro text-chalk-dim">{title}</h3>
+      <h3 className="label mb-3 text-micro text-fg-muted">{title}</h3>
       {children}
     </section>
   )
@@ -269,7 +269,7 @@ function Fact({
 }): JSX.Element {
   return (
     <div>
-      <dt className="label text-micro text-chalk-dim">
+      <dt className="label text-micro text-fg-muted">
         <Abbr name={term} />
       </dt>
       <dd>
@@ -306,7 +306,7 @@ function HistoryTable({
   return (
     <table className="w-full border-collapse text-base">
       <thead>
-        <tr className="label text-micro text-chalk-dim">
+        <tr className="label text-micro text-fg-muted">
           <th className="border-b border-line py-1 text-left">stagione</th>
           <th className="border-b border-line py-1 text-right">
             <Abbr name="Pv" />
@@ -399,16 +399,16 @@ function Chart({
            frase, e il §10 vuole l'espansione dove c'è spazio per scriverla. */
         aria-label={`Andamento di ${glossary.FM.full.toLowerCase()} e ${glossary.MV.full.toLowerCase()} dal ${seasons[0]} al ${seasons[seasons.length - 1]}`}
       >
-        <Line values={mv} x={x} y={y} className="text-chalk-dim" dashed />
-        <Line values={fm} x={x} y={y} className="text-chalk" />
+        <Line values={mv} x={x} y={y} className="text-fg-muted" dashed />
+        <Line values={fm} x={x} y={y} className="text-fg" />
       </svg>
-      <figcaption className="mt-1 flex justify-between text-base text-chalk-dim">
+      <figcaption className="mt-1 flex justify-between text-base text-fg-muted">
         {/* Document 2 §2: "L'ambra è riservata al denaro… Nient'altro usa quel
             colore." FM is an average, not a credit, so the two series separate
             by weight and dash instead — and the legend says which is which
             rather than relying on the colour alone. */}
         <span>
-          <span className="text-chalk">
+          <span className="text-fg">
             <Abbr name="FM" /> piena
           </span>
           , <Abbr name="MV" /> tratteggiata
@@ -497,7 +497,7 @@ function Indicators({
 }): JSX.Element {
   if (stats === undefined || season === null || !seasons.includes(season)) {
     return (
-      <p className="text-base text-chalk-dim">
+      <p className="text-base text-fg-muted">
         Nessun dato per questa stagione. Cambia stagione per vedere gli indicatori.
       </p>
     )
@@ -548,7 +548,7 @@ function Indicators({
               </dt>
               <dd className="figure-column">{row.value}</dd>
             </div>
-            <p className="mt-0.5 text-base text-chalk-dim">
+            <p className="mt-0.5 text-base text-fg-muted">
               {'abbr' in row ? glossary[row.abbr].explains : row.note}
             </p>
           </div>
@@ -558,7 +558,7 @@ function Indicators({
         /* Document 2 §9: what is thin shows what it has, with Pv beside it to
            qualify it. Not a threshold that hides — that is the hidden threshold
            the titolari filter already refused. */
-        <p className="pt-1 text-base text-chalk-dim">
+        <p className="pt-1 text-base text-fg-muted">
           {pv === 1
             ? 'Tutto qui sopra riposa su una partita a voto.'
             : `Tutto qui sopra riposa su ${show(pv)} partite a voto.`}
@@ -618,7 +618,7 @@ function Objective({
         <h3 className="label text-micro">obiettivo</h3>
         {target && (
           <button
-            className="text-base text-chalk-dim hover:text-taken"
+            className="text-base text-fg-muted hover:text-blocking"
             onClick={() => objectives.remove(player.id)}
           >
             togli
@@ -627,10 +627,10 @@ function Objective({
       </div>
 
       <dl className="mt-3 grid grid-cols-[6rem_1fr] items-center gap-x-4 gap-y-3 text-base">
-        <dt className="label text-micro text-chalk-dim">fascia</dt>
+        <dt className="label text-micro text-fg-muted">fascia</dt>
         <dd>
           <select
-            className="rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
+            className="rounded-md border border-line bg-surface px-2 py-1 text-base"
             value={target?.tier ?? ''}
             onChange={(e) =>
               objectives.patch({
@@ -648,7 +648,7 @@ function Objective({
           </select>
         </dd>
 
-        <dt className="label text-micro text-chalk-dim">prezzo massimo</dt>
+        <dt className="label text-micro text-fg-muted">prezzo massimo</dt>
         <dd className="flex items-baseline gap-2">
           <PriceField
             value={target?.maxPrice ?? null}
@@ -659,21 +659,21 @@ function Objective({
               e vederlo qui evita di scoprire solo là che le prime scelte non
               stanno insieme. */}
           {budget !== null && budget > 0 && target?.maxPrice != null && (
-            <span className="text-base text-chalk-dim">
+            <span className="text-base text-fg-muted">
               {Math.round((target.maxPrice / budget) * 100)}% del budget
             </span>
           )}
         </dd>
 
-        <dt className="label text-micro text-chalk-dim">rating</dt>
+        <dt className="label text-micro text-fg-muted">rating</dt>
         <dd className="flex">
           {Array.from({ length: MAX_RATING }, (_, i) => i + 1).map((star) => (
             <button
               key={star}
               className={`px-0.5 leading-none ${
                 target?.rating != null && star <= target.rating
-                  ? 'text-target'
-                  : 'text-line hover:text-chalk-dim'
+                  ? 'text-targeted'
+                  : 'text-line hover:text-fg-muted'
               }`}
               aria-label={`${star} su ${MAX_RATING} a ${player.name}`}
               onClick={() =>
@@ -688,7 +688,7 @@ function Objective({
           ))}
         </dd>
 
-        <dt className="label text-micro self-start pt-1 text-chalk-dim">note</dt>
+        <dt className="label text-micro self-start pt-1 text-fg-muted">note</dt>
         <dd>
           <Note
             key={`${player.id}-${target?.note ?? ''}`}
@@ -719,7 +719,7 @@ function Note({
     <textarea
       rows={2}
       maxLength={500}
-      className="w-full rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
+      className="w-full rounded-md border border-line bg-surface px-2 py-1 text-base"
       placeholder="Solo se scende sotto 40"
       value={draft}
       onChange={(e) => setDraft(e.target.value)}

@@ -5,11 +5,13 @@
  * mappature sono **due**, e saltare la seconda è il modo più facile di rompere
  * il refactoring senza vedere un errore.
  *
- * La prima è il namespace delle utility dell'app: Tailwind genera `bg-pitch-800`
- * e `text-chalk-dim` solo da variabili dichiarate sotto il prefisso `--color-`.
- * I primitivi qui sotto stanno in un `:root` nudo, dove Tailwind non guarda. Il
- * §9 contava 71 occorrenze di quelle utility; oggi sono **594 in 24 file**, e
- * senza il blocco `@theme` smetterebbero di risolvere in silenzio, lasciando
+ * La prima è il namespace delle utility dell'app: Tailwind genera `bg-surface`
+ * e `text-fg-muted` solo da variabili dichiarate sotto il prefisso `--color-`.
+ * I primitivi qui sotto stanno in un `:root` nudo, dove Tailwind non guarda —
+ * e in T25 sono stati tolti anche dal blocco `@theme`, quindi `bg-pitch-700`
+ * non è più una classe che funziona, che è il divieto del §3 reso meccanico.
+ * Il §9 contava 71 occorrenze di queste utility; oggi sono **594 in 32 file**,
+ * e senza il blocco `@theme` smetterebbero di risolvere in silenzio, lasciando
  * l'elemento senza colore invece di dare errore.
  *
  * La seconda è il vocabolario di shadcn/ui, che scrive i suoi componenti contro
@@ -94,56 +96,53 @@
   --confirmed: var(--moss);
   --focus: var(--chalk-50);
 
-  /* Il ponte verso i nomi che l'app usa già, e senza il quale il criterio di
-     T22 — «l'aspetto nuovo ovunque senza che un componente sia modificato» —
-     fallirebbe contro sé stesso: il §9 rinomina `chalk` in `chalk-100` e
-     `credit` in `money`, ma sono 594 le utility scritte coi nomi vecchi.
-     Restano finché T25 non passa vista per vista. Le tre citate come variabile
-     dentro un componente sono `--line`, `--chalk-dim` e `--taken`. */
-  --chalk: var(--chalk-100);
-  --chalk-dim: var(--chalk-400);
-  --credit: var(--gold);
-  --taken: var(--rust);
-  --target: var(--teal);
+  /* Il fondo della proiezione. Il §11 lo scrive come primitivo — «Sfondo
+     `--pitch-950`» — ed è l'unico posto del documento che lo fa: qui prende il
+     nome del ruolo, perché la regola del §3 non ammette eccezioni che i
+     componenti possano vedere. */
+  --surface-deep: var(--pitch-950);
 }
 
-/* ── Prima mappatura: il namespace delle utility dell'app ────────────────── */
+/* ── Prima mappatura: il namespace delle utility dell'app ──────────────────
+   **I primitivi non sono qui, ed è la regola del §3 resa meccanica.** Fino a
+   T24 questo blocco dichiarava `--color-pitch-*` e `--color-chalk-*`, quindi
+   `bg-pitch-700` era una classe che funzionava e il divieto del §3 — «nessun
+   componente cita mai un primitivo» — viveva soltanto nella memoria di chi
+   scriveva. Erano 90 le citazioni. Togliendoli, scriverne una non produce più
+   nessuna regola: il divieto smette di essere una cosa da ricordare.
+
+   È il rovescio del ponte che stava qui. Il ponte serviva a T22, che doveva
+   cambiare l'aspetto «senza che un solo componente sia modificato» e non
+   poteva quindi rinominare 594 utility; T25 è il passo che le rinomina, e con
+   loro il ponte perde la sua ragione di esistere.
+
+   **Il testo si chiama `fg` e non `text`.** I semantici del §3 si chiamano
+   `--text`, `--text-strong`, `--text-muted`, `--text-disabled`, e restano così
+   in `:root`; ma `--color-text-muted` genererebbe l'utility `text-text-muted`,
+   che nessuno scriverebbe due volte. `fg` è il nome dell'utility, i semantici
+   del documento sono i valori che porta, e la mappatura fra i due sta qui —
+   che è l'unico posto dove il §3 ammette che i due livelli si incontrino. */
 @theme {
-  --color-pitch-950: var(--pitch-950);
-  --color-pitch-900: var(--pitch-900);
-  --color-pitch-800: var(--pitch-800);
-  --color-pitch-700: var(--pitch-700);
-  --color-pitch-600: var(--pitch-600);
-  --color-pitch-500: var(--pitch-500);
-
-  --color-chalk-50: var(--chalk-50);
-  --color-chalk-100: var(--chalk-100);
-  --color-chalk-400: var(--chalk-400);
-  --color-chalk-600: var(--chalk-600);
-
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-money: var(--money);
-  --color-taken: var(--unavailable);
-  --color-target: var(--targeted);
+  --color-unavailable: var(--unavailable);
+  --color-targeted: var(--targeted);
   --color-blocking: var(--blocking);
   --color-confirmed: var(--confirmed);
+  --color-focus: var(--focus);
 
-  /* Le superfici del §3 come utility. Fino a T22 esistevano solo in `:root`,
-     leggibili con `var()` e irraggiungibili da un `className`: per questo i
-     componenti scrivono `bg-pitch-700` 89 volte, cioè citano un primitivo, che
-     è proprio ciò che il §3 vieta. I nomi del testo restano fuori di proposito —
-     `--color-text-muted` genererebbe `text-text-muted`, e per quel colore il
-     ponte dà già `text-chalk-dim`, che è come sono scritte tutte e 594. */
+  /* Le superfici del §3 come utility. */
   --color-surface: var(--surface);
   --color-surface-panel: var(--surface-panel);
   --color-surface-raised: var(--surface-raised);
+  --color-surface-deep: var(--surface-deep);
 
-  /* L'altra metà del ponte, per le utility. `text-chalk`, `text-chalk-dim` e
-     `text-credit` sono 310 delle 594. */
-  --color-chalk: var(--chalk-100);
-  --color-chalk-dim: var(--chalk-400);
-  --color-credit: var(--money);
+  /* I quattro livelli del testo. */
+  --color-fg: var(--text);
+  --color-fg-strong: var(--text-strong);
+  --color-fg-muted: var(--text-muted);
+  --color-fg-disabled: var(--text-disabled);
 
   /* ── Le due famiglie del §4 ───────────────────────────────────────────────
      Ognuna con un lavoro che l'altra non fa. **IBM Plex Sans** per interfaccia,
@@ -218,7 +217,9 @@
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);
   --radius-lg: calc(var(--radius) + 2px);
-  --radius-xl: calc(var(--radius) + 6px);
+  /* `--radius-xl` era dichiarato e nessuno lo usava. Il §14 passo 5 va a
+     cercare `rounded-xl` o superiore: togliendo il token, la prima che qualcuno
+     scrive non genera niente, invece di funzionare e passare inosservata. */
   /* Il 3px che il §6 assegna a pastiglie e badge. Non deriva da `--radius`: la
      scala di shadcn parte da 4 e scende di 2, quindi il gradino sotto è 2px e il
      3 non nasce da nessun calcolo. Scritto, perché il badge di ruolo lo chiede
@@ -671,7 +672,7 @@
    dall'elenco, non cambiando stato: è l'ultima cosa che se ne vede. */
 @keyframes flash-lost {
   from {
-    background-color: color-mix(in srgb, var(--taken) 45%, transparent);
+    background-color: color-mix(in srgb, var(--unavailable) 45%, transparent);
     opacity: 1;
   }
   to {

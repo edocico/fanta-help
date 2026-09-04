@@ -68,12 +68,12 @@ export default function Reference(): JSX.Element | null {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-pitch-900/70 p-6">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-surface/70 p-6">
       <div className="flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-line bg-surface-panel">
         <header className="flex items-center justify-between border-b border-line px-4 py-2">
           <h2 className="text-title">Riferimento</h2>
           <button
-            className="label text-micro text-chalk-dim hover:text-chalk"
+            className="label text-micro text-fg-muted hover:text-fg"
             onClick={() => setOpen(false)}
           >
             Chiudi ⎋
@@ -101,7 +101,7 @@ export default function Reference(): JSX.Element | null {
                   term={abbr}
                   definition={
                     <>
-                      <span className="block text-chalk">{glossary[abbr].full}</span>
+                      <span className="block text-fg">{glossary[abbr].full}</span>
                       {glossary[abbr].explains}
                     </>
                   }
@@ -194,7 +194,7 @@ function Section({
 }): JSX.Element {
   return (
     <section className={wide ? 'col-span-2' : undefined}>
-      <h3 className="label mb-2 text-micro text-chalk-dim">{title}</h3>
+      <h3 className="label mb-2 text-micro text-fg-muted">{title}</h3>
       {children}
     </section>
   )
@@ -213,10 +213,10 @@ function Row({
 }): JSX.Element {
   return (
     <>
-      <dt className={`whitespace-nowrap text-chalk ${figures ? 'figure-column' : 'label text-micro'}`}>
+      <dt className={`whitespace-nowrap text-fg ${figures ? 'figure-column' : 'label text-micro'}`}>
         {term}
       </dt>
-      <dd className="text-chalk-dim">{definition}</dd>
+      <dd className="text-fg-muted">{definition}</dd>
     </>
   )
 }

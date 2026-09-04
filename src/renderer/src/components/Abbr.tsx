@@ -31,7 +31,7 @@ import { glossary, type Abbr as AbbrName } from '@shared/glossary'
  *
  *     <Abbr name="FM">
  *       {(label, className) => (
- *         <button className={cn(className, 'hover:text-chalk')} onClick={sort}>
+ *         <button className={cn(className, 'hover:text-fg')} onClick={sort}>
  *           {label} ↑
  *         </button>
  *       )}
@@ -84,8 +84,8 @@ export default function Abbr({
           a 12px". T25 closed the scale, so the two arbitrary lengths that stood
           here until the names existed are now the names themselves. */}
       <TooltipContent>
-        <p className="text-base font-medium text-chalk">{entry.full}</p>
-        <p className="mt-1 text-sm text-chalk-dim">{entry.explains}</p>
+        <p className="text-base font-medium text-fg">{entry.full}</p>
+        <p className="mt-1 text-sm text-fg-muted">{entry.explains}</p>
       </TooltipContent>
     </Tooltip>
   )

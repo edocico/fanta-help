@@ -33,24 +33,24 @@ export default function History({
   })
 
   return (
-    <aside className="flex w-96 max-w-full shrink-0 flex-col border-l border-line bg-pitch-800">
+    <aside className="flex w-96 max-w-full shrink-0 flex-col border-l border-line bg-surface-panel">
       <header className="flex items-center justify-between border-b border-line px-3 py-2">
-        <h2 className="label text-micro text-chalk-dim">Cronologia</h2>
-        <button className="label text-micro text-chalk-dim hover:text-chalk" onClick={onClose}>
+        <h2 className="label text-micro text-fg-muted">Cronologia</h2>
+        <button className="label text-micro text-fg-muted hover:text-fg" onClick={onClose}>
           Chiudi ⎋
         </button>
       </header>
 
       <div className="min-h-0 flex-1 overflow-auto">
         {history.isError && (
-          <p className="p-3 text-base text-taken">
+          <p className="p-3 text-base text-blocking">
             {history.error instanceof IpcError ? history.error.message : errorMessages.IPC_UNAVAILABLE()}
           </p>
         )}
 
         {history.data?.length === 0 && (
           // Document 2 §8, word for word.
-          <p className="p-3 text-base text-chalk-dim">Nessuna operazione ancora.</p>
+          <p className="p-3 text-base text-fg-muted">Nessuna operazione ancora.</p>
         )}
 
         <ul>
@@ -61,7 +61,7 @@ export default function History({
                   panel that stands in a column, and "3 set, 09:07" over
                   "12 set, 23:41" only reads as a column if the digits are
                   tabular. */}
-              <span className="figure-column shrink-0 text-sm text-chalk-dim">
+              <span className="figure-column shrink-0 text-sm text-fg-muted">
                 {when(entry.createdAt)}
               </span>
               <span className="min-w-0 flex-1">{describe(entry, teams)}</span>
@@ -70,7 +70,7 @@ export default function History({
         </ul>
       </div>
 
-      <footer className="border-t border-line px-3 py-2 text-sm text-chalk-dim">
+      <footer className="border-t border-line px-3 py-2 text-sm text-fg-muted">
         Ctrl/Cmd+Z annulla l’ultimo acquisto. Per correggerne uno più vecchio, chiudi l’asta e
         apri la revisione.
       </footer>

@@ -48,21 +48,21 @@ export default function Toast({
   return (
     <div
       role="status"
-      className="pointer-events-auto flex items-center gap-4 rounded-md border border-line bg-pitch-700 px-4 py-2 text-base shadow-none"
+      className="pointer-events-auto flex items-center gap-4 rounded-md border border-line bg-surface-raised px-4 py-2 text-base shadow-none"
     >
-      <span className="text-chalk">{message}</span>
+      <span className="text-fg">{message}</span>
       {/*
-        Not `text-credit`. Document 2 §2: "L'ambra è riservata al denaro. Se un
+        Not `text-money`. Document 2 §2: "L'ambra è riservata al denaro. Se un
         numero è ambra è un credito. Nient'altro usa quel colore, mai per
         decorazione." This is the label of an action, and the toast already
         carries one legitimate amber figure inside its message — two ambers of
         which one is not money is precisely the reading the rule protects.
       */}
-      <button className="label text-micro text-chalk hover:underline" onClick={onUndo}>
+      <button className="label text-micro text-fg hover:underline" onClick={onUndo}>
         Annulla
       </button>
       <button
-        className="label text-micro text-chalk-dim hover:text-chalk"
+        className="label text-micro text-fg-muted hover:text-fg"
         aria-label="chiudi l’avviso"
         title="chiudi"
         onClick={onDismiss}

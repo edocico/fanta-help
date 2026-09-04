@@ -84,7 +84,7 @@ export default function TargetsView(): JSX.Element {
     const error = league.error ?? targets.error
     return (
       <Frame>
-        <p className="text-base text-taken">
+        <p className="text-base text-blocking">
           {error instanceof IpcError ? error.message : errorMessages.IPC_UNAVAILABLE()}
         </p>
       </Frame>
@@ -94,7 +94,7 @@ export default function TargetsView(): JSX.Element {
   if (league.data === null) {
     return (
       <Frame>
-        <p className="text-base text-chalk-dim">{errorMessages.LEAGUE_MISSING()}</p>
+        <p className="text-base text-fg-muted">{errorMessages.LEAGUE_MISSING()}</p>
       </Frame>
     )
   }
@@ -144,7 +144,7 @@ function Board({
         <Header league={league} />
         {/* Document 2 §8, word for word: the empty state that points elsewhere,
             because the action does not live on this screen. */}
-        <p className="mt-8 text-base text-chalk-dim">
+        <p className="mt-8 text-base text-fg-muted">
           Nessun obiettivo. Aggiungi giocatori dalla scheda Giocatori con la stella.
         </p>
       </>
@@ -156,25 +156,25 @@ function Board({
       <Header league={league} />
 
       {over && (
-        <p className="mt-2 text-base text-chalk">
+        <p className="mt-2 text-base text-fg">
           La fascia 1 vale <Figure value={over.total} kind="money" /> crediti e il budget è{' '}
           <Figure value={over.budget} kind="money" />.
         </p>
       )}
 
-      {refusal && <p className="mt-2 text-base text-taken">{refusal}</p>}
+      {refusal && <p className="mt-2 text-base text-blocking">{refusal}</p>}
 
-      <p className="mt-1 text-base text-chalk-dim">
+      <p className="mt-1 text-base text-fg-muted">
         Trascina una tessera per cambiarle fascia, o selezionala e premi da 1 a 5. Lo zero la
         rimanda fra le non collocate.
       </p>
 
       <div className="mt-4 grid grid-cols-[7rem_repeat(4,minmax(0,1fr))] gap-px bg-line">
-        <div className="bg-pitch-900" />
+        <div className="bg-surface" />
         {CLASSIC_ROLES.map((role) => (
-          <div key={role} className="bg-pitch-900 px-2 pb-2">
+          <div key={role} className="bg-surface px-2 pb-2">
             <div className="label text-micro">{ROLE_LABELS[role]}</div>
-            <div className="text-base text-chalk-dim">
+            <div className="text-base text-fg-muted">
               <Figure value={totals[role].count} /> ·{' '}
               <Figure value={totals[role].maxPriceTotal} kind="money" /> crediti
               {/* `percent` is given the share itself, not `Math.round(share * 100)` with a `%`
@@ -196,13 +196,13 @@ function Board({
 
         {ROWS.map((row) => (
           <Fragment key={row.label}>
-            <div className="flex items-start bg-pitch-800 px-2 py-2">
-              <span className="label text-micro text-chalk-dim">{row.label}</span>
+            <div className="flex items-start bg-surface-panel px-2 py-2">
+              <span className="label text-micro text-fg-muted">{row.label}</span>
             </div>
             {CLASSIC_ROLES.map((role) => (
               <div
                 key={role}
-                className="min-h-16 space-y-1 bg-pitch-800 p-1"
+                className="min-h-16 space-y-1 bg-surface-panel p-1"
                 onDragOver={(e) => {
                   // Only a tile of this column: a player's role is his, and a
                   // board that let a goalkeeper be dropped among the strikers
@@ -244,7 +244,7 @@ function Header({ league }: { league: LeagueDetail }): JSX.Element {
   return (
     <div>
       <h1 className="text-lg font-medium">Obiettivi</h1>
-      <p className="mt-1 text-base text-chalk-dim">
+      <p className="mt-1 text-base text-fg-muted">
         {league.name} · budget <Figure value={league.budget} kind="money" />
       </p>
     </div>
@@ -296,15 +296,20 @@ function Tile({
         }
         if (e.key === '0') onPatch({ playerId: target.playerId, tier: null })
       }}
-      className="cursor-grab rounded-md bg-pitch-700 p-1.5 focus:outline focus:outline-chalk-dim"
+      /* Nessuna classe di fuoco: la regola globale di `base.css` disegna
+         l'anello del §8 in `--focus`. Qui stava un `focus:outline-chalk-dim`,
+         che sbagliava due volte — `focus:` e non `focus-visible:`, quindi
+         l'anello compariva anche a chi clicca, e in `--chalk-400` invece che nel
+         gesso, cioe' un fuoco piu' debole proprio dove si trascina. */
+      className="cursor-grab rounded-md bg-surface-raised p-1.5"
     >
       <div className="flex items-baseline gap-1">
         <span className="min-w-0 flex-1 truncate text-base" title={target.name}>
           {target.name}
         </span>
-        <span className="label text-micro text-chalk-dim">{target.teamCode ?? target.teamName}</span>
+        <span className="label text-micro text-fg-muted">{target.teamCode ?? target.teamName}</span>
         <button
-          className="px-1 text-base text-chalk-dim hover:text-taken"
+          className="px-1 text-base text-fg-muted hover:text-blocking"
           aria-label={`togli ${target.name} dagli obiettivi`}
           title="togli dagli obiettivi"
           onClick={() => onRemove(target.playerId)}
@@ -354,7 +359,7 @@ function Rating({
             // riserva l'ambra ai crediti. Il teal e' il colore che il §2 da'
             // proprio a «e' nella tua lista obiettivi», ed e' quello che usano
             // gia' la stella in tabella e il blocco nel pannello.
-            value !== null && star <= value ? 'text-target' : 'text-line hover:text-chalk-dim'
+            value !== null && star <= value ? 'text-targeted' : 'text-line hover:text-fg-muted'
           }`}
           aria-label={`${star} su ${MAX_RATING} a ${name}`}
           title={`${star} su ${MAX_RATING}`}

@@ -41,7 +41,7 @@ export default function RoleBadge({
   return (
     <span
       className={cn(
-        'inline-flex size-[18px] shrink-0 items-center justify-center rounded-badge bg-surface-raised text-micro font-semibold text-chalk',
+        'inline-flex size-[18px] shrink-0 items-center justify-center rounded-badge bg-surface-raised text-micro font-semibold text-fg',
         className,
       )}
     >

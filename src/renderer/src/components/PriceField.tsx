@@ -82,7 +82,7 @@ export default function PriceField({
       aria-label={label}
       title={label}
       disabled={disabled}
-      className={`figure-column w-14 rounded-md border border-line bg-pitch-900 px-1 py-0.5 text-right text-base text-credit disabled:opacity-40 ${className}`}
+      className={`figure-column w-14 rounded-md border border-line bg-surface px-1 py-0.5 text-right text-base text-money disabled:opacity-40 ${className}`}
       value={draft}
       placeholder={placeholder}
       onChange={(e) => setDraft(e.target.value)}

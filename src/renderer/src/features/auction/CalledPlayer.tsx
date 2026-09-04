@@ -37,7 +37,7 @@ export default function CalledPlayer({ players }: { players: readonly PlayerRow[
       {/* Sentence case, like the other four `h2` of this screen — `Assegna`,
           `Rose`, `Obiettivi ancora liberi`, `Cronologia`. Lower case belongs to
           the labels that sit beside a value, such as `turno` in the bar. */}
-      <h2 className="label text-[length:var(--proj-small)] text-chalk-dim">In asta</h2>
+      <h2 className="label text-[length:var(--proj-small)] text-fg-muted">In asta</h2>
 
       {/*
         The height is held whether or not somebody is called. Document 2 §2 lists
@@ -53,7 +53,7 @@ export default function CalledPlayer({ players }: { players: readonly PlayerRow[
             out is, in the place it will actually be read: the first projection
             of the evening is nearly always an empty one.
           */
-          <p className="text-[length:var(--proj-small)] text-chalk-dim">
+          <p className="text-[length:var(--proj-small)] text-fg-muted">
             Nessun giocatore in asta. Esci dalla proiezione con Ctrl/Cmd+P per sceglierne uno.
           </p>
         ) : (
@@ -95,7 +95,7 @@ export default function CalledPlayer({ players }: { players: readonly PlayerRow[
                 which is a limit of the data, not of the code, and it is written
                 here so the next reader does not take a quiet screen for a bug.
 
-                `text-chalk` and not `text-chalk-dim`: §11 raises the contrast of
+                `text-fg` and not `text-fg-muted`: §11 raises the contrast of
                 secondary text from `--chalk-400` to `--chalk-100`, and this is
                 the projection band.
               */}
@@ -115,12 +115,12 @@ export default function CalledPlayer({ players }: { players: readonly PlayerRow[
                 gives back.
               */}
               {spelled !== null && (
-                <span className="min-w-0 truncate text-[length:var(--proj-small)] leading-tight text-chalk">
+                <span className="min-w-0 truncate text-[length:var(--proj-small)] leading-tight text-fg">
                   · {spelled}
                 </span>
               )}
             </span>
-            <span className="label shrink-0 text-[length:var(--proj-small)] text-chalk-dim">
+            <span className="label shrink-0 text-[length:var(--proj-small)] text-fg-muted">
               {player.roleClassic} · {player.teamCode ?? player.teamName}
               {/*
                 The one figure on this screen that had not even tabular digits:

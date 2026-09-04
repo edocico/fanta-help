@@ -53,7 +53,7 @@ export function DataTableHeadCell({
   return (
     <th
       className={cn(
-        'label border-b border-line px-2 text-micro font-medium text-chalk-dim',
+        'label border-b border-line px-2 text-micro font-medium text-fg-muted',
         numeric ? 'text-right' : 'text-left',
         className,
       )}
@@ -119,7 +119,7 @@ export function TargetedDot({ className }: { className?: string }): JSX.Element 
   return (
     <span
       aria-hidden
-      className={cn('mr-1.5 inline-block size-1.5 shrink-0 rounded-full bg-target', className)}
+      className={cn('mr-1.5 inline-block size-1.5 shrink-0 rounded-full bg-targeted', className)}
     />
   )
 }

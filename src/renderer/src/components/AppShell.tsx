@@ -62,12 +62,12 @@ export default function AppShell(): JSX.Element {
   const running = useDense()
 
   return (
-    <div className="flex h-screen bg-pitch-900 text-chalk">
+    <div className="flex h-screen bg-surface text-fg">
       {running ? (
-        <nav className="flex w-10 shrink-0 flex-col items-center border-r border-line bg-pitch-800 py-3">
+        <nav className="flex w-10 shrink-0 flex-col items-center border-r border-line bg-surface-panel py-3">
           <NavLink
             to={`/lega/${openId}`}
-            className="rounded-md border border-line px-2 py-1 text-base leading-none text-chalk-dim hover:text-chalk"
+            className="rounded-md border border-line px-2 py-1 text-base leading-none text-fg-muted hover:text-fg"
             title="torna alla lega"
             aria-label="torna alla lega"
           >
@@ -75,7 +75,7 @@ export default function AppShell(): JSX.Element {
           </NavLink>
         </nav>
       ) : (
-        <nav className="flex w-52 shrink-0 flex-col gap-1 border-r border-line bg-pitch-800 p-3">
+        <nav className="flex w-52 shrink-0 flex-col gap-1 border-r border-line bg-surface-panel p-3">
           <LeaguePicker leagues={leagues.data ?? []} />
           <LeagueSections />
           <hr className="my-2 border-line" />
@@ -103,7 +103,7 @@ function LeaguePicker({ leagues }: { leagues: LeagueSummary[] }): JSX.Element {
   return (
     <div className="flex items-center gap-1">
       <select
-        className="min-w-0 flex-1 truncate rounded-md border border-line bg-pitch-900 px-2 py-1.5 text-base"
+        className="min-w-0 flex-1 truncate rounded-md border border-line bg-surface px-2 py-1.5 text-base"
         value={openId ?? ''}
         disabled={leagues.length === 0}
         onChange={(e) => {
@@ -123,7 +123,7 @@ function LeaguePicker({ leagues }: { leagues: LeagueSummary[] }): JSX.Element {
 
       <NavLink
         to="/lega/nuova"
-        className="rounded-md border border-line px-2 py-1.5 text-base leading-none text-chalk-dim hover:text-chalk"
+        className="rounded-md border border-line px-2 py-1.5 text-base leading-none text-fg-muted hover:text-fg"
         title="Nuova lega"
         aria-label="Nuova lega"
       >
@@ -138,7 +138,7 @@ function LeagueSections(): JSX.Element {
 
   if (openId === null) {
     return (
-      <p className="px-2 py-3 text-base text-chalk-dim">
+      <p className="px-2 py-3 text-base text-fg-muted">
         Crea una lega per preparare l’asta.
       </p>
     )
@@ -157,7 +157,7 @@ function LeagueSections(): JSX.Element {
         ) : (
           <span
             key={section.label}
-            className="px-2 py-1.5 text-base text-chalk-dim opacity-40"
+            className="px-2 py-1.5 text-base text-fg-muted opacity-40"
             aria-disabled="true"
             title="Non ancora disponibile"
           >
@@ -176,7 +176,7 @@ function Entry({ to, label, end }: { to: string; label: string; end?: boolean })
       end={end}
       className={({ isActive }) =>
         `rounded-md px-2 py-1.5 text-base ${
-          isActive ? 'bg-pitch-700 text-chalk' : 'text-chalk-dim hover:text-chalk'
+          isActive ? 'bg-surface-raised text-fg' : 'text-fg-muted hover:text-fg'
         }`
       }
     >

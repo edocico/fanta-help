@@ -58,7 +58,7 @@ export default function AuctionView(): JSX.Element {
   if (state.isError) {
     return (
       <Frame>
-        <p className="text-base text-taken">
+        <p className="text-base text-blocking">
           {state.error instanceof IpcError ? state.error.message : errorMessages.IPC_UNAVAILABLE()}
         </p>
       </Frame>
@@ -68,7 +68,7 @@ export default function AuctionView(): JSX.Element {
   if (state.data === null) {
     return (
       <Frame>
-        <p className="text-base text-chalk-dim">{errorMessages.LEAGUE_MISSING()}</p>
+        <p className="text-base text-fg-muted">{errorMessages.LEAGUE_MISSING()}</p>
       </Frame>
     )
   }
@@ -118,26 +118,26 @@ function Closed({ state }: { state: AuctionState }): JSX.Element {
 
   return (
     <Frame>
-      <p className="pb-1 text-base text-chalk-dim">
+      <p className="pb-1 text-base text-fg-muted">
         {state.league.name} · {MODE_LABELS[state.league.mode]} ·{' '}
         {FORMAT_LABELS[state.league.auctionFormat]} · {STATUS_LABELS[state.league.status]}
       </p>
 
       {startable ? (
         <>
-          <p className="max-w-xl pb-4 pt-2 text-base text-chalk-dim">
+          <p className="max-w-xl pb-4 pt-2 text-base text-fg-muted">
             Aprire l’asta blocca il regolamento e l’elenco delle squadre, e chiude l’import del
             listone. Da qui in poi si registrano gli acquisti.
           </p>
           <button
-            className="rounded-md border border-line bg-pitch-700 px-3 py-2 text-base disabled:opacity-40"
+            className="rounded-md border border-line bg-surface-raised px-3 py-2 text-base disabled:opacity-40"
             disabled={!ready || busy}
             onClick={() => void start()}
           >
             Apri l’asta
           </button>
           {!ready && (
-            <p className="pt-2 text-sm text-taken">
+            <p className="pt-2 text-sm text-blocking">
               {state.teams.length < 2
                 ? errorMessages.TOO_FEW_TEAMS()
                 : errorMessages.LEAGUE_SLOTS_EMPTY()}
@@ -145,7 +145,7 @@ function Closed({ state }: { state: AuctionState }): JSX.Element {
           )}
         </>
       ) : (
-        <p className="max-w-xl pt-2 text-base text-chalk-dim">
+        <p className="max-w-xl pt-2 text-base text-fg-muted">
           {state.league.status === 'review'
             ? 'L’asta è chiusa. Gli acquisti si correggono nella revisione.'
             : state.league.status === 'closed'
@@ -154,7 +154,7 @@ function Closed({ state }: { state: AuctionState }): JSX.Element {
         </p>
       )}
 
-      {refusal !== null && <p className="pt-3 text-base text-taken">{refusal}</p>}
+      {refusal !== null && <p className="pt-3 text-base text-blocking">{refusal}</p>}
     </Frame>
   )
 }
@@ -366,7 +366,7 @@ function Live({ state }: { state: AuctionState }): JSX.Element {
         mode remounts the panel, whose mount effect calls `onEdit`.
       */}
       {projected && refusal !== null && (
-        <p className="shrink-0 border-b border-line px-3 py-2 text-base text-taken">{refusal}</p>
+        <p className="shrink-0 border-b border-line px-3 py-2 text-base text-blocking">{refusal}</p>
       )}
 
       {/* Full width and above the row, so the name has the whole screen: it is
@@ -385,7 +385,7 @@ function Live({ state }: { state: AuctionState }): JSX.Element {
           `stores/auction.ts` keeps it there and says so.
         */}
         {!projected && (
-          <div className="flex w-80 min-w-0 shrink-0 flex-col border-r border-line bg-pitch-800">
+          <div className="flex w-80 min-w-0 shrink-0 flex-col border-r border-line bg-surface-panel">
             <AssignPanel
               state={state}
               players={players.data?.players ?? []}
@@ -535,17 +535,17 @@ function TopBar({
       <header className="flex shrink-0 items-center gap-3 border-b border-line px-3 py-2">
         <span className="min-w-0 flex-1 truncate text-base">
           {state.league.name}{' '}
-          <span className="label text-micro text-chalk-dim">
+          <span className="label text-micro text-fg-muted">
             {MODE_LABELS[state.league.mode]} · {FORMAT_LABELS[state.league.auctionFormat]}
           </span>
         </span>
 
         <span className="flex min-w-0 max-w-56 shrink items-center gap-2 text-base">
-          <span className="label shrink-0 text-micro text-chalk-dim">turno</span>
+          <span className="label shrink-0 text-micro text-fg-muted">turno</span>
           <span className="min-w-0 truncate">{turn?.name ?? 'nessuno'}</span>
           {state.league.auctionFormat === 'call' && (
             <button
-              className="shrink-0 rounded-md border border-line px-1.5 leading-none text-chalk-dim hover:text-chalk"
+              className="shrink-0 rounded-md border border-line px-1.5 leading-none text-fg-muted hover:text-fg"
               title="passa il turno alla squadra successiva"
               aria-label="passa il turno alla squadra successiva"
               onClick={nextTurn}
@@ -569,7 +569,7 @@ function TopBar({
             needs nothing remembered — so it stays visible in projection, where
             the two beside it do not. */}
         <button
-          className="label shrink-0 rounded-md border border-line px-2 py-1 text-micro text-chalk-dim hover:text-chalk"
+          className="label shrink-0 rounded-md border border-line px-2 py-1 text-micro text-fg-muted hover:text-fg"
           onClick={onProjection}
           aria-pressed={projected}
           title="Ctrl/Cmd+P"
@@ -593,7 +593,7 @@ function TopBar({
         {!projected && (
           <>
             <button
-              className="label shrink-0 rounded-md border border-line px-2 py-1 text-micro text-chalk-dim hover:text-chalk"
+              className="label shrink-0 rounded-md border border-line px-2 py-1 text-micro text-fg-muted hover:text-fg"
               onClick={onHistory}
               title="Ctrl/Cmd+H"
             >
@@ -601,7 +601,7 @@ function TopBar({
             </button>
 
             <button
-              className="label shrink-0 rounded-md border border-line px-2 py-1 text-micro text-chalk-dim hover:text-chalk"
+              className="label shrink-0 rounded-md border border-line px-2 py-1 text-micro text-fg-muted hover:text-fg"
               onClick={() => {
                 // With every roster full there is nothing to warn about, so the
                 // first click closes: §7 attaches the warning to the free slots.
@@ -627,7 +627,7 @@ function TopBar({
           for one frame on the way in. */}
       {confirming && !projected && (
         <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-line px-3 py-2 text-sm">
-          <span className="text-taken">{notices.CLOSE_WITH_FREE_SLOTS({ n: incomplete })}</span>
+          <span className="text-fg-muted">{notices.CLOSE_WITH_FREE_SLOTS({ n: incomplete })}</span>
           <button
             className="rounded-md border border-line px-2 py-1"
             onClick={() => {
@@ -637,7 +637,7 @@ function TopBar({
           >
             Chiudi
           </button>
-          <button className="text-chalk-dim hover:text-chalk" onClick={() => setConfirming(false)}>
+          <button className="text-fg-muted hover:text-fg" onClick={() => setConfirming(false)}>
             Annulla
           </button>
         </div>
