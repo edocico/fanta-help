@@ -463,7 +463,12 @@
   --proj-team: 1.125rem;
   --proj-small: 0.8125rem;
   --proj-dots: 0.875rem;
-  --proj-credits: 1.125rem;
+  /* 1.25 e non 1.125: a 18px questa cifra portava Archivo sotto i 20 che il §15
+     gli dà come pavimento, ed è l'unico dei tre gradini in cui succedeva. È
+     anche il gradino che l'app non raggiunge più — la finestra si apre a
+     1440×900 e a 872 di viewport la scaletta parte da `min-height: 760` — quindi
+     il vincolo di altezza che questa riga regge non si muove. */
+  --proj-credits: 1.25rem;
   --proj-max: 1.75rem; /* la sola squadra di turno */
   --proj-row-y: 0.4375rem;
   --proj-bar-h: 2rem;

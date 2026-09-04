@@ -11,7 +11,7 @@ import Toast from '@/components/Toast'
 import { canStartAuction, canTransition } from '@shared/domain'
 import { credits, errorMessages, notices } from '@shared/errors'
 import type { AuctionState } from '@shared/types'
-import { FORMAT_LABELS, MODE_LABELS, STATUS_LABELS } from '@/features/leagues/labels'
+import { FORMAT_LABELS, MODE_LABELS } from '@/features/leagues/labels'
 import AssignPanel, { type AssignInput } from './AssignPanel'
 import CalledPlayer from './CalledPlayer'
 import FreeTargets from './FreeTargets'
@@ -119,8 +119,11 @@ function Closed({ state }: { state: AuctionState }): JSX.Element {
   return (
     <Frame>
       <p className="pb-1 text-base text-fg-muted">
+        {/* Tre fatti e non quattro: il §4 mette il tetto al `·`, e lo stato è
+            quello che si può togliere — il corpo della vista lo dice già a
+            parole, «Aprire l'asta…», «L'asta è chiusa…». */}
         {state.league.name} · {MODE_LABELS[state.league.mode]} ·{' '}
-        {FORMAT_LABELS[state.league.auctionFormat]} · {STATUS_LABELS[state.league.status]}
+        {FORMAT_LABELS[state.league.auctionFormat]}
       </p>
 
       {startable ? (

@@ -62,6 +62,14 @@ type Band = {
    */
   figureRole: 'column' | 'projection'
   /**
+   * And the prices inside an expanded roster, which are the one place here that
+   * cannot wear the projection role at any step: `--proj-small` is 13, 15 and
+   * 17px on the three rungs, and §15 forbids Archivo under 20 at all of them.
+   * Plex, exactly as §11 settles the same question for the board — "i prezzi di
+   * cella restano Plex: al gradino basso misurano 13px".
+   */
+  figureRoleSmall: 'column'
+  /**
    * And the maximum bid of the team on turn, which is the one figure of this
    * grid that carries a row on its own. In `normal` it renders at 24px — over
    * §4's 20px boundary — so it is a *large* figure, Archivo 600 at width 112,
@@ -84,6 +92,7 @@ const SIZES: Record<'normal' | 'projected', Band> = {
     rosterRole: 'w-4',
     rosterPrice: 'w-8',
     figureRole: 'column',
+    figureRoleSmall: 'column',
     figureRoleOnTurn: 'large',
   },
   projected: {
@@ -112,14 +121,15 @@ const SIZES: Record<'normal' | 'projected', Band> = {
     // own (`leading-tight`, and `leading-none` on the on-turn row, where the
     // two are equal).
     //
-    // What the role does not fix: `--proj-credits` starts at 18px and
-    // `--proj-small` at 13, both under the 20px floor §15 gives Archivo. That
-    // debt predates T23 — `.figures` was Archivo here too — and T24 did not
-    // clear it: it built the board of §10 beside this file rather than out of
-    // it, because §10 keeps this list alive as the narrow fallback. The board
-    // answers the same question its own way — its cell prices are Plex below
-    // 20px — so what is left here is this component's own, for T25.
+    // The 20px floor §15 gives Archivo, which this comment used to record as
+    // an open debt, is paid two ways in T25. `--proj-small` is under it at every
+    // rung, so the prices it dresses take `figureRoleSmall` and stay Plex — the
+    // answer §11 already gives the board. `--proj-credits` was under it at the
+    // base rung only, and that rung moved to 20px: it is the one the app no
+    // longer reaches anyway, since T24 opened the window at 1440×900 and 872 of
+    // viewport starts the ladder at `min-height: 760`.
     figureRole: 'projection',
+    figureRoleSmall: 'column',
     figureRoleOnTurn: 'projection',
   },
 }
@@ -376,7 +386,7 @@ function Roster({ team, band }: { team: AuctionTeam; band: Band }): JSX.Element 
             <Figure
               value={bought.price}
               kind="money"
-              role={band.figureRole}
+              role={band.figureRoleSmall}
               className={`${band.rosterPrice} shrink-0 text-right`}
             />
           </li>

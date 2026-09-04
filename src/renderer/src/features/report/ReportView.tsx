@@ -235,7 +235,10 @@ function Report({
               impronte si confrontano una sotto l'altra — questa e quella
               scritta nelle opzioni del selettore qui accanto. */}
           <span className="figure-column">{shortHash(detail.contentHash)}</span>
-          {file.producedBy.label !== null && ` · firmato da ${file.producedBy.label}`}
+          {/* Senza `·`: i tre fatti uniti dal separatore sono versione, data e
+              impronta, e il §4 li ferma a tre. La firma è il quarto, quindi si
+              stacca con uno spazio invece di allungare la catena. */}
+          {file.producedBy.label !== null && ` firmato da ${file.producedBy.label}`}
         </p>
         {versions.length > 1 && (
           <select

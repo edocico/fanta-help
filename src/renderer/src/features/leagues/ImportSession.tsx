@@ -100,9 +100,16 @@ export function useImportSession(): { button: JSX.Element; panel: JSX.Element | 
             resoconto: senza, `producedBy` ripiega sull'uuid, e «firmato da
             2ea2427e-a117-4962-…» non dice a nessuno chi ha chiuso l'asta.
           */}
+          {/* Due righe da tre e non una da sei: il §4 dà al `·` un tetto di tre
+              fatti «dello stesso tipo», e questi sono di due tipi — cosa c'è
+              dentro il file, e da dove viene. Su una riga sola il separatore
+              smetteva di essere struttura e diventava decorazione. */}
           <p className="pt-1 text-base text-fg-muted">
-            {preview.seasonId} · {teams(preview.teams)} · {purchases(preview.purchases)} ·{' '}
-            {when(preview.createdAt)} · <span className="figure-column">{shortHash(preview.contentHash)}</span>
+            {preview.seasonId} · {teams(preview.teams)} · {purchases(preview.purchases)}
+          </p>
+          <p className="text-base text-fg-muted">
+            {when(preview.createdAt)} ·{' '}
+            <span className="figure-column">{shortHash(preview.contentHash)}</span>
             {preview.producedBy !== null && ` · firmato da ${preview.producedBy}`}
           </p>
 

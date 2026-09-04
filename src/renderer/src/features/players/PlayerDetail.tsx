@@ -19,7 +19,7 @@ import type { PlayerRow, SeasonStats, TargetRow } from '@shared/types'
 import PriceField from '@/components/PriceField'
 import Abbr from '@/components/Abbr'
 import Figure from '@/components/Figure'
-import { show } from '@/lib/format'
+import { show, type FigureKind } from '@/lib/format'
 import { glossary, type Abbr as AbbrName } from '@shared/glossary'
 import type { Objectives } from '@/features/targets/objectives'
 
@@ -505,15 +505,17 @@ function Indicators({
 
   const pv = stats.matchesRated
   const rows: IndicatorRow[] = [
-    { abbr: 'bon', value: show(bonusIndex(stats.fantaAvg, stats.avgVote), 'signed') },
+    { abbr: 'bon', value: bonusIndex(stats.fantaAvg, stats.avgVote), kind: 'signed' },
     {
       word: 'affidabilità',
-      value: show(reliability(pv), 'percent'),
+      value: reliability(pv),
+      kind: 'percent',
       note: `In quante delle ${MATCHDAYS} giornate ha preso un voto. Chi è arrivato a gennaio scende, anche se ha giocato sempre.`,
     },
     {
       word: 'malus',
-      value: show(malusRate(stats.yellowCards, stats.redCards, stats.ownGoals, pv), 'average'),
+      value: malusRate(stats.yellowCards, stats.redCards, stats.ownGoals, pv),
+      kind: 'average',
       note: 'Cartellini e autogol per partita a voto. Il rosso pesa il doppio del giallo.',
     },
   ]
@@ -521,18 +523,23 @@ function Indicators({
   if (role === 'P') {
     rows.push({
       word: 'gol subiti',
-      value: show(concededPerMatch(stats.goalsConceded, pv), 'average'),
+      value: concededPerMatch(stats.goalsConceded, pv),
+      kind: 'average',
       note: 'Reti incassate per partita a voto. Conta col modificatore di difesa.',
     })
   }
 
   if (hasFbref) {
     rows.push(
-      { abbr: 'tit.', value: show(startShare(stats.starts, stats.matchesPlayed), 'percent') },
-      { abbr: 'min', value: show(minutesPerMatch(stats.minutes, stats.matchesPlayed), 'decimal') },
+      { abbr: 'tit.', value: startShare(stats.starts, stats.matchesPlayed), kind: 'percent' },
+      { abbr: 'min', value: minutesPerMatch(stats.minutes, stats.matchesPlayed), kind: 'decimal' },
     )
     if (role === 'P') {
-      rows.push({ abbr: 'CS', value: show(cleanSheetRate(stats.cleanSheets, stats.starts), 'percent') })
+      rows.push({
+        abbr: 'CS',
+        value: cleanSheetRate(stats.cleanSheets, stats.starts),
+        kind: 'percent',
+      })
     }
   }
 
@@ -546,7 +553,9 @@ function Indicators({
               <dt className="label text-micro">
                 {'abbr' in row ? <Abbr name={row.abbr} /> : row.word}
               </dt>
-              <dd className="figure-column">{row.value}</dd>
+              <dd>
+                <Figure value={row.value} kind={row.kind} />
+              </dd>
             </div>
             <p className="mt-0.5 text-base text-fg-muted">
               {'abbr' in row ? glossary[row.abbr].explains : row.note}
@@ -587,9 +596,16 @@ function Indicators({
  * potrebbe portarsi comunque un testo proprio, e la divergenza tornerebbe da
  * dove è appena stata tolta.
  */
+/* Il valore è il numero, non la stringa già formattata. Passava per `show()` e
+   finiva in un `<dd className="figure-column">`, che è il trattamento che il §10
+   riserva ai numeri **dentro una frase**: questi non lo sono, sono la cifra nuda
+   dell'indicatore in un elemento suo, e il §10 dice che nessun numero dell'app si
+   scrive a mano. `Figure` chiama la stessa `show()` e porta con sé famiglia,
+   peso e cifre tabulari — e il trattino lungo al posto di uno zero quando la
+   metrica non si può calcolare. */
 type IndicatorRow =
-  | { abbr: AbbrName; value: string }
-  | { word: string; value: string; note: string }
+  | { abbr: AbbrName; value: number | null; kind: FigureKind }
+  | { word: string; value: number | null; kind: FigureKind; note: string }
 
 /**
  * Il blocco obiettivo del §4.5: «fascia, prezzo massimo, rating, note. Si compila
@@ -660,7 +676,8 @@ function Objective({
               stanno insieme. */}
           {budget !== null && budget > 0 && target?.maxPrice != null && (
             <span className="text-base text-fg-muted">
-              {Math.round((target.maxPrice / budget) * 100)}% del budget
+              <span className="figure-column">{Math.round((target.maxPrice / budget) * 100)}</span>% del
+              budget
             </span>
           )}
         </dd>
