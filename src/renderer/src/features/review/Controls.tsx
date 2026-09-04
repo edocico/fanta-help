@@ -40,12 +40,12 @@ export default function Controls({
 
   return (
     <aside className="flex w-56 shrink-0 flex-col overflow-y-auto border-l border-line bg-pitch-800">
-      <h2 className="label sticky top-0 border-b border-line bg-pitch-800 px-3 py-2 text-xs text-chalk-dim">
+      <h2 className="label sticky top-0 border-b border-line bg-pitch-800 px-3 py-2 text-micro text-chalk-dim">
         Controlli
       </h2>
 
       {groups.length === 0 ? (
-        <p className="px-3 py-3 text-sm text-chalk-dim">Nessuna anomalia: le rose tornano tutte.</p>
+        <p className="px-3 py-3 text-base text-chalk-dim">Nessuna anomalia: le rose tornano tutte.</p>
       ) : (
         <ul>
           {groups.map(({ team, anomalies }) => {
@@ -53,7 +53,7 @@ export default function Controls({
             return (
               <li key={team.id} className="border-b border-line/60">
                 <button
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-pitch-700"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-base hover:bg-pitch-700"
                   aria-expanded={open}
                   onClick={() =>
                     setClosed((was) => {
@@ -84,7 +84,7 @@ export default function Controls({
                     {anomalies.map((anomaly, i) => (
                       <li key={i}>
                         <button
-                          className="block w-full px-3 py-0.5 pl-8 text-left text-sm text-chalk-dim hover:text-chalk"
+                          className="block w-full px-3 py-0.5 pl-8 text-left text-base text-chalk-dim hover:text-chalk"
                           onClick={() => onFocus({ teamId: team.id, role: roleOf(anomaly) })}
                         >
                           {anomalyMessage(anomaly)}

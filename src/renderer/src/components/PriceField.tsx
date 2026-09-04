@@ -24,8 +24,8 @@ import { useEffect, useState } from 'react'
  * input to draw it. The numeric treatment therefore comes from `figure-column`
  * applied by hand — the column role of document 7 §4, Plex 500 tabular, and not
  * the large Archivo one: Archivo enters at 20px and this field is nowhere near
- * it. The `text-sm` below is still Tailwind's 14px, not §4's 13 — the working
- * measure moves in T25 — and the role is the same on either side of that move.
+ * it. The `text-base` below is §4's 13px working measure, which T25 mapped onto
+ * Tailwind's name; the role is the same on either side of that move.
  *
  * **The amber stays**, even though §15 reserves it for money and nothing else:
  * what is typed here *is* a price. §9 grants that exception by name to the price
@@ -82,7 +82,7 @@ export default function PriceField({
       aria-label={label}
       title={label}
       disabled={disabled}
-      className={`figure-column w-14 rounded-md border border-line bg-pitch-900 px-1 py-0.5 text-right text-sm text-credit disabled:opacity-40 ${className}`}
+      className={`figure-column w-14 rounded-md border border-line bg-pitch-900 px-1 py-0.5 text-right text-base text-credit disabled:opacity-40 ${className}`}
       value={draft}
       placeholder={placeholder}
       onChange={(e) => setDraft(e.target.value)}

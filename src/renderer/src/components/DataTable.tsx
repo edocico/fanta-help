@@ -22,10 +22,13 @@ import { cn } from '@/lib/utils'
  * | Cell padding | 8px | 12px, 8px and 0 |
  *
  * The 16px headings are worth a line of their own, because nothing in the
- * markup says 16: `label` carries weight and letter-spacing and no size, no
- * ancestor declares one, and there is no `font-size` on `html` or `body`. So
- * every heading in this app was rendering *larger* than the cells beneath it,
- * which is the opposite of §10, and no reading of a component would show it.
+ * markup said 16: `label` carries weight and letter-spacing and no size, no
+ * ancestor declared one, and there was no `font-size` on `html` or `body` at
+ * all. So every heading in this app was rendering *larger* than the cells
+ * beneath it, which is the opposite of §10, and no reading of a component would
+ * show it. T25 closed both halves — `body` now carries §4's 13px working
+ * measure, and every `label` site declares `text-micro` — so the number a
+ * heading renders at is written somewhere a reader can find it.
  */
 export function DataTable({ className, ...props }: ComponentProps<'table'>): JSX.Element {
   return <table className={cn('w-full border-collapse', className)} {...props} />

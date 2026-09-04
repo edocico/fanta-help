@@ -84,7 +84,7 @@ export default function TargetsView(): JSX.Element {
     const error = league.error ?? targets.error
     return (
       <Frame>
-        <p className="text-sm text-taken">
+        <p className="text-base text-taken">
           {error instanceof IpcError ? error.message : errorMessages.IPC_UNAVAILABLE()}
         </p>
       </Frame>
@@ -94,7 +94,7 @@ export default function TargetsView(): JSX.Element {
   if (league.data === null) {
     return (
       <Frame>
-        <p className="text-sm text-chalk-dim">{errorMessages.LEAGUE_MISSING()}</p>
+        <p className="text-base text-chalk-dim">{errorMessages.LEAGUE_MISSING()}</p>
       </Frame>
     )
   }
@@ -144,7 +144,7 @@ function Board({
         <Header league={league} />
         {/* Document 2 §8, word for word: the empty state that points elsewhere,
             because the action does not live on this screen. */}
-        <p className="mt-8 text-sm text-chalk-dim">
+        <p className="mt-8 text-base text-chalk-dim">
           Nessun obiettivo. Aggiungi giocatori dalla scheda Giocatori con la stella.
         </p>
       </>
@@ -156,15 +156,15 @@ function Board({
       <Header league={league} />
 
       {over && (
-        <p className="mt-2 text-sm text-chalk">
+        <p className="mt-2 text-base text-chalk">
           La fascia 1 vale <Figure value={over.total} kind="money" /> crediti e il budget è{' '}
           <Figure value={over.budget} kind="money" />.
         </p>
       )}
 
-      {refusal && <p className="mt-2 text-sm text-taken">{refusal}</p>}
+      {refusal && <p className="mt-2 text-base text-taken">{refusal}</p>}
 
-      <p className="mt-1 text-sm text-chalk-dim">
+      <p className="mt-1 text-base text-chalk-dim">
         Trascina una tessera per cambiarle fascia, o selezionala e premi da 1 a 5. Lo zero la
         rimanda fra le non collocate.
       </p>
@@ -173,8 +173,8 @@ function Board({
         <div className="bg-pitch-900" />
         {CLASSIC_ROLES.map((role) => (
           <div key={role} className="bg-pitch-900 px-2 pb-2">
-            <div className="label text-sm">{ROLE_LABELS[role]}</div>
-            <div className="text-sm text-chalk-dim">
+            <div className="label text-micro">{ROLE_LABELS[role]}</div>
+            <div className="text-base text-chalk-dim">
               <Figure value={totals[role].count} /> ·{' '}
               <Figure value={totals[role].maxPriceTotal} kind="money" /> crediti
               {/* `percent` is given the share itself, not `Math.round(share * 100)` with a `%`
@@ -197,7 +197,7 @@ function Board({
         {ROWS.map((row) => (
           <Fragment key={row.label}>
             <div className="flex items-start bg-pitch-800 px-2 py-2">
-              <span className="label text-sm text-chalk-dim">{row.label}</span>
+              <span className="label text-micro text-chalk-dim">{row.label}</span>
             </div>
             {CLASSIC_ROLES.map((role) => (
               <div
@@ -244,7 +244,7 @@ function Header({ league }: { league: LeagueDetail }): JSX.Element {
   return (
     <div>
       <h1 className="text-lg font-medium">Obiettivi</h1>
-      <p className="mt-1 text-sm text-chalk-dim">
+      <p className="mt-1 text-base text-chalk-dim">
         {league.name} · budget <Figure value={league.budget} kind="money" />
       </p>
     </div>
@@ -299,12 +299,12 @@ function Tile({
       className="cursor-grab rounded-md bg-pitch-700 p-1.5 focus:outline focus:outline-chalk-dim"
     >
       <div className="flex items-baseline gap-1">
-        <span className="min-w-0 flex-1 truncate text-sm" title={target.name}>
+        <span className="min-w-0 flex-1 truncate text-base" title={target.name}>
           {target.name}
         </span>
-        <span className="label text-sm text-chalk-dim">{target.teamCode ?? target.teamName}</span>
+        <span className="label text-micro text-chalk-dim">{target.teamCode ?? target.teamName}</span>
         <button
-          className="px-1 text-sm text-chalk-dim hover:text-taken"
+          className="px-1 text-base text-chalk-dim hover:text-taken"
           aria-label={`togli ${target.name} dagli obiettivi`}
           title="togli dagli obiettivi"
           onClick={() => onRemove(target.playerId)}
@@ -349,7 +349,7 @@ function Rating({
       {Array.from({ length: MAX_RATING }, (_, i) => i + 1).map((star) => (
         <button
           key={star}
-          className={`px-0.5 text-sm leading-none ${
+          className={`px-0.5 text-base leading-none ${
             // Teal e non ambra: un rating non e' denaro, e il documento 2 §2
             // riserva l'ambra ai crediti. Il teal e' il colore che il §2 da'
             // proprio a «e' nella tua lista obiettivi», ed e' quello che usano

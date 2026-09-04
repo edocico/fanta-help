@@ -72,11 +72,11 @@ type Band = {
 
 const SIZES: Record<'normal' | 'projected', Band> = {
   normal: {
-    team: 'text-sm',
-    small: 'text-xs',
-    dots: 'text-xs gap-x-3',
-    credits: 'text-sm',
-    max: 'text-sm',
+    team: 'text-base',
+    small: 'text-sm',
+    dots: 'text-sm gap-x-3',
+    credits: 'text-base',
+    max: 'text-base',
     maxOnTurn: 'text-2xl',
     rowY: 'py-1.5',
     bar: 'h-7',
@@ -159,7 +159,7 @@ export default function RosterGrid({
       aria-label={projected ? 'Rose' : undefined}
     >
       {!projected && (
-        <h2 className="label border-b border-line px-3 py-2 text-xs text-chalk-dim">Rose</h2>
+        <h2 className="label border-b border-line px-3 py-2 text-micro text-chalk-dim">Rose</h2>
       )}
       <ul className="min-h-0 flex-1 overflow-auto">
         {state.teams.map((team) => (
@@ -235,7 +235,7 @@ function Row({
           <span className={`block truncate ${band.team} ${team.isMine ? 'font-semibold' : ''}`}>
             {team.name}
             {team.complete && (
-              <span className={`label ml-2 ${band.small} text-chalk-dim`}>rosa completa</span>
+              <span className={`label text-micro ml-2 ${band.small} text-chalk-dim`}>rosa completa</span>
             )}
           </span>
           <Dots slots={slots} filled={team.filled} band={band} />
@@ -263,14 +263,14 @@ function Row({
           <Figure value={team.credits} kind="money" role={band.figureRole} />{' '}
           <Abbr name="cr">
             {(label, trigger) => (
-              <span className={`${trigger} label ${band.small} text-chalk-dim`}>{label}</span>
+              <span className={`${trigger} label text-micro ${band.small} text-chalk-dim`}>{label}</span>
             )}
           </Abbr>
         </span>
         <span className={`shrink-0 text-right ${onTurn ? band.maxOnTurn : band.max}`}>
           <Abbr name="max">
             {(label, trigger) => (
-              <span className={`${trigger} label align-middle ${band.small} text-chalk-dim`}>
+              <span className={`${trigger} label text-micro align-middle ${band.small} text-chalk-dim`}>
                 {label}
               </span>
             )}
@@ -313,7 +313,7 @@ function Dots({
     <span className={`flex flex-wrap items-center pt-0.5 leading-none ${band.dots}`}>
       {CLASSIC_ROLES.filter((role) => slots[role] > 0 || filled[role] > 0).map((role) => (
         <span key={role} className="flex items-center gap-1">
-          <span className="label text-chalk-dim">{role}</span>
+          <span className="label text-micro text-chalk-dim">{role}</span>
           <span aria-label={`${filled[role]} su ${slots[role]}`}>
             {Array.from({ length: Math.max(slots[role], filled[role]) }, (_, i) => (
               <span
@@ -352,13 +352,13 @@ function Roster({ team, band }: { team: AuctionTeam; band: Band }): JSX.Element 
                 `review/Row.tsx` draws the same `slotRole` as a badge because
                 its row is 40px and stands still — the primitive is right
                 there, the density is what differs. */}
-            <span className={`label ${band.rosterRole} shrink-0 text-chalk-dim`}>
+            <span className={`label text-micro ${band.rosterRole} shrink-0 text-chalk-dim`}>
               {bought.slotRole}
             </span>
             <span className="min-w-0 flex-1 truncate">{bought.name}</span>
             {/* "Resta in rosa, marcato", §7. The purchase stands; the listing does not. */}
             {bought.delisted && (
-              <span className="label shrink-0 text-taken" title={notices.DELISTED()}>
+              <span className="label text-micro shrink-0 text-taken" title={notices.DELISTED()}>
                 fuori listone
               </span>
             )}
@@ -366,7 +366,7 @@ function Roster({ team, band }: { team: AuctionTeam; band: Band }): JSX.Element 
                 name and change with every promotion — so it is not in the
                 glossary and does not get a popover. The column that would
                 explain it is `squa`, and this list has no headings. */}
-            <span className="label shrink-0 text-chalk-dim">{bought.teamCode}</span>
+            <span className="label text-micro shrink-0 text-chalk-dim">{bought.teamCode}</span>
             {/* Money, so amber and tabular, and `Figure` brings both. The
                 count-up it brings with them never runs: a price paid does not
                 change, and the hook starts on the value it is given. */}

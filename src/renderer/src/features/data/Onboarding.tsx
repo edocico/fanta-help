@@ -74,11 +74,11 @@ export default function Onboarding({ onDone }: { onDone: () => void }): JSX.Elem
     return (
       <Frame>
         <h1 className="text-lg font-medium">Listone importato</h1>
-        <p className="mt-2 text-sm text-chalk-dim">
+        <p className="mt-2 text-base text-chalk-dim">
           {report.label} · {report.added + report.updated} giocatori, {report.teams} squadre.
           {report.delisted > 0 && ` ${report.delisted} non sono più nel listone e restano marcati.`}
         </p>
-        <p className="mt-1 text-sm text-chalk-dim">
+        <p className="mt-1 text-base text-chalk-dim">
           {report.statsUntouched > 0
             ? `Le ${report.statsUntouched} righe di storico non sono state toccate: il file delle quotazioni non contiene statistiche.`
             : 'Non c’è storico per questa stagione: le colonne di rendimento restano vuote finché non importi un dataset completo.'}
@@ -93,15 +93,15 @@ export default function Onboarding({ onDone }: { onDone: () => void }): JSX.Elem
   return (
     <Frame>
       <h1 className="text-lg font-medium">Servono i giocatori</h1>
-      <p className="mt-2 text-sm text-chalk-dim">
+      <p className="mt-2 text-base text-chalk-dim">
         Fanta Help parte da un listone di Serie A. Puoi scaricarlo o importarlo da un file.
       </p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         {/* Present and honest about itself, rather than absent. T7b turns it on. */}
         <section className="rounded-md border border-line bg-pitch-800 p-4 opacity-60">
-          <h2 className="text-sm font-medium">Scarica il listone</h2>
-          <p className="mt-1 text-sm text-chalk-dim">
+          <h2 className="text-title font-medium">Scarica il listone</h2>
+          <p className="mt-1 text-base text-chalk-dim">
             Non ancora disponibile: arriva col collegamento alla repo del listone. Intanto usa il
             file XLSX di Fantacalcio.it.
           </p>
@@ -111,8 +111,8 @@ export default function Onboarding({ onDone }: { onDone: () => void }): JSX.Elem
         </section>
 
         <section className="rounded-md border border-line bg-pitch-800 p-4">
-          <h2 className="text-sm font-medium">Importa un file</h2>
-          <p className="mt-1 text-sm text-chalk-dim">
+          <h2 className="text-title font-medium">Importa un file</h2>
+          <p className="mt-1 text-base text-chalk-dim">
             Le quotazioni scaricate da Fantacalcio.it, in formato XLSX.
           </p>
           <button className={PRIMARY} onClick={() => void pick()} disabled={busy}>
@@ -121,21 +121,21 @@ export default function Onboarding({ onDone }: { onDone: () => void }): JSX.Elem
         </section>
       </div>
 
-      {error && <p className="mt-4 text-sm text-taken">{error}</p>}
+      {error && <p className="mt-4 text-base text-taken">{error}</p>}
 
       {preview && (
         <div className="mt-6 rounded-md border border-line bg-pitch-800 p-4">
-          <h2 className="text-sm font-medium">{preview.file}</h2>
+          <h2 className="text-title font-medium">{preview.file}</h2>
 
           {preview.refusal ? (
-            <p className="mt-2 text-sm text-taken">{preview.refusal.message}</p>
+            <p className="mt-2 text-base text-taken">{preview.refusal.message}</p>
           ) : (
-            <p className="mt-2 text-sm text-chalk-dim">
+            <p className="mt-2 text-base text-chalk-dim">
               {preview.validRows} giocatori, intestazione alla riga {preview.headerRow}.
             </p>
           )}
 
-          <dl className="mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[10rem_1fr]">
+          <dl className="mt-4 grid gap-x-6 gap-y-2 text-base sm:grid-cols-[10rem_1fr]">
             {/* None of the three lists below is a figure, though they are text for two
                 different reasons: `recognised` and `unrecognised` are header strings as
                 the chosen workbook spells them, while `missing` are the names this app
@@ -144,26 +144,26 @@ export default function Onboarding({ onDone }: { onDone: () => void }): JSX.Elem
                 it: `figure-column` aligns digits under one another and here there is no
                 column. `.figures` was wrong on its own terms too — it is Archivo, at the
                 14px of this `dl`, which §15 forbids. */}
-            <dt className="label text-chalk-dim">colonne riconosciute</dt>
+            <dt className="label text-micro text-chalk-dim">colonne riconosciute</dt>
             <dd>{preview.recognised.join(', ') || '—'}</dd>
 
             {preview.missing.length > 0 && (
               <>
-                <dt className="label text-chalk-dim">colonne mancanti</dt>
+                <dt className="label text-micro text-chalk-dim">colonne mancanti</dt>
                 <dd className="text-taken">{preview.missing.join(', ')}</dd>
               </>
             )}
 
             {preview.unrecognised.length > 0 && (
               <>
-                <dt className="label text-chalk-dim">colonne ignorate</dt>
+                <dt className="label text-micro text-chalk-dim">colonne ignorate</dt>
                 <dd className="text-chalk-dim">{preview.unrecognised.join(', ')}</dd>
               </>
             )}
 
             {preview.rejectedTotal > 0 && (
               <>
-                <dt className="label text-chalk-dim">righe scartate</dt>
+                <dt className="label text-micro text-chalk-dim">righe scartate</dt>
                 <dd className="text-chalk-dim">
                   {/* A count, alone in its element, so it is a figure — `whole` and not
                       `money`: rows are not credits, and the amber is money and nothing
@@ -184,7 +184,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }): JSX.Elem
             <div className="mt-5 border-t border-line pt-4">
               {/* Document 4 §6: the file does not say its season reliably, so the
                   import always asks — even when the guess looks obvious. */}
-              <label className="label block text-chalk-dim" htmlFor="season">
+              <label className="label text-micro block text-chalk-dim" htmlFor="season">
                 stagione
               </label>
               {/* `2026-27` is a label, not a figure: §4 gives family and weight to
@@ -193,13 +193,13 @@ export default function Onboarding({ onDone }: { onDone: () => void }): JSX.Elem
                   like the season buttons below it, which never wore a figure class. */}
               <input
                 id="season"
-                className="mt-1 w-32 rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+                className="mt-1 w-32 rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
                 value={seasonId}
                 onChange={(e) => setSeasonId(e.target.value.trim())}
                 placeholder="2026-27"
               />
               {preview.seasons.length > 0 && (
-                <p className="mt-2 text-sm text-chalk-dim">
+                <p className="mt-2 text-base text-chalk-dim">
                   già installate:{' '}
                   {preview.seasons.map((s) => (
                     <button
@@ -213,7 +213,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }): JSX.Elem
                 </p>
               )}
 
-              <p className="mt-3 text-sm text-chalk-dim">
+              <p className="mt-3 text-base text-chalk-dim">
                 {known && known.stats > 0
                   ? `Le ${known.stats} righe di storico di ${known.label} restano come sono: questo file contiene solo quotazioni e ruoli.`
                   : 'Questa stagione non ha storico: le colonne di rendimento resteranno vuote finché non importi un dataset completo.'}
@@ -239,6 +239,6 @@ function Frame({ children }: { children: React.ReactNode }): JSX.Element {
 }
 
 const PRIMARY =
-  'mt-4 rounded-md bg-pitch-700 px-3 py-1.5 text-sm text-chalk hover:bg-line disabled:opacity-40'
+  'mt-4 rounded-md bg-pitch-700 px-3 py-1.5 text-base text-chalk hover:bg-line disabled:opacity-40'
 const SECONDARY =
-  'mt-4 rounded-md border border-line px-3 py-1.5 text-sm text-chalk-dim disabled:opacity-40'
+  'mt-4 rounded-md border border-line px-3 py-1.5 text-base text-chalk-dim disabled:opacity-40'

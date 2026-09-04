@@ -73,7 +73,7 @@ export default function ReportView(): JSX.Element {
     const e = versions.error ?? detail.error
     return (
       <Frame>
-        <p className="text-sm text-taken">
+        <p className="text-base text-taken">
           {e instanceof IpcError ? e.message : errorMessages.IPC_UNAVAILABLE()}
         </p>
       </Frame>
@@ -92,7 +92,7 @@ export default function ReportView(): JSX.Element {
   if (!league.data) {
     return (
       <Frame>
-        <p className="text-sm text-chalk-dim">{errorMessages.LEAGUE_MISSING()}</p>
+        <p className="text-base text-chalk-dim">{errorMessages.LEAGUE_MISSING()}</p>
       </Frame>
     )
   }
@@ -110,10 +110,10 @@ export default function ReportView(): JSX.Element {
     const status = league.data.league.status
     return (
       <Frame>
-        <p className="pb-1 text-sm text-chalk-dim">
+        <p className="pb-1 text-base text-chalk-dim">
           {league.data.league.name} <span>· resoconto</span>
         </p>
-        <p className="max-w-xl pt-2 text-sm text-chalk-dim">
+        <p className="max-w-xl pt-2 text-base text-chalk-dim">
           {status === 'review'
             ? 'Non c’è ancora un resoconto: lo crea «Cristallizza il resoconto», in fondo alla revisione.'
             : status === 'auction'
@@ -215,7 +215,7 @@ function Report({
   return (
     <div className="flex h-screen min-h-0 flex-col">
       {/* «In cima, una barra che dice quale versione stai guardando.» §4.11 */}
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-4 py-2 text-sm">
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-4 py-2 text-base">
         <h1 className="min-w-0 truncate">
           {file.league.name} <span className="text-chalk-dim">· resoconto</span>
         </h1>
@@ -237,7 +237,7 @@ function Report({
         </p>
         {versions.length > 1 && (
           <select
-            className="ml-auto rounded-md border border-line bg-pitch-800 px-2 py-0.5 text-sm"
+            className="ml-auto rounded-md border border-line bg-pitch-800 px-2 py-0.5 text-base"
             value={chosen ?? versions[0].version}
             onChange={(e) => {
               // La riga «Salvato in …» parla del file appena scaricato, che è
@@ -288,9 +288,9 @@ function Report({
           {report.teams.map((team) => (
             <li key={team.uuid} className="rounded-md border border-line bg-pitch-800">
               <header className="flex flex-wrap items-baseline gap-x-3 border-b border-line px-3 py-1.5">
-                <h2 className="min-w-0 truncate text-sm">{team.name}</h2>
+                <h2 className="min-w-0 truncate text-base">{team.name}</h2>
                 {team.manager !== null && (
-                  <span className="text-xs text-chalk-dim">{team.manager}</span>
+                  <span className="text-sm text-chalk-dim">{team.manager}</span>
                 )}
                 {/*
                   L'etichetta prima della cifra. «{n} spesi» concorda con
@@ -312,14 +312,14 @@ function Report({
                   parte niente. Non è un difetto — contare ha senso solo dove
                   sullo schermo c'era un «prima», e lì non c'era.
                 */}
-                <span className="ml-auto text-sm text-chalk-dim">
+                <span className="ml-auto text-base text-chalk-dim">
                   spesi <Figure value={team.spent} kind="money" /> · in mano{' '}
                   <Figure value={team.left} kind="money" />
                 </span>
               </header>
 
               {/* «Spesa per reparto per squadra.» */}
-              <ul className="flex flex-wrap gap-x-5 border-b border-line/60 px-3 py-1 text-xs text-chalk-dim">
+              <ul className="flex flex-wrap gap-x-5 border-b border-line/60 px-3 py-1 text-sm text-chalk-dim">
                 {/*
                   La spesa, e non anche il numero di giocatori. Il §4.11 chiede
                   «spesa per reparto per squadra» e i giocatori sono elencati due
@@ -341,11 +341,11 @@ function Report({
 
               <ul className="px-3 py-1">
                 {(byTeam.get(team.uuid) ?? []).map((bought) => (
-                  <li key={bought.uuid} className="flex items-baseline gap-2 py-0.5 text-sm">
+                  <li key={bought.uuid} className="flex items-baseline gap-2 py-0.5 text-base">
                     <span className="w-4 shrink-0 text-chalk-dim">{bought.slotRole}</span>
                     <span className="min-w-0 flex-1 truncate">{bought.playerName}</span>
                     {bought.playerTeam !== null && (
-                      <span className="label shrink-0 text-xs text-chalk-dim">
+                      <span className="label shrink-0 text-micro text-chalk-dim">
                         {bought.playerTeam}
                       </span>
                     )}
@@ -357,7 +357,7 @@ function Report({
                   </li>
                 ))}
                 {(byTeam.get(team.uuid) ?? []).length === 0 && (
-                  <li className="py-0.5 text-sm text-chalk-dim">Nessun acquisto.</li>
+                  <li className="py-0.5 text-base text-chalk-dim">Nessun acquisto.</li>
                 )}
               </ul>
             </li>
@@ -372,37 +372,37 @@ function Report({
           stai guardando**, non l'ultima: il selettore accanto serve a questo.
         */}
         <button
-          className="rounded-md border border-line bg-pitch-700 px-3 py-1 text-sm disabled:opacity-40"
+          className="rounded-md border border-line bg-pitch-700 px-3 py-1 text-base disabled:opacity-40"
           disabled={busy}
           onClick={() => void download('xlsx')}
         >
           Scarica XLSX
         </button>
         <button
-          className="rounded-md border border-line bg-pitch-700 px-3 py-1 text-sm disabled:opacity-40"
+          className="rounded-md border border-line bg-pitch-700 px-3 py-1 text-base disabled:opacity-40"
           disabled={busy}
           onClick={() => void download('json')}
         >
           Scarica JSON
         </button>
-        {saved !== null && <p className="text-xs text-chalk-dim">Salvato in {saved}</p>}
-        <p className="text-xs text-chalk-dim">
+        {saved !== null && <p className="text-sm text-chalk-dim">Salvato in {saved}</p>}
+        <p className="text-sm text-chalk-dim">
           La prossima cristallizzazione creerà la versione {versions[0].version + 1}.
         </p>
         {crystallised ? (
           <button
-            className="ml-auto rounded-md border border-line px-3 py-1 text-sm text-chalk-dim hover:text-chalk disabled:opacity-40"
+            className="ml-auto rounded-md border border-line px-3 py-1 text-base text-chalk-dim hover:text-chalk disabled:opacity-40"
             disabled={busy}
             onClick={() => void reopen()}
           >
             Riapri per modifiche
           </button>
         ) : (
-          <p className="ml-auto text-xs text-chalk-dim">
+          <p className="ml-auto text-sm text-chalk-dim">
             La lega è aperta in revisione: questo è il resoconto di com’era.
           </p>
         )}
-        {refusal !== null && <p className="w-full text-sm text-taken">{refusal}</p>}
+        {refusal !== null && <p className="w-full text-base text-taken">{refusal}</p>}
       </footer>
     </div>
   )
@@ -431,8 +431,8 @@ function Stat({
 }): JSX.Element {
   return (
     <li>
-      <div className="label text-xs text-chalk-dim">{label}</div>
-      <div className="text-sm">
+      <div className="label text-micro text-chalk-dim">{label}</div>
+      <div className="text-base">
         {name === null || figure === null ? (
           <span className="text-chalk-dim">nessuno</span>
         ) : (

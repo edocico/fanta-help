@@ -80,14 +80,12 @@ export default function Abbr({
   return (
     <Tooltip>
       <TooltipTrigger asChild>{trigger}</TooltipTrigger>
-      {/* 13px and 12px are §4's `--text-base` and `--text-sm`, which do not exist
-          as tokens: Tailwind already owns those two names with other values, and
-          redeclaring them would resize 283 utilities nobody has reread. Written
-          out until T25 gives the scale its own names, and written here rather
-          than in six call sites. */}
+      {/* §10: "Esteso in `--text` a 13px peso 500, spiegazione in `--text-muted`
+          a 12px". T25 closed the scale, so the two arbitrary lengths that stood
+          here until the names existed are now the names themselves. */}
       <TooltipContent>
-        <p className="text-[13px] font-medium text-chalk">{entry.full}</p>
-        <p className="mt-1 text-[12px] text-chalk-dim">{entry.explains}</p>
+        <p className="text-base font-medium text-chalk">{entry.full}</p>
+        <p className="mt-1 text-sm text-chalk-dim">{entry.explains}</p>
       </TooltipContent>
     </Tooltip>
   )

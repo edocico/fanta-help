@@ -63,7 +63,7 @@ export default function RosterBoard({
       aria-label={projected ? 'Rose' : undefined}
     >
       {!projected && (
-        <h2 className="label shrink-0 border-b border-line px-3 py-2 text-xs text-chalk-dim">Rose</h2>
+        <h2 className="label shrink-0 border-b border-line px-3 py-2 text-micro text-chalk-dim">Rose</h2>
       )}
 
       <table className="w-full table-fixed border-separate border-spacing-0">
@@ -96,7 +96,7 @@ export default function RosterBoard({
                   <th
                     scope="rowgroup"
                     rowSpan={group.rows}
-                    className="label border-t border-line align-top"
+                    className="label text-micro border-t border-line align-top"
                     style={{ color: 'var(--board-muted)' }}
                   >
                     {/* `ROLE_LABELS` and not `ROLE_LABELS_ONE`, and the two are
@@ -226,7 +226,7 @@ function ColumnHead({
         */}
         <Abbr name="max">
           {(label, trigger) => (
-            <span className={`${trigger} label shrink-0`} style={{ fontSize: 'var(--board-price)' }}>
+            <span className={`${trigger} label text-micro shrink-0`} style={{ fontSize: 'var(--board-price)' }}>
               {label}
             </span>
           )}

@@ -55,7 +55,7 @@ export default function LeagueView(): JSX.Element {
   if (league.isError) {
     return (
       <Frame>
-        <p className="text-sm text-taken">
+        <p className="text-base text-taken">
           {league.error instanceof IpcError ? league.error.message : errorMessages.IPC_UNAVAILABLE()}
         </p>
       </Frame>
@@ -65,7 +65,7 @@ export default function LeagueView(): JSX.Element {
   if (league.data === null) {
     return (
       <Frame>
-        <p className="text-sm text-chalk-dim">{errorMessages.LEAGUE_MISSING()}</p>
+        <p className="text-base text-chalk-dim">{errorMessages.LEAGUE_MISSING()}</p>
       </Frame>
     )
   }
@@ -154,21 +154,21 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
             this header wraps rather than aligning, so there is no column for
             tabular digits to hold. Document 7 §4 gives the numeric roles to
             numbers, and a label that happens to contain digits is not one. */}
-        <span className="text-sm text-chalk-dim">{league.seasonLabel}</span>
-        <span className="text-sm text-chalk-dim">
+        <span className="text-base text-chalk-dim">{league.seasonLabel}</span>
+        <span className="text-base text-chalk-dim">
           {MODE_LABELS[league.mode]} · {FORMAT_LABELS[league.auctionFormat]}
         </span>
-        <span className="ml-auto text-sm text-chalk-dim">{STATUS_LABELS[league.status]}</span>
+        <span className="ml-auto text-base text-chalk-dim">{STATUS_LABELS[league.status]}</span>
       </header>
 
-      {refusal && <p className="mt-4 text-sm text-taken">{refusal}</p>}
+      {refusal && <p className="mt-4 text-base text-taken">{refusal}</p>}
 
       <section className="mt-8">
-        <h2 className="text-sm font-medium">Squadre</h2>
+        <h2 className="text-title font-medium">Squadre</h2>
 
         {league.teams.length === 0 ? (
           // Document 2 §8, parola per parola.
-          <p className="mt-2 text-sm text-chalk-dim">
+          <p className="mt-2 text-base text-chalk-dim">
             Aggiungi le squadre che partecipano all’asta.
           </p>
         ) : (
@@ -215,15 +215,15 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
         )}
 
         {listLocked && !readOnly && (
-          <p className="mt-3 text-sm text-chalk-dim">{errorMessages.TEAMS_LOCKED()}</p>
+          <p className="mt-3 text-base text-chalk-dim">{errorMessages.TEAMS_LOCKED()}</p>
         )}
       </section>
 
       <section className="mt-10">
-        <h2 className="text-sm font-medium">Regolamento</h2>
+        <h2 className="text-title font-medium">Regolamento</h2>
 
         {!rulesOpen && (
-          <p className="mt-2 text-sm text-chalk-dim">
+          <p className="mt-2 text-base text-chalk-dim">
             {readOnly ? errorMessages.LEAGUE_FROZEN() : errorMessages.RULES_LOCKED()}
           </p>
         )}
@@ -232,8 +232,8 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
             rifiuto il valore che arriva dall'alto è quello di prima, quindi un
             campo che si risincronizza solo quando quel valore *cambia* resta a
             mostrare il numero appena respinto, con l'errore stampato sopra. */}
-        <dl key={resync} className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[10rem_1fr]">
-          <dt className="label text-chalk-dim">budget</dt>
+        <dl key={resync} className="mt-3 grid gap-x-6 gap-y-2 text-base sm:grid-cols-[10rem_1fr]">
+          <dt className="label text-micro text-chalk-dim">budget</dt>
           <dd>
             <Editable
               value={league.budget}
@@ -243,7 +243,7 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
             />
           </dd>
 
-          <dt className="label text-chalk-dim">puntata minima</dt>
+          <dt className="label text-micro text-chalk-dim">puntata minima</dt>
           <dd>
             <Editable
               value={league.minBid}
@@ -253,7 +253,7 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
             />
           </dd>
 
-          <dt className="label text-chalk-dim">slot per ruolo</dt>
+          <dt className="label text-micro text-chalk-dim">slot per ruolo</dt>
           <dd className="flex flex-wrap items-center gap-3">
             {CLASSIC_ROLES.map((role) => (
               <span key={role} className="flex items-center gap-1.5">
@@ -272,7 +272,7 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
                 around each would break the phrase into separate nodes to say
                 what one class already says. `figure-column` is the role of
                 document 7 §4 — Plex 500, tabular — and it is the right one at
-                any size under 20px, where Archivo starts. The `text-sm` on the
+                any size under 20px, where Archivo starts. The `text-base` on the
                 `<dl>` above is still Tailwind's 14px, not §4's 13: the working
                 measure moves in T25, and the role does not move with it. */}
             <span className="figure-column text-chalk-dim">
@@ -280,7 +280,7 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
             </span>
           </dd>
 
-          <dt className="label text-chalk-dim">modificatore di difesa</dt>
+          <dt className="label text-micro text-chalk-dim">modificatore di difesa</dt>
           <dd>
             <label className="flex items-center gap-2">
               <input
@@ -297,12 +297,12 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
             </label>
           </dd>
 
-          <dt className="label text-chalk-dim">questa installazione</dt>
+          <dt className="label text-micro text-chalk-dim">questa installazione</dt>
           <dd>
             {/* Non è fra i campi che l'invariante 16 congela: si cambia anche a
                 asta avviata, perché decide solo come viene marcato l'export. */}
             <select
-              className="rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+              className="rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
               value={league.instanceRole}
               disabled={readOnly}
               onChange={(e) =>
@@ -328,7 +328,7 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
                 key={warning.code + ('role' in warning ? warning.role : '')}
                 // Gesso e non ambra: metà di questi avvisi conta giocatori, e il
                 // documento 2 §2 riserva l'ambra al denaro. Vedi Wizard.tsx.
-                className="text-sm text-chalk"
+                className="text-base text-chalk"
               >
                 {warningMessage(warning)}
               </li>
@@ -338,7 +338,7 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
       </section>
 
       <section className="mt-10 border-t border-line pt-4">
-        <p className="text-sm text-chalk-dim">
+        <p className="text-base text-chalk-dim">
           {NEXT_STEP[league.status]}
           {/* Cortesia, non la regola: il servizio rifiuta comunque una lega con
               acquisti dentro, e in `closed` rifiuta e basta. */}
@@ -442,14 +442,14 @@ function AddTeam({ onAdd }: { onAdd: (name: string) => void }): JSX.Element {
   return (
     <div className="mt-3 flex items-center gap-2">
       <input
-        className="w-48 rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+        className="w-48 rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
         value={name}
         placeholder="nome squadra"
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && add()}
       />
       <button
-        className="rounded-md border border-line px-3 py-1.5 text-sm text-chalk-dim hover:text-chalk disabled:opacity-40"
+        className="rounded-md border border-line px-3 py-1.5 text-base text-chalk-dim hover:text-chalk disabled:opacity-40"
         disabled={name.trim() === ''}
         onClick={add}
       >
@@ -467,8 +467,8 @@ function AddTeam({ onAdd }: { onAdd: (name: string) => void }): JSX.Element {
  * input to render it. The numeric treatment is therefore `figure-column` written
  * by hand — the column role of document 7 §4, Plex 500 tabular, and not the
  * large Archivo one: Archivo enters at 20px and this field is nowhere near it.
- * The `text-sm` below is still Tailwind's 14px, not §4's 13 — the working
- * measure moves in T25 — and the role is the same on either side of that move.
+ * The `text-base` below is §4's 13px working measure, which T25 mapped onto
+ * Tailwind's name; the role is the same on either side of that move.
  * Same reasoning, same class, as `PriceField`.
  *
  * **And no amber**, even though budget and puntata minima are credits: §9 gives
@@ -503,7 +503,7 @@ function Editable({
   return (
     <input
       type="number"
-      className="figure-column w-24 rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm disabled:opacity-50"
+      className="figure-column w-24 rounded-md border border-line bg-pitch-900 px-2 py-1 text-base disabled:opacity-50"
       value={draft}
       min={min}
       disabled={disabled}

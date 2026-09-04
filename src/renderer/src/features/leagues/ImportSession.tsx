@@ -74,7 +74,7 @@ export function useImportSession(): { button: JSX.Element; panel: JSX.Element | 
 
   const button = (
     <button
-      className="rounded-md border border-line px-3 py-1.5 text-sm text-chalk-dim hover:text-chalk disabled:opacity-40"
+      className="rounded-md border border-line px-3 py-1.5 text-base text-chalk-dim hover:text-chalk disabled:opacity-40"
       disabled={busy}
       onClick={() => void pick()}
     >
@@ -84,10 +84,10 @@ export function useImportSession(): { button: JSX.Element; panel: JSX.Element | 
 
   const panel =
     error !== null && preview === null ? (
-      <p className="mt-4 text-sm text-taken">{error}</p>
+      <p className="mt-4 text-base text-taken">{error}</p>
     ) : preview === null ? null : (
       <section className="mt-6 rounded-md border border-line bg-pitch-800 p-4">
-          <h2 className="text-sm">
+          <h2 className="text-title">
             {preview.leagueName} <span className="text-chalk-dim">· versione {preview.version}</span>
           </h2>
           {/*
@@ -100,7 +100,7 @@ export function useImportSession(): { button: JSX.Element; panel: JSX.Element | 
             resoconto: senza, `producedBy` ripiega sull'uuid, e «firmato da
             2ea2427e-a117-4962-…» non dice a nessuno chi ha chiuso l'asta.
           */}
-          <p className="pt-1 text-sm text-chalk-dim">
+          <p className="pt-1 text-base text-chalk-dim">
             {preview.seasonId} · {teams(preview.teams)} · {purchases(preview.purchases)} ·{' '}
             {when(preview.createdAt)} · <span className="figure-column">{shortHash(preview.contentHash)}</span>
             {preview.producedBy !== null && ` · firmato da ${preview.producedBy}`}
@@ -113,25 +113,25 @@ export function useImportSession(): { button: JSX.Element; panel: JSX.Element | 
              * Le versioni sono la parte che non torna: il file ne porta una, e
              * quelle cristallizzate qui non stanno da nessun'altra parte.
              */
-            <p className="pt-3 text-sm text-taken">{notices.REPLACING_LEAGUE(preview.replaces)}</p>
+            <p className="pt-3 text-base text-taken">{notices.REPLACING_LEAGUE(preview.replaces)}</p>
           )}
 
           {preview.refusal !== null && (
-            <p className="pt-3 text-sm text-taken">{preview.refusal.message}</p>
+            <p className="pt-3 text-base text-taken">{preview.refusal.message}</p>
           )}
 
-          {error !== null && <p className="pt-3 text-sm text-taken">{error}</p>}
+          {error !== null && <p className="pt-3 text-base text-taken">{error}</p>}
 
           <div className="flex gap-3 pt-4">
             <button
-              className="rounded-md bg-pitch-700 px-3 py-1.5 text-sm disabled:opacity-40"
+              className="rounded-md bg-pitch-700 px-3 py-1.5 text-base disabled:opacity-40"
               disabled={busy || preview.refusal !== null}
               onClick={() => void confirm()}
             >
               {busy ? 'Importo…' : preview.replaces !== null ? 'Sostituisci la lega' : 'Importa'}
             </button>
             <button
-              className="rounded-md border border-line px-3 py-1.5 text-sm text-chalk-dim hover:text-chalk"
+              className="rounded-md border border-line px-3 py-1.5 text-base text-chalk-dim hover:text-chalk"
               onClick={() => {
                 setPreview(null)
                 setError(null)

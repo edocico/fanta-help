@@ -155,33 +155,38 @@
   --font-sans: 'IBM Plex Sans Variable', system-ui, -apple-system, sans-serif;
   --font-display: 'Archivo Variable', system-ui, -apple-system, sans-serif;
 
-  /* ── I nomi nuovi della scala del §4 ──────────────────────────────────────
-     Solo quelli che non collidono. `--text-sm` e `--text-base` esistono già in
-     Tailwind con altri valori (14 e 16 contro i 12 e 13 del §4), e ridefinirli
-     cambierebbe la taglia di 283 utility già scritte senza che nessuno abbia
-     riletto la vista in cui stanno. Il §14 dice che non è compito di questo
-     passo: il passo 1 elenca «i token e le due famiglie», non la scala. Questi
-     quattro nomi sono qui perché T23 e T25 li citino quando i primitivi
-     dell'app esisteranno.
+  /* ── La scala del §4, chiusa in T25 ───────────────────────────────────────
+     Sei nomi e sei taglie, senza doppioni. T22 ne aveva dichiarati quattro e
+     aveva lasciato fuori `--text-sm` e `--text-base` perché Tailwind possiede
+     già quei due nomi con altri valori (14 e 16 contro i 12 e 13 del §4), e
+     mapparli sposta in un colpo ogni utility già scritta. T25 li mappa, e la
+     ragione per cui si può è che i siti si muovono insieme: le 240 `text-sm`
+     sono diventate `text-base` e le 47 `text-xs` sono diventate `text-sm`,
+     quindi la gerarchia sullo schermo è quella di prima e a cambiare è solo la
+     misura di lavoro, da 14 a 13.
 
-     Quello che resta indietro va detto per quello che è, e **non** è «il testo
-     a 14px lasciato dal default di shadcn» che il passo 5 va a cercare: qui non
-     c'è nessuna `font-size` né su `html` né su `body`, quindi tutto ciò che non
-     porta una classe `text-*` esplicita rende a **16px**. Il §15 dice «non
-     alzare la misura base sopra 13px», e a quei 16 non arriva né la caccia del
-     passo 5 né questo blocco. È il debito di T25, ed è la misura base.
+     **`text-xs` non si usa più.** Vale 12px come il nuovo `text-sm`: due nomi
+     per la stessa taglia sono la porta da cui rientra il disordine che questo
+     passo esiste per chiudere, e il §4 dà un nome per taglia.
 
-     Archivo entra dai 20px in su, quindi `--text-heading` è l'unico dei quattro
-     che potrà portarla: sotto, le sue cifre tabulari sulla matrice peso ×
-     larghezza non sono garantite. Ed è il motivo per cui i titoli di vista sono
-     rimasti su Plex: portarli ad Archivo senza portarli anche a 24px violerebbe
-     il §15, e una regola globale che sovrascriva il `text-lg` che il componente
-     dichiara sarebbe la stessa regola discendente che il blocco della proiezione
-     più sotto argomenta di non scrivere — nel componente si leggerebbe una
-     taglia e sullo schermo se ne vedrebbe un'altra. Le due cose vanno insieme,
-     vista per vista, ed è T25. */
+     **Le interlinee vanno dichiarate a mano, anche dove sembrano già giuste.**
+     `--text-sm--line-height` e `--text-base--line-height` di Tailwind valgono
+     `calc(1.25 / 0.875)` e `calc(1.5 / 1)`: mappando la sola taglia si eredita
+     1,43 e 1,5, e il secondo è l'interlinea che il §4 assegna alla **prosa**,
+     non all'interfaccia. È la trappola di `@theme inline` dal lato del testo —
+     si dichiara la metà che si vede e l'altra resta di Tailwind, in silenzio.
+
+     Archivo entra dai 20px in su, quindi `--text-heading` è l'unico che la
+     porta: sotto, le sue cifre tabulari sulla matrice peso × larghezza non sono
+     garantite. E la porta **solo insieme a `font-display`**: `--text-heading`
+     dà la taglia e nient'altro, quindi un `<h1>` con la sola taglia diventa
+     Plex 24px e niente lo dice. */
   --text-micro: 11px; /* etichette di colonna, badge, pastiglie */
   --text-micro--line-height: 1.4;
+  --text-sm: 12px; /* secondario, note, età del dato */
+  --text-sm--line-height: 1.4;
+  --text-base: 13px; /* tabelle, form, navigazione: la misura di lavoro */
+  --text-base--line-height: 1.4;
   --text-body: 15px; /* prosa, spiegazioni nella scheda giocatore */
   --text-body--line-height: 1.5;
   --text-title: 18px; /* intestazioni di pannello */
@@ -277,10 +282,23 @@
   /* Semantici e non primitivi, come chiede il §3: «nessun componente cita mai
      un primitivo». Vale anche per questo foglio, che è il posto dove i due
      livelli si incontrano e quindi quello dove è più facile confonderli. */
+  /* La misura base, ed è il debito che T25 chiude. Fino a qui non c'era nessuna
+     `font-size` né su `html` né su `body`, quindi tutto ciò che non porta una
+     classe `text-*` rendeva a **16px** — non ai 14 di shadcn che la caccia del
+     §14 passo 5 va a cercare, e tre punti sopra il tetto che il §15 fissa.
+
+     **Su `body` e mai su `html`.** Le spaziature di Tailwind sono in `rem`, e i
+     `rem` si radicano sul `font-size` di `html`: portarlo a 13px rimpicciolisce
+     del 19% ogni `p-4`, `h-10` e `gap-2` dell'applicazione — un refactoring
+     tipografico travestito da refactoring di layout, e nessuna classe cambiata
+     a dirlo. Su `body` si sposta l'ereditarietà del testo e la griglia resta
+     ferma. */
   body {
     background-color: var(--surface);
     color: var(--text);
     font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.4;
     font-weight: 400;
   }
 

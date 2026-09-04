@@ -48,7 +48,7 @@ export default function Toast({
   return (
     <div
       role="status"
-      className="pointer-events-auto flex items-center gap-4 rounded-md border border-line bg-pitch-700 px-4 py-2 text-sm shadow-none"
+      className="pointer-events-auto flex items-center gap-4 rounded-md border border-line bg-pitch-700 px-4 py-2 text-base shadow-none"
     >
       <span className="text-chalk">{message}</span>
       {/*
@@ -58,11 +58,11 @@ export default function Toast({
         carries one legitimate amber figure inside its message — two ambers of
         which one is not money is precisely the reading the rule protects.
       */}
-      <button className="label text-chalk hover:underline" onClick={onUndo}>
+      <button className="label text-micro text-chalk hover:underline" onClick={onUndo}>
         Annulla
       </button>
       <button
-        className="label text-chalk-dim hover:text-chalk"
+        className="label text-micro text-chalk-dim hover:text-chalk"
         aria-label="chiudi l’avviso"
         title="chiudi"
         onClick={onDismiss}

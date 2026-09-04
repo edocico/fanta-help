@@ -84,7 +84,7 @@ export default function TeamRows({
               carries the grab cursor and the hint, and neither of those is
               something a figure knows about. */}
           <span
-            className={`w-6 text-right text-sm text-chalk-dim ${
+            className={`w-6 text-right text-base text-chalk-dim ${
               locked || frozen ? '' : 'cursor-grab'
             }`}
             title={locked || frozen ? undefined : 'Trascina per cambiare il turno'}
@@ -116,7 +116,7 @@ export default function TeamRows({
             onCommit={(manager) => onPatch(index, { manager: manager === '' ? null : manager })}
           />
 
-          <label className="ml-auto flex items-center gap-1.5 text-sm text-chalk-dim">
+          <label className="ml-auto flex items-center gap-1.5 text-base text-chalk-dim">
             <input
               type="checkbox"
               checked={row.isMine}
@@ -140,7 +140,7 @@ export default function TeamRows({
               onClick={() => onMove(index, index + 1)}
             />
             <button
-              className="px-1.5 py-0.5 text-sm text-chalk-dim hover:text-taken disabled:opacity-30 disabled:hover:text-chalk-dim"
+              className="px-1.5 py-0.5 text-base text-chalk-dim hover:text-taken disabled:opacity-30 disabled:hover:text-chalk-dim"
               disabled={locked || frozen}
               title={locked ? 'Le squadre si tolgono prima dell’asta' : 'Togli la squadra'}
               aria-label={`Togli ${row.name || 'la squadra'}`}
@@ -188,7 +188,7 @@ function Text({
 
   return (
     <input
-      className={`rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm disabled:opacity-50 ${className ?? ''}`}
+      className={`rounded-md border border-line bg-pitch-900 px-2 py-1 text-base disabled:opacity-50 ${className ?? ''}`}
       value={draft}
       placeholder={placeholder}
       disabled={disabled}
@@ -273,7 +273,7 @@ function Arrow({
 }): JSX.Element {
   return (
     <button
-      className="px-1 py-0.5 text-sm text-chalk-dim hover:text-chalk disabled:opacity-30 disabled:hover:text-chalk-dim"
+      className="px-1 py-0.5 text-base text-chalk-dim hover:text-chalk disabled:opacity-30 disabled:hover:text-chalk-dim"
       disabled={disabled}
       aria-label={label}
       title={label}

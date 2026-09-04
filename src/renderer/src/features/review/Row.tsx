@@ -113,19 +113,19 @@ export default function Row({
 
   return (
     <DataTableRow index={position}>
-      <DataTableCell numeric className="text-sm text-chalk-dim">
+      <DataTableCell numeric className="text-base text-chalk-dim">
         {/* Un ordine di registrazione, non del denaro: `whole`, quindi niente
             ambra — il `text-chalk-dim` della cella è quello di prima — e
             nessun conteggio animato, che il §7 dà ai crediti soltanto. */}
         <Figure value={line.sequence} />
       </DataTableCell>
 
-      <DataTableCell className="relative min-w-0 text-sm">
+      <DataTableCell className="relative min-w-0 text-base">
         {searching ? (
           <>
             <input
               autoFocus
-              className="w-full rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+              className="w-full rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
               placeholder="Sostituisci il giocatore"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -145,7 +145,7 @@ export default function Row({
             {query.trim() !== '' && (
               <div className="absolute left-2 right-2 z-20 mt-1 overflow-hidden rounded-md border border-line bg-pitch-700 shadow-lg">
                 {results.length === 0 ? (
-                  <p className="px-2 py-1 text-sm text-chalk-dim">
+                  <p className="px-2 py-1 text-base text-chalk-dim">
                     {notices.NO_SEARCH_RESULTS()}
                   </p>
                 ) : (
@@ -155,7 +155,7 @@ export default function Row({
                       return (
                         <li key={p.id}>
                           <button
-                            className="flex w-full items-center gap-2 px-2 py-1 text-left text-sm hover:bg-pitch-800 disabled:opacity-40 disabled:hover:bg-transparent"
+                            className="flex w-full items-center gap-2 px-2 py-1 text-left text-base hover:bg-pitch-800 disabled:opacity-40 disabled:hover:bg-transparent"
                             disabled={owner !== null}
                             onClick={() => {
                               onUpdate({ playerId: p.id })
@@ -182,7 +182,7 @@ export default function Row({
                                 </span>
                               )}
                             </span>
-                            <span className="label shrink-0 text-xs text-chalk-dim">
+                            <span className="label shrink-0 text-micro text-chalk-dim">
                               {owner === null
                                 ? `${p.roleClassic} · ${p.teamCode ?? p.teamName}`
                                 : errorMessages.PLAYER_ALREADY_OWNED(owner)}
@@ -225,7 +225,7 @@ export default function Row({
               <Glyph
                 mark="fuori"
                 says={notices.DELISTED()}
-                className="shrink-0 text-xs text-taken"
+                className="shrink-0 text-sm text-taken"
               />
             )}
           </div>
@@ -240,7 +240,7 @@ export default function Row({
         <RoleBadge role={line.slotRole} />
       </DataTableCell>
 
-      <DataTableCell className="text-sm">
+      <DataTableCell className="text-base">
         <select
           /*
             `min-w-[6.5rem]` e non una larghezza sulla colonna: in una tabella a
@@ -249,7 +249,7 @@ export default function Row({
             — misurato, la colonna passa da 75px a 112 e il nome della squadra si
             legge invece di finire in tre lettere e una freccia.
           */
-          className="w-full min-w-[6.5rem] rounded-md border border-line bg-pitch-900 px-1 py-0.5 text-sm"
+          className="w-full min-w-[6.5rem] rounded-md border border-line bg-pitch-900 px-1 py-0.5 text-base"
           value={line.teamId}
           onChange={(e) => onUpdate({ fantaTeamId: window.Number(e.target.value) })}
         >
@@ -267,7 +267,7 @@ export default function Row({
             che si può dare a un `input` — cifre tabulari e Plex 500 — così la
             colonna dei prezzi non balla mentre si corregge. */}
         <input
-          className="figure-column w-14 rounded-md border border-line bg-pitch-900 px-1 py-0.5 text-right text-sm"
+          className="figure-column w-14 rounded-md border border-line bg-pitch-900 px-1 py-0.5 text-right text-base"
           inputMode="numeric"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -298,7 +298,7 @@ export default function Row({
         {menu && (
           <div className="absolute right-2 top-8 z-20 rounded-md border border-line bg-pitch-700 shadow-lg">
             <button
-              className="whitespace-nowrap px-3 py-1.5 text-sm text-taken hover:bg-pitch-800"
+              className="whitespace-nowrap px-3 py-1.5 text-base text-taken hover:bg-pitch-800"
               onClick={() => {
                 setMenu(false)
                 onDelete()

@@ -131,7 +131,7 @@ export default function Wizard(): JSX.Element {
     <div className="mx-auto max-w-3xl px-6 py-8">
       <h1 className="text-lg font-medium">Nuova lega</h1>
 
-      <ol className="mt-4 flex gap-1 text-sm">
+      <ol className="mt-4 flex gap-1 text-base">
         {([1, 2, 3] as Step[]).map((n) => (
           <li key={n}>
             <button
@@ -152,7 +152,7 @@ export default function Wizard(): JSX.Element {
           <section className="grid gap-4 sm:grid-cols-2">
             <Field label="nome della lega" className="sm:col-span-2">
               <input
-                className="w-full rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+                className="w-full rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
                 value={name}
                 placeholder="Lega degli amici"
                 onChange={(e) => setName(e.target.value)}
@@ -161,7 +161,7 @@ export default function Wizard(): JSX.Element {
 
             <Field label="stagione">
               <select
-                className="w-full rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+                className="w-full rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
                 value={season?.id ?? ''}
                 onChange={(e) => setSeasonId(e.target.value)}
               >
@@ -208,7 +208,7 @@ export default function Wizard(): JSX.Element {
 
         {step === 2 && (
           <section>
-            <p className="mb-3 text-sm text-chalk-dim">
+            <p className="mb-3 text-base text-chalk-dim">
               {teams.length < 2
                 ? 'Aggiungi le squadre che partecipano all’asta.'
                 : 'L’ordine è il turno: trascina una riga o usa le frecce.'}
@@ -223,7 +223,7 @@ export default function Wizard(): JSX.Element {
             />
 
             <button
-              className="mt-3 rounded-md border border-line px-3 py-1.5 text-sm text-chalk-dim hover:text-chalk"
+              className="mt-3 rounded-md border border-line px-3 py-1.5 text-base text-chalk-dim hover:text-chalk"
               onClick={() => setTeams((rows) => [...rows, blankTeam(rows.length)])}
             >
               Aggiungi squadra
@@ -250,7 +250,7 @@ export default function Wizard(): JSX.Element {
                     adding any height — the total would end up shorter than the
                     four inputs beside it. The numeral inside takes the column
                     role, which is the one those inputs now wear too. */}
-                <p className="px-2 py-1 text-sm">
+                <p className="px-2 py-1 text-base">
                   <Figure value={totalSlots(slots)} />
                 </p>
               </Field>
@@ -259,12 +259,12 @@ export default function Wizard(): JSX.Element {
             <Warnings warnings={warnings} />
 
             <div className="mt-8 border-t border-line pt-4">
-              <h2 className="text-sm font-medium">Riepilogo</h2>
-              <dl className="mt-3 grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[10rem_1fr]">
-                <dt className="label text-chalk-dim">lega</dt>
+              <h2 className="text-title font-medium">Riepilogo</h2>
+              <dl className="mt-3 grid gap-x-6 gap-y-1.5 text-base sm:grid-cols-[10rem_1fr]">
+                <dt className="label text-micro text-chalk-dim">lega</dt>
                 <dd>{name.trim() || <span className="text-chalk-dim">senza nome</span>}</dd>
 
-                <dt className="label text-chalk-dim">stagione</dt>
+                <dt className="label text-micro text-chalk-dim">stagione</dt>
                 {/* The season reads `Serie A 2026/27` — `seasonLabel` in
                     `shared/listone.ts` — so it is a name, and the year inside
                     it is part of the name rather than a figure. The class goes
@@ -272,14 +272,14 @@ export default function Wizard(): JSX.Element {
                     up with. */}
                 <dd>{season?.label ?? '—'}</dd>
 
-                <dt className="label text-chalk-dim">regole</dt>
+                <dt className="label text-micro text-chalk-dim">regole</dt>
                 <dd>
                   {MODE_LABELS[mode]}, {FORMAT_LABELS[auctionFormat]},{' '}
                   <Figure value={budget} kind="money" /> crediti, puntata minima{' '}
                   <Figure value={minBid} kind="money" />
                 </dd>
 
-                <dt className="label text-chalk-dim">rosa</dt>
+                <dt className="label text-micro text-chalk-dim">rosa</dt>
                 {/* No Figure here, unlike the credits above: `3/8/8/6` is a
                     single string of four numbers, and the total reads inside a
                     sentence. Both only want the tabular figures of a column. */}
@@ -288,7 +288,7 @@ export default function Wizard(): JSX.Element {
                   squadra
                 </dd>
 
-                <dt className="label text-chalk-dim">squadre</dt>
+                <dt className="label text-micro text-chalk-dim">squadre</dt>
                 <dd>
                   <ul className="space-y-0.5">
                     {teams.map((team, i) => (
@@ -312,14 +312,14 @@ export default function Wizard(): JSX.Element {
       </div>
 
       {create.isError && (
-        <p className="mt-4 text-sm text-taken">
+        <p className="mt-4 text-base text-taken">
           {create.error instanceof IpcError ? create.error.message : errorMessages.IPC_UNAVAILABLE()}
         </p>
       )}
 
       <div className="mt-8 flex items-center gap-2 border-t border-line pt-4">
         <button
-          className="rounded-md border border-line px-3 py-1.5 text-sm text-chalk-dim hover:text-chalk disabled:opacity-40"
+          className="rounded-md border border-line px-3 py-1.5 text-base text-chalk-dim hover:text-chalk disabled:opacity-40"
           disabled={step === 1}
           onClick={() => setStep((s) => (s - 1) as Step)}
         >
@@ -328,14 +328,14 @@ export default function Wizard(): JSX.Element {
 
         {step < 3 ? (
           <button
-            className="rounded-md bg-pitch-700 px-3 py-1.5 text-sm text-chalk hover:bg-line"
+            className="rounded-md bg-pitch-700 px-3 py-1.5 text-base text-chalk hover:bg-line"
             onClick={() => setStep((s) => (s + 1) as Step)}
           >
             Avanti
           </button>
         ) : (
           <button
-            className="rounded-md bg-pitch-700 px-3 py-1.5 text-sm text-chalk hover:bg-line disabled:opacity-40"
+            className="rounded-md bg-pitch-700 px-3 py-1.5 text-base text-chalk hover:bg-line disabled:opacity-40"
             disabled={!canCreate}
             onClick={() => create.mutate()}
           >
@@ -344,7 +344,7 @@ export default function Wizard(): JSX.Element {
         )}
 
         {step === 3 && !canCreate && !create.isPending && (
-          <span className="text-sm text-chalk-dim">{whatIsMissing(name, season, teams)}</span>
+          <span className="text-base text-chalk-dim">{whatIsMissing(name, season, teams)}</span>
         )}
       </div>
     </div>
@@ -391,7 +391,7 @@ function Warnings({
   return (
     <ul className="mt-4 space-y-1">
       {warnings.map((warning) => (
-        <li key={warning.code + ('role' in warning ? warning.role : '')} className="text-sm text-chalk">
+        <li key={warning.code + ('role' in warning ? warning.role : '')} className="text-base text-chalk">
           {warningMessage(warning)}
         </li>
       ))}
@@ -410,7 +410,7 @@ function Field({
 }): JSX.Element {
   return (
     <label className={`block ${className ?? ''}`}>
-      <span className="label block text-sm text-chalk-dim">{label}</span>
+      <span className="label block text-micro text-chalk-dim">{label}</span>
       <span className="mt-1 block">{children}</span>
     </label>
   )
@@ -431,7 +431,7 @@ function NumberField({
     // it is read back in the summary.
     <input
       type="number"
-      className="figure-column w-24 rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+      className="figure-column w-24 rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
       value={value}
       min={min}
       onChange={(e) => {
@@ -465,7 +465,7 @@ function Choice<T extends string>({
       {options.map((option) => (
         <button
           key={option.value}
-          className={`rounded-md border px-2.5 py-1 text-sm ${
+          className={`rounded-md border px-2.5 py-1 text-base ${
             option.value === value
               ? 'border-line bg-pitch-700 text-chalk'
               : 'border-line text-chalk-dim hover:text-chalk'

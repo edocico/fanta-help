@@ -24,12 +24,15 @@ import { cn } from '@/lib/utils'
  *
  * ## `inherit` is the default and it is deliberate
  *
- * Most of the 63 sites declare no size at all and take one from their row. Given
- * an explicit `--num-sm` they would each shift by a pixel or two against text
- * that has not moved yet, because the working measure is still Tailwind's 14px
- * until T25 brings it to §4's 13. So `inherit` changes the family, the weight
- * and the tabular figures — the part that is wrong today — and leaves the size
- * where the row put it. Only the figures §10 sizes by name take a token.
+ * Most of the 63 sites declare no size at all and take one from their row, and
+ * that row's size is the one §4 assigns to the surface it sits on. An explicit
+ * `--num-sm` would override it everywhere and put the figure a pixel or two off
+ * the text beside it — which is why the default survives T25 rather than being
+ * a placeholder for it: the working measure has moved to §4's 13px, and the
+ * argument for `inherit` never rested on where it was. So `inherit` changes the
+ * family, the weight and the tabular figures — the part that was wrong — and
+ * leaves the size where the row put it. Only the figures §10 sizes by name take
+ * a token.
  *
  * ## It counts, but only where §7 says
  *

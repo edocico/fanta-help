@@ -71,9 +71,9 @@ export default function Reference(): JSX.Element | null {
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-pitch-900/70 p-6">
       <div className="flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-line bg-surface-panel">
         <header className="flex items-center justify-between border-b border-line px-4 py-2">
-          <h2 className="text-sm">Riferimento</h2>
+          <h2 className="text-title">Riferimento</h2>
           <button
-            className="label text-sm text-chalk-dim hover:text-chalk"
+            className="label text-micro text-chalk-dim hover:text-chalk"
             onClick={() => setOpen(false)}
           >
             Chiudi ⎋
@@ -82,7 +82,7 @@ export default function Reference(): JSX.Element | null {
 
         <div className="grid min-h-0 flex-1 grid-cols-2 gap-x-6 gap-y-5 overflow-auto p-4">
           <Section title="Scorciatoie">
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-base">
               {SHORTCUTS.map(([keys, what]) => (
                 <Row key={keys} term={keys} definition={what} figures />
               ))}
@@ -94,7 +94,7 @@ export default function Reference(): JSX.Element | null {
               glossario, ed è lo stesso testo che il popover mostra — un solo
               posto da correggere quando una definizione si rivela storta. */}
           <Section title="Sigle">
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-base">
               {ABBREVIATIONS.map((abbr) => (
                 <Row
                   key={abbr}
@@ -114,7 +114,7 @@ export default function Reference(): JSX.Element | null {
               `A` compaiono in tutti e due gli insiemi con due significati, quindi
               un oggetto solo non può tenerli. Un pannello sì, sotto due titoli. */}
           <Section title="Ruoli Classic">
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-base">
               {CLASSIC_ROLES.map((role) => (
                 <Row key={role} term={role} definition={ROLE_LABELS_ONE[role]} />
               ))}
@@ -122,7 +122,7 @@ export default function Reference(): JSX.Element | null {
           </Section>
 
           <Section title="Ruoli Mantra">
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-base">
               {MANTRA_ROLES.map((role) => (
                 <Row key={role} term={role} definition={MANTRA_LABELS[role]} />
               ))}
@@ -131,7 +131,7 @@ export default function Reference(): JSX.Element | null {
 
           {clubs.length > 0 && (
             <Section title="Squadre" wide>
-              <dl className="grid grid-cols-[auto_1fr_auto_1fr] gap-x-3 gap-y-1 text-sm">
+              <dl className="grid grid-cols-[auto_1fr_auto_1fr] gap-x-3 gap-y-1 text-base">
                 {clubs.map((club) => (
                   <Row key={club.code} term={club.code} definition={club.name} />
                 ))}
@@ -213,7 +213,7 @@ function Row({
 }): JSX.Element {
   return (
     <>
-      <dt className={`whitespace-nowrap text-chalk ${figures ? 'figure-column' : 'label'}`}>
+      <dt className={`whitespace-nowrap text-chalk ${figures ? 'figure-column' : 'label text-micro'}`}>
         {term}
       </dt>
       <dd className="text-chalk-dim">{definition}</dd>

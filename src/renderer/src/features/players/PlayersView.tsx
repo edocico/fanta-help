@@ -425,7 +425,7 @@ export default function PlayersView(): JSX.Element {
   if (error) {
     return (
       <Shell>
-        <p className="p-6 text-sm text-taken">
+        <p className="p-6 text-base text-taken">
           {error instanceof IpcError ? error.message : errorMessages.IPC_UNAVAILABLE()}
         </p>
       </Shell>
@@ -435,7 +435,7 @@ export default function PlayersView(): JSX.Element {
   if (!list) {
     return (
       <Shell>
-        <p className="p-6 text-sm text-chalk-dim">Carico i giocatori…</p>
+        <p className="p-6 text-base text-chalk-dim">Carico i giocatori…</p>
       </Shell>
     )
   }
@@ -448,7 +448,7 @@ export default function PlayersView(): JSX.Element {
         <div className="flex items-baseline gap-4">
           <input
             ref={searchRef}
-            className="min-w-0 flex-1 rounded-md border border-line bg-pitch-800 px-3 py-1.5 text-sm placeholder:text-chalk-dim"
+            className="min-w-0 flex-1 rounded-md border border-line bg-pitch-800 px-3 py-1.5 text-base placeholder:text-chalk-dim"
             placeholder="Cerca un giocatore"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -458,7 +458,7 @@ export default function PlayersView(): JSX.Element {
               cifra in un elemento suo, è una parola su tre. Prende la classe del
               ruolo — cifre tabulari, così «524 giocatori» e «12 di 524» non
               ballano mentre si digita — e non il componente. */}
-          <span className="figure-column shrink-0 text-sm text-chalk-dim">
+          <span className="figure-column shrink-0 text-base text-chalk-dim">
             {sorted.length === list.players.length
               ? `${list.players.length} giocatori`
               : `${sorted.length} di ${list.players.length}`}
@@ -469,7 +469,7 @@ export default function PlayersView(): JSX.Element {
             sulla riga: la riga può essere stata portata via da un filtro o dalla
             ricerca nel frattempo, e un messaggio che scompare con essa non è
             stato letto da nessuno. */}
-        {starRefusal && <p className="mt-2 text-sm text-taken">{starRefusal}</p>}
+        {starRefusal && <p className="mt-2 text-base text-taken">{starRefusal}</p>}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {/* La lettera resta la lettera: `ROLE_LABELS` la porta per chi legge con
@@ -510,7 +510,7 @@ export default function PlayersView(): JSX.Element {
               type="number"
               min={0}
               max={MATCHDAYS}
-              className="figure-column w-14 rounded-md border border-line bg-surface-panel px-1.5 py-1 text-sm"
+              className="figure-column w-14 rounded-md border border-line bg-surface-panel px-1.5 py-1 text-base"
               value={filters.minPv ?? ''}
               onChange={(e) =>
                 patchFilters({ minPv: e.target.value === '' ? null : Number(e.target.value) })
@@ -544,7 +544,7 @@ export default function PlayersView(): JSX.Element {
               />
             )}
             {list.statsSeasons.length > 1 && (
-              <label className="label flex items-center gap-1.5 text-chalk-dim">
+              <label className="label text-micro flex items-center gap-1.5 text-chalk-dim">
                 numeri della
                 <Select
                   value={statsSeason ?? ''}
@@ -625,7 +625,7 @@ export default function PlayersView(): JSX.Element {
                     <DataTableCell
                       key={cell.id}
                       numeric={cell.column.columnDef.meta?.numeric}
-                      className="text-sm"
+                      className="text-base"
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </DataTableCell>
@@ -644,7 +644,7 @@ export default function PlayersView(): JSX.Element {
         </DataTable>
 
         {sorted.length === 0 && (
-          <p className="px-6 py-10 text-center text-sm text-chalk-dim">
+          <p className="px-6 py-10 text-center text-base text-chalk-dim">
             Nessun giocatore con questi filtri. Togline uno per allargare la ricerca.
           </p>
         )}
@@ -856,7 +856,7 @@ function Star({
         Array.from({ length: MAX_RATING }, (_, i) => i + 1).map((star) => (
           <button
             key={star}
-            className={`text-sm leading-none ${
+            className={`text-base leading-none ${
               target?.rating != null && star <= target.rating
                 ? 'text-target'
                 : 'text-line hover:text-chalk-dim'
@@ -875,7 +875,7 @@ function Star({
           </button>
         ))}
       <button
-        className={`ml-0.5 text-sm leading-none ${target ? 'text-target' : 'text-chalk-dim'}`}
+        className={`ml-0.5 text-base leading-none ${target ? 'text-target' : 'text-chalk-dim'}`}
         aria-label={target ? `togli ${player.name} dagli obiettivi` : `aggiungi ${player.name} agli obiettivi`}
         title={target ? 'togli dagli obiettivi' : 'aggiungi agli obiettivi'}
         onFocus={() => setOpen(true)}
@@ -997,7 +997,7 @@ function Select({
 }): JSX.Element {
   return (
     <select
-      className="label rounded-md border border-line bg-pitch-800 px-2 py-1 text-chalk-dim"
+      className="label text-micro rounded-md border border-line bg-pitch-800 px-2 py-1 text-chalk-dim"
       value={value}
       onChange={(e) => onChange(e.target.value)}
     >

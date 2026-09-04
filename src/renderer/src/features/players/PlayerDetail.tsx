@@ -118,16 +118,16 @@ export default function PlayerDetail({
       <header className="sticky top-0 border-b border-line bg-pitch-800 px-5 py-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-medium">{player.name}</h2>
+            <h2 className="text-title font-medium">{player.name}</h2>
             {/*
               Under the heading and not inside it: the heading is what the
               listone calls him, and it is what every other pane of the app —
               roster, report, snapshot — will keep calling him.
             */}
             {spelledOut(player.name, player.fullName) !== null && (
-              <p className="text-sm text-chalk-dim">{spelledOut(player.name, player.fullName)}</p>
+              <p className="text-base text-chalk-dim">{spelledOut(player.name, player.fullName)}</p>
             )}
-            <p className="mt-1 text-sm text-chalk-dim">
+            <p className="mt-1 text-base text-chalk-dim">
               {player.roleClassic} · {player.teamName}
               {player.rolesMantra.length > 0 && ` · ${player.rolesMantra.join(' ')}`}
             </p>
@@ -135,7 +135,7 @@ export default function PlayerDetail({
           <button
             onClick={onClose}
             aria-label="Chiudi"
-            className="label rounded-md border border-line px-2 py-1 text-sm text-chalk-dim hover:text-chalk"
+            className="label rounded-md border border-line px-2 py-1 text-micro text-chalk-dim hover:text-chalk"
           >
             Esc
           </button>
@@ -151,7 +151,7 @@ export default function PlayerDetail({
         </dl>
 
         {(player.penaltyTaker || player.delisted) && (
-          <p className="mt-3 text-sm text-chalk-dim">
+          <p className="mt-3 text-base text-chalk-dim">
             {player.penaltyTaker && 'Tira i rigori.'}
             {player.penaltyTaker && player.delisted && ' '}
             {/* Invariant 10: he left the listone, his purchases did not. */}
@@ -187,7 +187,7 @@ export default function PlayerDetail({
          * present rather than written by hand.
          */
         <>
-          <p className="px-5 py-8 text-sm text-chalk-dim">
+          <p className="px-5 py-8 text-base text-chalk-dim">
             {seasonWindow(past)
               ? `Nessuna presenza nelle stagioni disponibili (${seasonWindow(past)}).`
               : 'Nessuna presenza nelle stagioni disponibili.'}
@@ -231,7 +231,7 @@ export default function PlayerDetail({
 function Section({ title, children }: { title: string; children: React.ReactNode }): JSX.Element {
   return (
     <section className="border-b border-line px-5 py-4">
-      <h3 className="label mb-3 text-sm text-chalk-dim">{title}</h3>
+      <h3 className="label mb-3 text-micro text-chalk-dim">{title}</h3>
       {children}
     </section>
   )
@@ -269,7 +269,7 @@ function Fact({
 }): JSX.Element {
   return (
     <div>
-      <dt className="label text-sm text-chalk-dim">
+      <dt className="label text-micro text-chalk-dim">
         <Abbr name={term} />
       </dt>
       <dd>
@@ -304,9 +304,9 @@ function HistoryTable({
   showMinutes: boolean
 }): JSX.Element {
   return (
-    <table className="w-full border-collapse text-sm">
+    <table className="w-full border-collapse text-base">
       <thead>
-        <tr className="label text-chalk-dim">
+        <tr className="label text-micro text-chalk-dim">
           <th className="border-b border-line py-1 text-left">stagione</th>
           <th className="border-b border-line py-1 text-right">
             <Abbr name="Pv" />
@@ -402,7 +402,7 @@ function Chart({
         <Line values={mv} x={x} y={y} className="text-chalk-dim" dashed />
         <Line values={fm} x={x} y={y} className="text-chalk" />
       </svg>
-      <figcaption className="mt-1 flex justify-between text-sm text-chalk-dim">
+      <figcaption className="mt-1 flex justify-between text-base text-chalk-dim">
         {/* Document 2 §2: "L'ambra è riservata al denaro… Nient'altro usa quel
             colore." FM is an average, not a credit, so the two series separate
             by weight and dash instead — and the legend says which is which
@@ -497,7 +497,7 @@ function Indicators({
 }): JSX.Element {
   if (stats === undefined || season === null || !seasons.includes(season)) {
     return (
-      <p className="text-sm text-chalk-dim">
+      <p className="text-base text-chalk-dim">
         Nessun dato per questa stagione. Cambia stagione per vedere gli indicatori.
       </p>
     )
@@ -543,12 +543,12 @@ function Indicators({
         return (
           <div key={key}>
             <div className="flex items-baseline justify-between gap-3">
-              <dt className="label text-sm">
+              <dt className="label text-micro">
                 {'abbr' in row ? <Abbr name={row.abbr} /> : row.word}
               </dt>
               <dd className="figure-column">{row.value}</dd>
             </div>
-            <p className="mt-0.5 text-sm text-chalk-dim">
+            <p className="mt-0.5 text-base text-chalk-dim">
               {'abbr' in row ? glossary[row.abbr].explains : row.note}
             </p>
           </div>
@@ -558,7 +558,7 @@ function Indicators({
         /* Document 2 §9: what is thin shows what it has, with Pv beside it to
            qualify it. Not a threshold that hides — that is the hidden threshold
            the titolari filter already refused. */
-        <p className="pt-1 text-sm text-chalk-dim">
+        <p className="pt-1 text-base text-chalk-dim">
           {pv === 1
             ? 'Tutto qui sopra riposa su una partita a voto.'
             : `Tutto qui sopra riposa su ${show(pv)} partite a voto.`}
@@ -615,10 +615,10 @@ function Objective({
   return (
     <section className="border-t border-line px-5 py-4">
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="label text-sm">obiettivo</h3>
+        <h3 className="label text-micro">obiettivo</h3>
         {target && (
           <button
-            className="text-sm text-chalk-dim hover:text-taken"
+            className="text-base text-chalk-dim hover:text-taken"
             onClick={() => objectives.remove(player.id)}
           >
             togli
@@ -626,11 +626,11 @@ function Objective({
         )}
       </div>
 
-      <dl className="mt-3 grid grid-cols-[6rem_1fr] items-center gap-x-4 gap-y-3 text-sm">
-        <dt className="label text-chalk-dim">fascia</dt>
+      <dl className="mt-3 grid grid-cols-[6rem_1fr] items-center gap-x-4 gap-y-3 text-base">
+        <dt className="label text-micro text-chalk-dim">fascia</dt>
         <dd>
           <select
-            className="rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+            className="rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
             value={target?.tier ?? ''}
             onChange={(e) =>
               objectives.patch({
@@ -648,7 +648,7 @@ function Objective({
           </select>
         </dd>
 
-        <dt className="label text-chalk-dim">prezzo massimo</dt>
+        <dt className="label text-micro text-chalk-dim">prezzo massimo</dt>
         <dd className="flex items-baseline gap-2">
           <PriceField
             value={target?.maxPrice ?? null}
@@ -659,13 +659,13 @@ function Objective({
               e vederlo qui evita di scoprire solo là che le prime scelte non
               stanno insieme. */}
           {budget !== null && budget > 0 && target?.maxPrice != null && (
-            <span className="text-sm text-chalk-dim">
+            <span className="text-base text-chalk-dim">
               {Math.round((target.maxPrice / budget) * 100)}% del budget
             </span>
           )}
         </dd>
 
-        <dt className="label text-chalk-dim">rating</dt>
+        <dt className="label text-micro text-chalk-dim">rating</dt>
         <dd className="flex">
           {Array.from({ length: MAX_RATING }, (_, i) => i + 1).map((star) => (
             <button
@@ -688,7 +688,7 @@ function Objective({
           ))}
         </dd>
 
-        <dt className="label self-start pt-1 text-chalk-dim">note</dt>
+        <dt className="label text-micro self-start pt-1 text-chalk-dim">note</dt>
         <dd>
           <Note
             key={`${player.id}-${target?.note ?? ''}`}
@@ -719,7 +719,7 @@ function Note({
     <textarea
       rows={2}
       maxLength={500}
-      className="w-full rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+      className="w-full rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
       placeholder="Solo se scende sotto 40"
       value={draft}
       onChange={(e) => setDraft(e.target.value)}

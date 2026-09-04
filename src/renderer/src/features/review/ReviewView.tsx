@@ -58,7 +58,7 @@ export default function ReviewView(): JSX.Element {
   if (state.isError) {
     return (
       <Frame>
-        <p className="text-sm text-taken">
+        <p className="text-base text-taken">
           {state.error instanceof IpcError ? state.error.message : errorMessages.IPC_UNAVAILABLE()}
         </p>
       </Frame>
@@ -68,7 +68,7 @@ export default function ReviewView(): JSX.Element {
   if (state.data === null) {
     return (
       <Frame>
-        <p className="text-sm text-chalk-dim">{errorMessages.LEAGUE_MISSING()}</p>
+        <p className="text-base text-chalk-dim">{errorMessages.LEAGUE_MISSING()}</p>
       </Frame>
     )
   }
@@ -92,8 +92,8 @@ function Frame({ children }: { children: React.ReactNode }): JSX.Element {
 function NotYet({ state }: { state: AuctionState }): JSX.Element {
   return (
     <Frame>
-      <p className="pb-1 text-sm text-chalk-dim">{state.league.name} · revisione</p>
-      <p className="max-w-xl pt-2 text-sm text-chalk-dim">
+      <p className="pb-1 text-base text-chalk-dim">{state.league.name} · revisione</p>
+      <p className="max-w-xl pt-2 text-base text-chalk-dim">
         {state.league.status === 'closed'
           ? notices.CRYSTALLISED()
           : state.league.status === 'auction'
@@ -289,10 +289,10 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
   return (
     <div className="flex h-screen min-h-0 flex-col">
       <header className="flex items-baseline gap-3 border-b border-line px-4 py-2">
-        <h1 className="min-w-0 truncate text-sm">
+        <h1 className="min-w-0 truncate text-base">
           {state.league.name} <span className="text-chalk-dim">· revisione</span>
         </h1>
-        <span className="ml-auto shrink-0 text-sm text-chalk-dim">
+        <span className="ml-auto shrink-0 text-base text-chalk-dim">
           {purchases(lines.length)} · {anomalies(anomalyCount)}
         </span>
       </header>
@@ -301,7 +301,7 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
         <section className="flex min-w-0 flex-1 flex-col">
           <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-2">
             <select
-              className="rounded-md border border-line bg-pitch-800 px-2 py-1 text-sm"
+              className="rounded-md border border-line bg-pitch-800 px-2 py-1 text-base"
               value={team}
               onChange={(e) =>
                 setTeam(e.target.value === TUTTE ? TUTTE : window.Number(e.target.value))
@@ -316,7 +316,7 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
             </select>
 
             <select
-              className="rounded-md border border-line bg-pitch-800 px-2 py-1 text-sm"
+              className="rounded-md border border-line bg-pitch-800 px-2 py-1 text-base"
               value={role}
               onChange={(e) => setRole(e.target.value as ClassicRole | typeof TUTTI)}
             >
@@ -329,7 +329,7 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
             </select>
 
             <input
-              className="min-w-0 flex-1 rounded-md border border-line bg-pitch-800 px-2 py-1 text-sm"
+              className="min-w-0 flex-1 rounded-md border border-line bg-pitch-800 px-2 py-1 text-base"
               placeholder="Cerca un giocatore fra gli acquisti"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -337,12 +337,12 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
           </div>
 
           {refusal !== null && (
-            <p className="border-b border-line px-4 py-1.5 text-sm text-taken">{refusal}</p>
+            <p className="border-b border-line px-4 py-1.5 text-base text-taken">{refusal}</p>
           )}
 
           <div className="min-h-0 flex-1 overflow-auto">
             {lines.length === 0 ? (
-              <p className="px-4 py-4 text-sm text-chalk-dim">
+              <p className="px-4 py-4 text-base text-chalk-dim">
                 Nessun acquisto registrato. Aggiungine uno qui sotto.
               </p>
             ) : (
@@ -422,7 +422,7 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
             )}
 
             {lines.length > 0 && shown.length === 0 && (
-              <p className="px-4 py-4 text-sm text-chalk-dim">
+              <p className="px-4 py-4 text-base text-chalk-dim">
                 Nessun acquisto con questi filtri. Togline uno per allargare la ricerca.
               </p>
             )}
@@ -447,10 +447,10 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
           <div className="border-t border-line px-4 py-2">
             {asking && (
               <div className="pb-2">
-                <p className="pb-1 text-sm text-chalk-dim">
+                <p className="pb-1 text-base text-chalk-dim">
                   {notices.ANOMALIES_OPEN({ n: anomalyCount })}
                 </p>
-                <ul className="max-h-24 overflow-y-auto text-sm text-taken">
+                <ul className="max-h-24 overflow-y-auto text-base text-taken">
                   {anomalyLines.map((line, i) => (
                     <li key={i}>{line}</li>
                   ))}
@@ -463,14 +463,14 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
                 // clitico plurale mente, ed è l'etichetta che la conferma di
                 // chiusura asta usa già per il suo secondo bottone.
                 <button
-                  className="rounded-md border border-line px-3 py-1 text-sm text-chalk-dim hover:text-chalk"
+                  className="rounded-md border border-line px-3 py-1 text-base text-chalk-dim hover:text-chalk"
                   onClick={() => setConfirming(false)}
                 >
                   Annulla
                 </button>
               )}
               <button
-                className="mx-auto rounded-md border border-line bg-pitch-700 px-4 py-1.5 text-sm"
+                className="mx-auto rounded-md border border-line bg-pitch-700 px-4 py-1.5 text-base"
                 onClick={() => void crystallise()}
               >
                 {asking ? 'Cristallizza lo stesso' : 'Cristallizza il resoconto'}

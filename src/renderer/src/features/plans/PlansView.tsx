@@ -77,7 +77,7 @@ export default function PlansView(): JSX.Element {
     const error = league.error ?? plans.error
     return (
       <Frame>
-        <p className="text-sm text-taken">
+        <p className="text-base text-taken">
           {error instanceof IpcError ? error.message : errorMessages.IPC_UNAVAILABLE()}
         </p>
       </Frame>
@@ -87,7 +87,7 @@ export default function PlansView(): JSX.Element {
   if (league.data === null) {
     return (
       <Frame>
-        <p className="text-sm text-chalk-dim">{errorMessages.LEAGUE_MISSING()}</p>
+        <p className="text-base text-chalk-dim">{errorMessages.LEAGUE_MISSING()}</p>
       </Frame>
     )
   }
@@ -105,15 +105,15 @@ export default function PlansView(): JSX.Element {
   return (
     <Frame>
       <h1 className="text-lg font-medium">Piani</h1>
-      <p className="mt-1 text-sm text-chalk-dim">
+      <p className="mt-1 text-base text-chalk-dim">
         {openLeague.name} · budget <Figure value={openLeague.budget} kind="money" />
       </p>
 
       <div className="mt-4 flex flex-wrap items-end gap-3">
-        <label className="text-sm">
-          <span className="label block text-chalk-dim">nuovo piano</span>
+        <label className="text-base">
+          <span className="label text-micro block text-chalk-dim">nuovo piano</span>
           <input
-            className="mt-1 w-48 rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+            className="mt-1 w-48 rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
             placeholder="Difesa forte"
             maxLength={60}
             value={name}
@@ -128,7 +128,7 @@ export default function PlansView(): JSX.Element {
           />
         </label>
         <button
-          className="rounded-md bg-pitch-700 px-3 py-1.5 text-sm hover:bg-line disabled:opacity-40"
+          className="rounded-md bg-pitch-700 px-3 py-1.5 text-base hover:bg-line disabled:opacity-40"
           disabled={name.trim() === ''}
           onClick={() =>
             void guard(() => call('plan.create', { leagueId: id, name }))().then(
@@ -140,10 +140,10 @@ export default function PlansView(): JSX.Element {
         </button>
 
         {all.length > 0 && (
-          <label className="text-sm">
-            <span className="label block text-chalk-dim">piano</span>
+          <label className="text-base">
+            <span className="label text-micro block text-chalk-dim">piano</span>
             <select
-              className="mt-1 rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+              className="mt-1 rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
               value={open?.id ?? ''}
               onChange={(e) => setOpenId(window.Number(e.target.value))}
             >
@@ -159,10 +159,10 @@ export default function PlansView(): JSX.Element {
         {/* "Due piani si possono affiancare per confronto": the second one is a
             choice and not a mode, so it lists only the plans that are not open. */}
         {all.length > 1 && (
-          <label className="text-sm">
-            <span className="label block text-chalk-dim">confronta con</span>
+          <label className="text-base">
+            <span className="label text-micro block text-chalk-dim">confronta con</span>
             <select
-              className="mt-1 rounded-md border border-line bg-pitch-900 px-2 py-1 text-sm"
+              className="mt-1 rounded-md border border-line bg-pitch-900 px-2 py-1 text-base"
               value={compare?.id ?? ''}
               onChange={(e) =>
                 setCompareId(e.target.value === '' ? null : window.Number(e.target.value))
@@ -181,12 +181,12 @@ export default function PlansView(): JSX.Element {
         )}
       </div>
 
-      {refusal && <p className="mt-3 text-sm text-taken">{refusal}</p>}
+      {refusal && <p className="mt-3 text-base text-taken">{refusal}</p>}
 
       {all.length === 0 ? (
         // Document 2 §8, word for word. Unlike the objectives, this one invites an
         // action that lives right here: the field above it.
-        <p className="mt-8 text-sm text-chalk-dim">
+        <p className="mt-8 text-base text-chalk-dim">
           Nessun piano. Costruisci una rosa ipotetica per capire quanto ti serve per reparto.
         </p>
       ) : (
@@ -250,9 +250,9 @@ function Grid({
   return (
     <section className="min-w-0 rounded-md border border-line bg-pitch-800 p-4">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-sm font-medium">{plan.name}</h2>
+        <h2 className="text-title font-medium">{plan.name}</h2>
         <button
-          className="text-sm text-chalk-dim hover:text-taken"
+          className="text-base text-chalk-dim hover:text-taken"
           onClick={onDelete}
           title="cancella il piano"
         >
@@ -264,19 +264,19 @@ function Grid({
           numero per cui il piano esiste. */}
       <dl className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-1 border-b border-line pb-3">
         <div>
-          <dt className="label inline text-sm text-chalk-dim">speso </dt>
-          <dd className="inline text-sm">
+          <dt className="label inline text-micro text-chalk-dim">speso </dt>
+          <dd className="inline text-base">
             <Figure value={totals.spent} kind="money" />
           </dd>
         </div>
         <div>
-          <dt className="label inline text-sm text-chalk-dim">residuo </dt>
-          <dd className="inline text-sm">
+          <dt className="label inline text-micro text-chalk-dim">residuo </dt>
+          <dd className="inline text-base">
             <Figure value={totals.remaining} kind="money" />
           </dd>
         </div>
         <div>
-          <dt className="label inline text-sm text-chalk-dim">
+          <dt className="label inline text-micro text-chalk-dim">
             media per slot rimanente{' '}
           </dt>
           {/* `decimal` and not `money`: this is a division, and the tenth is
@@ -295,10 +295,10 @@ function Grid({
           </dd>
         </div>
         <div>
-          <dt className="label inline text-sm text-chalk-dim">slot </dt>
+          <dt className="label inline text-micro text-chalk-dim">slot </dt>
           {/* Two numbers and a slash, not one figure: `3/25` is read as a single
               fraction, so it stays a string and takes the column role by class. */}
-          <dd className="figure-column inline text-sm">
+          <dd className="figure-column inline text-base">
             {totals.slotsFilled}/{totals.slotsTotal}
           </dd>
         </div>
@@ -331,7 +331,7 @@ function Grid({
                 della barra laterale di `AppShell`, il `gap-6` della griglia
                 qui sopra e il `p-4` della `section`. Chi ne cambia una
                 rimisuri. */}
-            <div className="text-sm text-chalk-dim">
+            <div className="text-base text-chalk-dim">
               {/* «portieri 20», senza la parola «crediti»: è la forma che il
                   resoconto del §4.11 dà già a questo stesso dato — la spesa per
                   reparto di `ReportView`, `{ROLE_LABELS[role]} <Figure money>`
@@ -349,7 +349,7 @@ function Grid({
                   sé. Lo stesso inciampo che `ReportView` racconta a riga 295 per
                   «1 spesi», e la casa lo risolve così: via il sostantivo, non
                   via l'animazione, che il §7 elenca fra le sole quattro. */}
-              <span className="label">{ROLE_LABELS[role]}</span>{' '}
+              <span className="label text-micro">{ROLE_LABELS[role]}</span>{' '}
               <Figure value={totals.byRole[role].spent} kind="money" />
               {/* La quota manca solo a budget zero, che `contracts.ts` ammette.
                   Un «— del budget» non direbbe niente a nessuno. */}
@@ -380,7 +380,7 @@ function Grid({
               {Array.from({ length: cells[role].empty }, (_, i) => (
                 <button
                   key={`empty-${i}`}
-                  className="h-12 w-32 rounded-md border border-dashed border-line text-sm text-chalk-dim hover:border-chalk-dim"
+                  className="h-12 w-32 rounded-md border border-dashed border-line text-base text-chalk-dim hover:border-chalk-dim"
                   onClick={() => setPicking(picking === role ? null : role)}
                 >
                   + vuoto
@@ -425,7 +425,7 @@ function Grid({
         cells.C.overflow.length +
         cells.A.overflow.length >
         0 && (
-        <p className="mt-3 text-sm text-chalk">
+        <p className="mt-3 text-base text-chalk">
           Alcuni giocatori sono oltre gli slot del loro ruolo: gli slot della lega sono stati
           abbassati dopo. Toglili o rialza gli slot.
         </p>
@@ -456,11 +456,11 @@ function Cell({
       }`}
     >
       <div className="flex items-baseline gap-1">
-        <span className="min-w-0 flex-1 truncate text-sm" title={name}>
+        <span className="min-w-0 flex-1 truncate text-base" title={name}>
           {name}
         </span>
         <button
-          className="text-sm text-chalk-dim hover:text-taken"
+          className="text-base text-chalk-dim hover:text-taken"
           aria-label={`togli ${name} dal piano`}
           onClick={onRemove}
         >
@@ -468,7 +468,7 @@ function Cell({
         </button>
       </div>
       <div className="flex items-baseline justify-between">
-        <span className="label text-sm text-chalk-dim">{team}</span>
+        <span className="label text-micro text-chalk-dim">{team}</span>
         <PriceField value={price} label={`prezzo stimato di ${name}`} onCommit={onPrice} />
       </div>
     </div>
@@ -527,21 +527,21 @@ function Picker({
       <div className="flex items-center gap-2">
         <input
           autoFocus
-          className="min-w-0 flex-1 rounded-md border border-line bg-pitch-800 px-2 py-1 text-sm"
+          className="min-w-0 flex-1 rounded-md border border-line bg-pitch-800 px-2 py-1 text-base"
           placeholder={`Cerca un ${ROLE_LABELS_ONE[role]}`}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Escape' && onClose()}
         />
-        <button className="text-sm text-chalk-dim hover:text-chalk" onClick={onClose}>
+        <button className="text-base text-chalk-dim hover:text-chalk" onClick={onClose}>
           chiudi
         </button>
       </div>
 
-      {players.isPending && <p className="mt-2 text-sm text-chalk-dim">Carico il listone…</p>}
+      {players.isPending && <p className="mt-2 text-base text-chalk-dim">Carico il listone…</p>}
 
       {players.isError && (
-        <p className="mt-2 text-sm text-taken">
+        <p className="mt-2 text-base text-taken">
           {players.error instanceof IpcError
             ? players.error.message
             : errorMessages.IPC_UNAVAILABLE()}
@@ -550,14 +550,14 @@ function Picker({
 
       {!players.isPending && !players.isError && results.length === 0 && (
         // La riga del documento 2 §7 per una ricerca senza risultati.
-        <p className="mt-2 text-sm text-chalk-dim">Nessun giocatore. Prova con meno lettere.</p>
+        <p className="mt-2 text-base text-chalk-dim">Nessun giocatore. Prova con meno lettere.</p>
       )}
 
       <ul className="mt-1">
         {results.map((player) => (
           <li key={player.id}>
             <button
-              className="flex w-full items-baseline gap-2 rounded-md px-1 py-0.5 text-left text-sm hover:bg-pitch-700"
+              className="flex w-full items-baseline gap-2 rounded-md px-1 py-0.5 text-left text-base hover:bg-pitch-700"
               onClick={() => onPick(player)}
             >
               {/* Same reason as the auction panel: this list searches both names
@@ -577,7 +577,7 @@ function Picker({
                   </span>
                 )}
               </span>
-              <span className="label text-chalk-dim">{player.teamCode ?? player.teamName}</span>
+              <span className="label text-micro text-chalk-dim">{player.teamCode ?? player.teamName}</span>
               {/* The dash for a missing quotazione is `Figure`'s own now: `value`
                   takes null, so the `?? '—'` that used to stand here is gone. */}
               <Figure value={player.qtClassicCurrent} kind="money" />
