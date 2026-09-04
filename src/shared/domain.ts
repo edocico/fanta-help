@@ -1168,6 +1168,34 @@ export function tierOneOverBudget(
   return total > budget ? { total, budget } : null
 }
 
+/**
+ * What one role's row says beside its label in the grid of document 2 §4.7 —
+ * the same two figures the board of §4.6 puts at the head of a column, beside a
+ * count this grid has no use for, its cells being countable on sight.
+ *
+ * Grouped on `items` and not on the cells of `planCells`, so a player beyond his
+ * role's slots counts here too. He occupies no cell, but his crediti are spent
+ * all the same — `spent` below already includes him — and the two numbers end up
+ * printed a few centimetres apart. Leaving him out would keep the grid right and
+ * make the arithmetic wrong: the four roles would stop adding up to `spent`, and
+ * neither figure would fail on its own to say so.
+ *
+ * Every item carries a `slotRole` out of `CLASSIC_ROLES`, so the four roles
+ * partition the plan exactly. That is what makes the sum an invariant worth a
+ * test rather than a coincidence worth a comment.
+ */
+export type PlanRoleTotals = {
+  spent: number
+  /**
+   * `spent / budget`, null when there is no budget to weigh against.
+   *
+   * The same guard `targetTotals` puts on its own share, and not a dead branch:
+   * `contracts.ts` takes `budget` from 0 up on purpose, "un budget troppo piccolo
+   * per la rosa" being a coherence warning rather than a refusal.
+   */
+  budgetShare: number | null
+}
+
 /** What the bar of document 2 §4.7 shows above a plan. */
 export type PlanTotals = {
   spent: number
@@ -1184,6 +1212,8 @@ export type PlanTotals = {
    * small average, it is a question with no meaning. Callers show an em dash.
    */
   perSlot: number | null
+  /** What each role costs and what share of the budget it takes. */
+  byRole: Record<ClassicRole, PlanRoleTotals>
 }
 
 type PlanItemLike = { slotRole: ClassicRole; estPrice: number }
@@ -1201,6 +1231,13 @@ export function planTotals(
   const cells = planCells(items, slots)
   const slotsFilled = CLASSIC_ROLES.reduce((sum, role) => sum + cells[role].filled.length, 0)
   const slotsLeft = slotsTotal - slotsFilled
+  const byRole = {} as Record<ClassicRole, PlanRoleTotals>
+  for (const role of CLASSIC_ROLES) {
+    const roleSpent = items
+      .filter((item) => item.slotRole === role)
+      .reduce((sum, item) => sum + item.estPrice, 0)
+    byRole[role] = { spent: roleSpent, budgetShare: budget > 0 ? roleSpent / budget : null }
+  }
   return {
     spent,
     remaining,
@@ -1208,6 +1245,7 @@ export function planTotals(
     slotsFilled,
     slotsLeft,
     perSlot: slotsLeft > 0 ? remaining / slotsLeft : null,
+    byRole,
   }
 }
 

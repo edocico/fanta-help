@@ -216,6 +216,8 @@ Griglia degli slot della rosa, uno per casella, divisi per ruolo. Le caselle vuo
 
 Barra in alto: speso, residuo, e **media disponibile per slot rimanente**, che è il numero che dice se il piano regge.
 
+Accanto all'etichetta di ogni reparto, quanto costa e **quanto pesa sul budget**: `portieri 20 · 4% del budget`. Che siano crediti lo dice l'ambra, come già nella spesa per reparto del §4.11. La parola non c'è perché, accanto a una cifra che conta al nuovo valore, concorderebbe col numero d'arrivo mentre se ne legge ancora un altro. Sono le stesse due cifre che il §4.6 mette in cima a ogni colonna della board, accanto a un conteggio che qui non serve — le caselle si contano da sole — e mantengono la promessa che lo stato vuoto della schermata fa già: «per capire quanto ti serve per reparto». I crediti di chi è rimasto oltre gli slot del suo ruolo contano anche qui, come già contano nello speso: i quattro reparti sommano sempre allo speso della barra.
+
 Due piani si possono affiancare per confronto.
 
 ### 4.8 Asta live

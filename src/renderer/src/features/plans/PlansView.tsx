@@ -304,7 +304,60 @@ function Grid({
       <div className="mt-3 space-y-3">
         {CLASSIC_ROLES.map((role) => (
           <div key={role}>
-            <div className="label text-sm text-chalk-dim">{ROLE_LABELS[role]}</div>
+            {/* Etichetta e peso sulla stessa riga, mentre la board del §4.6 li
+                mette su due. Là i ruoli sono colonne e la seconda riga la paga
+                una volta; qui sono righe, e quattro righe in più rubano altezza
+                proprio alla griglia di caselle per cui la schermata esiste.
+
+                `label` resta sul solo nome del ruolo: il peso 500 è
+                dell'etichetta, non delle cifre, che hanno già il loro dalle
+                classi di `Figure`.
+
+                Misurata con due piani affiancati, che è il caso stretto: alla
+                finestra come si apre — 900×620, `main/index.ts` — la colonna
+                sta in 310px e alla riga ne restano 276. Il peggio plausibile,
+                «centrocampisti 500 · 100% del budget», ne occupa 244,5, quindi
+                ci sta con 31 di margine; va a capo sotto gli **835px** di
+                finestra, misurati stringendo a gradini, e andare a capo non
+                rompe niente perché qui non c'è nessun `shrink-0`. Il margine
+                dipende da tre cose che non stanno in questo file: la larghezza
+                della barra laterale di `AppShell`, il `gap-6` della griglia
+                qui sopra e il `p-4` della `section`. Chi ne cambia una
+                rimisuri. */}
+            <div className="text-sm text-chalk-dim">
+              {/* «portieri 20», senza la parola «crediti»: è la forma che il
+                  resoconto del §4.11 dà già a questo stesso dato — la spesa per
+                  reparto di `ReportView`, `{ROLE_LABELS[role]} <Figure money>`
+                  — e a dire che sono crediti ci pensa l'ambra, che il documento
+                  7 §15 non concede a nient'altro.
+
+                  Il sostantivo c'era, ed è stato tolto in revisione. Scritto
+                  accanto a una cifra che conta, mente per metà dei suoi 200ms:
+                  `useCountUp` arrotonda ogni fotogramma, quindi un reparto che
+                  passa da 0 a 1 mostra la cifra ancora a 0 col singolare già
+                  scelto sul valore finale — «0 credito», e «1 crediti»
+                  togliendolo. Non è un caso di scuola: 40 portieri su 63 hanno
+                  qt 1 e il `Picker` qui sotto semina `estPrice` con
+                  `Math.round(qt)`, quindi il primo terzo portiere lo produce da
+                  sé. Lo stesso inciampo che `ReportView` racconta a riga 295 per
+                  «1 spesi», e la casa lo risolve così: via il sostantivo, non
+                  via l'animazione, che il §7 elenca fra le sole quattro. */}
+              <span className="label">{ROLE_LABELS[role]}</span>{' '}
+              <Figure value={totals.byRole[role].spent} kind="money" />
+              {/* La quota manca solo a budget zero, che `contracts.ts` ammette.
+                  Un «— del budget» non direbbe niente a nessuno. */}
+              {totals.byRole[role].budgetShare !== null && (
+                <>
+                  {' · '}
+                  {/* La quota, non il suo centuplo: `percent` moltiplica per
+                      cento da sé, e il commento di `TargetsView` racconta cosa
+                      costa farlo a mano. Niente ambra — una percentuale non è
+                      denaro, documento 7 §15. */}
+                  <Figure value={totals.byRole[role].budgetShare} kind="percent" />
+                  {' del budget'}
+                </>
+              )}
+            </div>
             <div className="mt-1 flex flex-wrap gap-1">
               {cells[role].filled.map((item) => (
                 <Cell

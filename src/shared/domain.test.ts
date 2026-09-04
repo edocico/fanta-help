@@ -1101,6 +1101,91 @@ describe('la barra del piano, documento 2 §4.7', () => {
 })
 
 /**
+ * Il peso di ogni reparto sul budget: la riga che la vista Piani scrive accanto
+ * a ogni etichetta di ruolo, come la board del §4.6 la scrive in cima a ogni
+ * colonna.
+ */
+describe('quanto pesa ogni reparto di un piano, documento 2 §4.7', () => {
+  const slots = { P: 1, D: 2, C: 2, A: 1 }
+
+  it('dà a ogni reparto quello che ha speso e la sua quota di budget', () => {
+    const totals = planTotals(
+      [
+        { slotRole: 'P' as const, estPrice: 20 },
+        { slotRole: 'D' as const, estPrice: 60 },
+        { slotRole: 'C' as const, estPrice: 130 },
+        { slotRole: 'A' as const, estPrice: 250 },
+      ],
+      slots,
+      500,
+    )
+    expect(totals.byRole.P).toEqual({ spent: 20, budgetShare: 0.04 })
+    expect(totals.byRole.D).toEqual({ spent: 60, budgetShare: 0.12 })
+    expect(totals.byRole.C).toEqual({ spent: 130, budgetShare: 0.26 })
+    expect(totals.byRole.A).toEqual({ spent: 250, budgetShare: 0.5 })
+  })
+
+  /**
+   * L'invariante che tiene insieme i due numeri della schermata: la barra dice
+   * «speso 500» e le quattro righe sotto dicono da dove vengono. Se non
+   * tornassero sarebbero due cifre che si contraddicono a otto centimetri l'una
+   * dall'altra, e nessuna delle due fallirebbe da sola.
+   */
+  it('la somma dei quattro reparti è lo speso', () => {
+    const totals = planTotals(
+      [
+        { slotRole: 'P' as const, estPrice: 20 },
+        { slotRole: 'D' as const, estPrice: 60 },
+        { slotRole: 'D' as const, estPrice: 40 },
+        { slotRole: 'D' as const, estPrice: 30 },
+        { slotRole: 'C' as const, estPrice: 100 },
+        { slotRole: 'A' as const, estPrice: 250 },
+      ],
+      slots,
+      500,
+    )
+    const summed = CLASSIC_ROLES.reduce((sum, role) => sum + totals.byRole[role].spent, 0)
+    expect(summed).toBe(totals.spent)
+    expect(summed).toBe(500)
+  })
+
+  /**
+   * Lo stesso motivo per cui `spent` li conta già, due casi più su: i crediti
+   * del terzo difensore sono impegnati anche se la sua casella non esiste.
+   * Escluderli terrebbe in piedi la griglia e farebbe cadere l'aritmetica.
+   */
+  it('conta anche chi è oltre gli slot del suo ruolo', () => {
+    const totals = planTotals(
+      [
+        { slotRole: 'D' as const, estPrice: 60 },
+        { slotRole: 'D' as const, estPrice: 40 },
+        { slotRole: 'D' as const, estPrice: 30 },
+      ],
+      slots,
+      500,
+    )
+    expect(totals.byRole.D.spent).toBe(130)
+    expect(totals.byRole.D.budgetShare).toBe(0.26)
+  })
+
+  /**
+   * La stessa guardia di `targetTotals`, e non è un ramo irraggiungibile:
+   * `contracts.ts` accetta `budget` da 0 in su di proposito. Una quota su zero
+   * budget non è piccola, non esiste.
+   */
+  it('senza budget non esiste nessuna quota', () => {
+    const totals = planTotals([{ slotRole: 'A' as const, estPrice: 250 }], slots, 0)
+    expect(totals.byRole.A.budgetShare).toBeNull()
+    expect(totals.byRole.A.spent).toBe(250)
+  })
+
+  it('un reparto vuoto pesa zero, e lo dice invece di tacere', () => {
+    const totals = planTotals([{ slotRole: 'A' as const, estPrice: 250 }], slots, 500)
+    expect(totals.byRole.P).toEqual({ spent: 0, budgetShare: 0 })
+  })
+})
+
+/**
  * T13. La tabella del documento 6 §4, riga per riga.
  *
  * Scritti prima del servizio, che è l'ordine che il §7 impone: «le funzioni pure
