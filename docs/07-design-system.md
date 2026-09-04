@@ -67,7 +67,7 @@ I **primitivi** sono la tavolozza grezza e non si citano mai nei componenti. I *
 --gold-deep: #8A6E2A;   /* bordi e fondi legati al denaro */
 --rust:      #A8483E;   /* non più disponibile */
 --teal:      #4FB8A8;   /* è un tuo obiettivo */
---crimson:   #D06058;   /* violazione bloccante */
+--crimson:   #D26760;   /* violazione bloccante */
 --moss:      #6FB584;   /* conferma, reparto completo */
 ```
 
@@ -629,6 +629,7 @@ Le linee guida per i tabelloni convergono su poche cose: sans-serif, alto contra
 Il pavimento minimo, verificato e non dichiarato.
 
 - **Contrasto**: 4.5:1 per il testo normale, 3:1 per cifre da 20px in su. Misurati: `--chalk-400` sta a 6.44:1 su `--pitch-900`, 5.94:1 su `--pitch-800` e 5.14:1 su `--pitch-700`, quindi passa anche nel caso peggiore delle righe alterne. `--chalk-600` sta a 3.45:1 ed è per questo riservato al disabilitato e ai segnaposto, mai a testo che vada letto.
+- **`--blocking` misurato sulle stesse tre superfici, aggiunto in T25.** La riga sopra le misura per il gesso e non le misurava per il cremisi, e il cremisi è l'altro colore che porta testo: `#D06058` stava a 4.64:1 su `--pitch-900` ma a **4.28** su `--pitch-800`, cioè sotto il pavimento proprio dove vivono i rifiuti del pannello d'asta. Schiarito a `#D26760` — stessa tinta, stessa saturazione, luminosità dal 58 al 60% — sta a 4.94 · 4.55 · 3.94. Il terzo numero resta corto e va saputo: **su `--surface-raised` non si scrive un messaggio bloccante**, e infatti non ce n'è nessuno. Effetto collaterale misurato e non previsto: il cremisi nuovo è più lontano dalla tinta squadra più vicina, ΔE 12,4 contro 11,4.
 - **Contrasto massimo evitato**: `--chalk-100` su `--pitch-900` sta intorno a 13:1 di proposito. Bianco puro su nero puro fa sanguinare il testo per chi ha astigmatismo.
 - **Attenuazione, non opacità, sul testo che resta da leggere**: `--chalk-100` al 45% su `--pitch-900` scende a 3.58:1 e l'ambra a 2.85:1, sotto il pavimento. La riga «già acquistato» del §10 attenua quindi con un colore proprio, non con `opacity`, e `--unavailable` (3.09:1) resta un colore da riempimento e da icona, mai da testo.
 - **Mai il colore da solo**: il colore squadra ha sempre il nome accanto e una posizione fissa nella board, l'indisponibilità ha sempre icona e testo, la violazione ha sempre un messaggio.

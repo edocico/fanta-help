@@ -443,13 +443,13 @@ describe('la rosa, documento 2 §4.3, e le tinte, documento 7 §3', () => {
    * un’uguaglianza esatta, e nessuna delle due tavolozze ha mai contenuto uno di
    * questi cinque valori alla lettera. Quello che protegge davvero i colori
    * squadra dai semantici non è la distanza — verde #3FAE83 sta a ΔE 11,1 da
-   * `--moss` e vermiglio #E8735A a 11,4 da `--crimson`, sotto il pavimento che
+   * `--moss` e vermiglio #E8735A a 12,4 da `--crimson`, sotto il pavimento che
    * il §3 dichiara — ma la **regola di canale**: un colore squadra è sempre e
    * solo un riempimento, l’ambra è sempre e solo testo. Una soglia di distanza
    * qui boccerebbe due tinte che il documento 7 §3 prescrive.
    */
   it('non riusa nessuno dei cinque colori che significano già qualcosa', () => {
-    const reserved = ['#E8B33D', '#A8483E', '#4FB8A8', '#D06058', '#6FB584']
+    const reserved = ['#E8B33D', '#A8483E', '#4FB8A8', '#D26760', '#6FB584']
     // La lista è la parte che marcisce: un semantico aggiunto ai token e non
     // qui lascia la guardia verde mentre smette di guardare. Il ciclo sotto da
     // solo passerebbe anche con la lista vuota.

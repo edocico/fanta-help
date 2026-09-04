@@ -97,7 +97,17 @@ const SIZES: Record<'normal' | 'projected', Band> = {
     dots: 'text-sm gap-x-3',
     credits: 'text-base',
     max: 'text-base',
-    maxOnTurn: 'text-2xl',
+    // `--num-md`, e non la 2xl di Tailwind che stava qui: quella valeva 24px,
+    // cioè un settimo nome per una taglia che la scala del §4 ha già, che è
+    // esattamente ciò che T25 ha chiuso togliendo la xs. Venti è la taglia che
+    // il §10 dà alle cifre dell'intestazione di colonna della board, ed è dove
+    // Archivo comincia a essere ammesso.
+    //
+    // I due nomi non sono scritti per esteso di proposito: **Tailwind scandisce
+    // anche i commenti**, quindi citare una classe qui la fa emettere nel CSS
+    // costruito. La prima stesura di questa riga faceva rinascere proprio la
+    // regola che stava spiegando di aver tolto.
+    maxOnTurn: 'text-[length:var(--num-md)]',
     rowY: 'py-1.5',
     bar: 'h-7',
     rosterRole: 'w-4',
