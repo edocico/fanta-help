@@ -301,7 +301,14 @@
      del 19% ogni `p-4`, `h-10` e `gap-2` dell'applicazione — un refactoring
      tipografico travestito da refactoring di layout, e nessuna classe cambiata
      a dirlo. Su `body` si sposta l'ereditarietà del testo e la griglia resta
-     ferma. */
+     ferma.
+
+     Misurato nell'app in esecuzione a 1440×871, che è la finestra come si apre
+     su questa macchina: `body` rende a **13px** con interlinea **18,2px**, cioè
+     i 13 × 1,4 dichiarati qui sotto, e una `.label` a **11px peso 500**. La riga
+     della tabella dati resta a **40,00px** esatti, quindi l'`estimateSize: 40`
+     del virtualizzatore della vista Giocatori è ancora il numero giusto — è la
+     misura che T23 aveva fissato e che questo task poteva far invecchiare. */
   body {
     background-color: var(--surface);
     color: var(--text);
@@ -481,7 +488,18 @@
      tante squadre quante nella schermata normale — **va rimisurato**, e non solo
      per questi 2px: T25 ha mosso anche l'altro lato, portando `band.team` da 14
      a 13px e `band.small` da 14 a 12, cioè accorciando la riga normale. Il
-     margine misurato in T15 era 9 squadre contro 8. */
+     margine misurato in T15 era 9 squadre contro 8.
+
+     **Rimisurarlo richiede una lega che il database di sviluppo non ha.** Questa
+     scaletta veste `RosterGrid`, che `RosterPane` monta solo quando la colonna
+     della board scenderebbe sotto i 98px — una soglia per squadra, non piatta.
+     Con le 3 squadre della lega di sviluppo la colonna misura 236px a finestra
+     minima e la board non cede mai, quindi in T25 la lista proiettata **non si è
+     potuta guardare**. Serve una lega da dieci o più: a dieci squadre la board
+     cede sotto i 996px, che a finestra 1100 accade in modo normale (board 725) e
+     **non** in proiezione, dove il pannello di assegnazione è smontato e la
+     board arriva a 1045 — misurato. La lista proiettata comincia a esistere da
+     quattordici squadre in su. */
   --proj-credits: 1.25rem;
   --proj-max: 1.75rem; /* la sola squadra di turno */
   --proj-row-y: 0.4375rem;
