@@ -275,7 +275,9 @@ export default function Wizard(): JSX.Element {
                 <dt className="label text-micro text-fg-muted">regole</dt>
                 <dd>
                   {MODE_LABELS[mode]}, {FORMAT_LABELS[auctionFormat]},{' '}
-                  <Figure value={budget} kind="money" /> crediti, puntata minima{' '}
+                  {/* Senza «crediti»: la cifra e' ambra e l'ambra e' denaro. Con
+                      il sostantivo, un budget di 1 leggeva «1 crediti». */}
+                  <Figure value={budget} kind="money" />, puntata minima{' '}
                   <Figure value={minBid} kind="money" />
                 </dd>
 

@@ -225,7 +225,7 @@ function ColumnHead({
         */}
         <Abbr name="max">
           {(label, trigger) => (
-            <span className={`${trigger} label text-micro shrink-0`} style={{ fontSize: 'var(--board-price)' }}>
+            <span className={`${trigger} label shrink-0`} style={{ fontSize: 'var(--board-price)' }}>
               {label}
             </span>
           )}

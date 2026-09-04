@@ -70,6 +70,17 @@ type Band = {
    */
   figureRoleSmall: 'column'
   /**
+   * `small` è **l'unica** taglia di queste etichette, e non va affiancata da un
+   * `text-micro`: sarebbero due utility di `font-size` sullo stesso elemento,
+   * stessa specificità e stesso `@layer utilities`, e a decidere è l'ordine in
+   * cui Tailwind le emette nel CSS costruito, non l'ordine nel `className`.
+   * Misurato sul file emesso, `.text-micro` sta a 27297 e `.text-sm` a 27420:
+   * vinceva `text-sm`, e il `text-micro` scritto qui era inerte — undici
+   * dichiarati, dodici sullo schermo. È la trappola dei due segnali sulla stessa
+   * proprietà applicata alla taglia, e qui senza `cn()` a fare da arbitro perché
+   * la stringa è un template literal.
+   */
+  /**
    * And the maximum bid of the team on turn, which is the one figure of this
    * grid that carries a row on its own. In `normal` it renders at 24px — over
    * §4's 20px boundary — so it is a *large* figure, Archivo 600 at width 112,
@@ -125,9 +136,13 @@ const SIZES: Record<'normal' | 'projected', Band> = {
     // an open debt, is paid two ways in T25. `--proj-small` is under it at every
     // rung, so the prices it dresses take `figureRoleSmall` and stay Plex — the
     // answer §11 already gives the board. `--proj-credits` was under it at the
-    // base rung only, and that rung moved to 20px: it is the one the app no
-    // longer reaches anyway, since T24 opened the window at 1440×900 and 872 of
-    // viewport starts the ladder at `min-height: 760`.
+    // base rung only, and that rung moved from 18px to 20.
+    //
+    // The base rung is *reachable*, contrary to what this comment first claimed:
+    // `main/index.ts` has `minHeight: 700`, so a viewport of ~672 sits below the
+    // 760 that starts the second rung. Its height budget therefore still has to
+    // hold, and T25 moved both sides of it — see the note beside the ladder in
+    // `base.css`.
     figureRole: 'projection',
     figureRoleSmall: 'column',
     figureRoleOnTurn: 'projection',
@@ -246,7 +261,7 @@ function Row({
           <span className={`block truncate ${band.team} ${team.isMine ? 'font-semibold' : ''}`}>
             {team.name}
             {team.complete && (
-              <span className={`label text-micro ml-2 ${band.small} text-fg-muted`}>rosa completa</span>
+              <span className={`label ml-2 ${band.small} text-fg-muted`}>rosa completa</span>
             )}
           </span>
           <Dots slots={slots} filled={team.filled} band={band} />
@@ -274,14 +289,14 @@ function Row({
           <Figure value={team.credits} kind="money" role={band.figureRole} />{' '}
           <Abbr name="cr">
             {(label, trigger) => (
-              <span className={`${trigger} label text-micro ${band.small} text-fg-muted`}>{label}</span>
+              <span className={`${trigger} label ${band.small} text-fg-muted`}>{label}</span>
             )}
           </Abbr>
         </span>
         <span className={`shrink-0 text-right ${onTurn ? band.maxOnTurn : band.max}`}>
           <Abbr name="max">
             {(label, trigger) => (
-              <span className={`${trigger} label text-micro align-middle ${band.small} text-fg-muted`}>
+              <span className={`${trigger} label align-middle ${band.small} text-fg-muted`}>
                 {label}
               </span>
             )}
@@ -330,7 +345,7 @@ function Dots({
               <span
                 key={i}
                 aria-hidden="true"
-                className={i >= slots[role] ? 'text-blocking' : i < filled[role] ? 'text-fg' : 'text-line'}
+                className={i >= slots[role] ? 'text-fg-muted' : i < filled[role] ? 'text-fg' : 'text-line'}
               >
                 {i < filled[role] ? '●' : '○'}
               </span>

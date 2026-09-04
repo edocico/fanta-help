@@ -580,7 +580,7 @@ function TopBar({
               mostra accanto a se', in --text-muted a 11px». Stava in un `title`,
               che il §15 vieta e che comunque non compare al fuoco da tastiera —
               cioe' proprio a chi le scorciatoie le sta cercando. */}
-          <span className="pl-1.5 text-fg-disabled">Ctrl/Cmd+P</span>
+          <span className="pl-1.5 text-fg-muted">Ctrl/Cmd+P</span>
         </button>
 
         {/*
@@ -603,7 +603,7 @@ function TopBar({
               onClick={onHistory}
             >
               Cronologia
-              <span className="pl-1.5 text-fg-disabled">Ctrl/Cmd+H</span>
+              <span className="pl-1.5 text-fg-muted">Ctrl/Cmd+H</span>
             </button>
 
             <button

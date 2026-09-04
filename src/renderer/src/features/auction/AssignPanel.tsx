@@ -461,7 +461,7 @@ export default function AssignPanel({
             </span>
           </p>
           {chosen.delisted && (
-            <p className="text-sm text-unavailable">{notices.DELISTED()}</p>
+            <p className="text-sm text-fg-muted">{notices.DELISTED()}</p>
           )}
           {/*
             The injury notice of §4.8 — "Infortunato · rientro previsto a novembre

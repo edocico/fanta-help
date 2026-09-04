@@ -157,7 +157,7 @@ function Board({
 
       {over && (
         <p className="mt-2 text-base text-fg">
-          La fascia 1 vale <Figure value={over.total} kind="money" /> crediti e il budget è{' '}
+          La fascia 1 vale <Figure value={over.total} kind="money" /> contro un budget di{' '}
           <Figure value={over.budget} kind="money" />.
         </p>
       )}
@@ -175,8 +175,15 @@ function Board({
           <div key={role} className="bg-surface px-2 pb-2">
             <div className="label text-micro">{ROLE_LABELS[role]}</div>
             <div className="text-base text-fg-muted">
+              {/* Senza «crediti»: `Figure` anima il denaro arrotondando ogni
+                  fotogramma e questi totali si muovono mentre si trascinano le
+                  tessere, quindi un reparto che passa da 0 a 1 mostrerebbe «0
+                  credito» a meta' animazione e «1 crediti» tornando indietro. La
+                  cifra e' ambra, e l'ambra e' denaro: e' la forma che `PlansView`
+                  usa gia' trenta righe piu' in la' e che il §4.11 del documento 2
+                  chiede al resoconto. */}
               <Figure value={totals[role].count} /> ·{' '}
-              <Figure value={totals[role].maxPriceTotal} kind="money" /> crediti
+              <Figure value={totals[role].maxPriceTotal} kind="money" />
               {/* `percent` is given the share itself, not `Math.round(share * 100)` with a `%`
                   written next to it, and the two are not the same function. 29/200 is 14,5%,
                   but the float product lands at 14.499999999999998, so the hand-rolled form

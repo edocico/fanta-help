@@ -80,9 +80,10 @@ export default function TeamRows({
           className="flex h-9 items-center gap-2 px-2"
         >
           {/* The turn, and the handle you drag to change it. `Figure` draws the
-              number; the span around it stays because it is the handle — it
-              carries the grab cursor and the hint, and neither of those is
-              something a figure knows about. */}
+              number; the span around it stays because it is the handle, and a
+              figure knows nothing about a cursor. The hint it used to carry was
+              a native `title`, which §15 forbids; the sentence that replaced it
+              is above the list, where the Wizard already puts its own. */}
           <span
             className={`w-6 text-right text-base text-fg-muted ${
               locked || frozen ? '' : 'cursor-grab'

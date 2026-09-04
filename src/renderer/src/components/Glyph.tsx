@@ -16,20 +16,29 @@ import { cn } from '@/lib/utils'
  * counted here, so that a number like that would get noticed instead of
  * absorbed.
  *
- * **T25 took all twenty-five out, and only four of them needed this component.**
- * Twelve were pure duplication: the element already carried an `aria-label` with
- * the same words, so the `title` gave nothing to a screen reader and gave a
- * system tooltip to everyone else. Seven were full names behind a `truncate`,
- * and those stay truncated — §15 has no exception, and inventing a popover for
- * every clipped name in a list is the thing §10 warns about one line later. Two
- * were keyboard shortcuts hidden in a tooltip that never opens on focus, which
- * is exactly the reader who is hunting for them: §10 wants those *visible*, and
- * now they are. The rest became words on the page or in an `sr-only`.
+ * **T25 took all twenty-five out, and exactly one of them needed this
+ * component** — the `fuori listone` of the roster grid, the one this docblock
+ * had named and left standing. The count of `<Glyph` went from three to four,
+ * and the first draft of this paragraph said "four needed this component",
+ * which counted the three T23 had already converted. It is the trap this very
+ * file records, taken inside the file that records it: an assertion of
+ * completeness that nobody can fail, made by adding two numbers that measure
+ * different things.
  *
- * There are now **zero** native `title` attributes under `src/renderer`. The
- * four that became this component are the penalty mark, the two `fuori` of the
- * players and review tables, and the `fuori listone` of the roster grid — the
- * one this docblock had named and left standing.
+ * The twenty-five break down, and the pieces add up: **twelve** were pure
+ * duplication, the element already carrying an `aria-label` with the same words,
+ * so the `title` gave nothing to a screen reader and a system tooltip to
+ * everyone else. **Seven** were full names behind a `truncate`, and those stay
+ * truncated — §15 has no exception, and inventing a popover for every clipped
+ * name in a list is the thing §10 warns about one line later. **Two** were
+ * keyboard shortcuts hidden in a tooltip that never opens on focus, which is
+ * exactly the reader hunting for them: §10 wants those visible, and now they
+ * are. **One** is this component. The remaining **three** became words on the
+ * page or in an `sr-only`: the drag hint of the team rows, which moved into the
+ * sentence above the list; the disabled nav entry; and the `fuori listone`
+ * label, whose own words already said what its `title` repeated.
+ *
+ * There are now **zero** native `title` attributes under `src/renderer`.
  *
  * §12: "mai il colore da solo", which a bare glyph in a colour is exactly.
  *

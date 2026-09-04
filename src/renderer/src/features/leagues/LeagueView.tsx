@@ -173,6 +173,14 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
           </p>
         ) : (
           <div className="mt-3">
+            {/* La frase che il Wizard scrive gia' sopra la stessa lista. Qui non
+                c'era, e l'unico posto che diceva cosa cambia trascinando era un
+                attributo `title` sulla maniglia — che il §15 vieta e che T25 ha
+                tolto. Il `cursor-grab` invita a trascinare; non dice a cosa
+                serve. */}
+            <p className="mb-3 text-base text-fg-muted">
+              L’ordine è il turno: trascina una riga o usa le frecce.
+            </p>
             <TeamRows
               key={resync}
               rows={league.teams.map((team) => ({ ...team, key: team.id }))}

@@ -92,7 +92,8 @@ function Frame({ children }: { children: React.ReactNode }): JSX.Element {
 function NotYet({ state }: { state: AuctionState }): JSX.Element {
   return (
     <Frame>
-      <p className="pb-1 text-base text-fg-muted">{state.league.name} · revisione</p>
+      <h1 className="pb-1 font-display text-heading font-medium">{state.league.name}</h1>
+      <p className="text-base text-fg-muted">revisione</p>
       <p className="max-w-xl pt-2 text-base text-fg-muted">
         {state.league.status === 'closed'
           ? notices.CRYSTALLISED()
@@ -456,7 +457,7 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
                 <p className="pb-1 text-base text-fg-muted">
                   {notices.ANOMALIES_OPEN({ n: anomalyCount })}
                 </p>
-                <ul className="max-h-24 overflow-y-auto text-base text-blocking">
+                <ul className="max-h-24 overflow-y-auto text-base text-fg-muted">
                   {anomalyLines.map((line, i) => (
                     <li key={i}>{line}</li>
                   ))}

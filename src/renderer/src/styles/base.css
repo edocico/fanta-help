@@ -166,9 +166,11 @@
      già quei due nomi con altri valori (14 e 16 contro i 12 e 13 del §4), e
      mapparli sposta in un colpo ogni utility già scritta. T25 li mappa, e la
      ragione per cui si può è che i siti si muovono insieme: le 240 `text-sm`
-     sono diventate `text-base` e le 47 `text-xs` sono diventate `text-sm`,
-     quindi la gerarchia sullo schermo è quella di prima e a cambiare è solo la
-     misura di lavoro, da 14 a 13.
+     sono diventate `text-base` e le 47 `text-xs` sono diventate `text-sm`, così
+     che nessun sito resti indietro. In quel passo la gerarchia sullo schermo è
+     quella di prima e a cambiare è solo la misura di lavoro, da 14 a 13; i
+     gradini dopo ne hanno mossa una ventina di proposito, verso `text-micro` e
+     `text-title`, quindi il conteggio di oggi non è quello della passata.
 
      **`text-xs` non si usa più.** Vale 12px come il nuovo `text-sm`: due nomi
      per la stessa taglia sono la porta da cui rientra il disordine che questo
@@ -466,10 +468,20 @@
   --proj-small: 0.8125rem;
   --proj-dots: 0.875rem;
   /* 1.25 e non 1.125: a 18px questa cifra portava Archivo sotto i 20 che il §15
-     gli dà come pavimento, ed è l'unico dei tre gradini in cui succedeva. È
-     anche il gradino che l'app non raggiunge più — la finestra si apre a
-     1440×900 e a 872 di viewport la scaletta parte da `min-height: 760` — quindi
-     il vincolo di altezza che questa riga regge non si muove. */
+     gli dà come pavimento, ed è l'unico dei tre gradini in cui succedeva.
+
+     **E questo gradino si raggiunge.** La prima stesura di questa riga diceva il
+     contrario — «la finestra si apre a 1440×900, quindi la scaletta parte da
+     `min-height: 760`» — leggendo la taglia predefinita e non il minimo:
+     `main/index.ts` dà `minHeight: 700`, cioè ~672 di viewport, che sta sotto i
+     760. È la trappola del breakpoint che la finestra non raggiunge mai, presa
+     dal lato opposto e nel modo che la trappola stessa avverte: guardare
+     `main/index.ts` invece di ricordarselo.
+     Quindi il vincolo che questa scaletta regge — in proiezione entrano almeno
+     tante squadre quante nella schermata normale — **va rimisurato**, e non solo
+     per questi 2px: T25 ha mosso anche l'altro lato, portando `band.team` da 14
+     a 13px e `band.small` da 14 a 12, cioè accorciando la riga normale. Il
+     margine misurato in T15 era 9 squadre contro 8. */
   --proj-credits: 1.25rem;
   --proj-max: 1.75rem; /* la sola squadra di turno */
   --proj-row-y: 0.4375rem;

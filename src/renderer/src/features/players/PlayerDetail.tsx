@@ -631,7 +631,7 @@ function Objective({
   return (
     <section className="border-t border-line px-5 py-4">
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="label text-micro">obiettivo</h3>
+        <h3 className="label text-micro">Obiettivo</h3>
         {target && (
           <button
             className="text-base text-fg-muted hover:text-blocking"
