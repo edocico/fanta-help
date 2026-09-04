@@ -192,9 +192,17 @@ Stretta e bassa. La misura di lavoro è 13px, non i 14 del default di shadcn.
 
 Archivo entra dai 20px in su. Sotto, le sue cifre tabulari sulla matrice peso × larghezza non sono garantite, e il posto dove servono davvero è la colonna a 13px.
 
-**Dove vivono questi nomi, aggiunto in T23.** I quattro `--num-*` stanno in un `:root` nudo e si consumano con `text-[length:var(--num-md)]`, che è l'idioma già in uso per le taglie della proiezione. In `@theme` non genererebbero niente: `--num-*` non è uno spazio dei nomi di Tailwind, e la build li scarterebbe in silenzio — la trappola del `--radius` nudo. E i nomi non si possono prestare a `--text-*`: quel prefisso **è** lo spazio delle taglie, quindi un `--text-sm` dichiarato qui sovrascriverebbe quello di Tailwind e rimpicciolirebbe a 12px le 283 utility `text-sm` già scritte, senza che nessuno le abbia rilette. Per la stessa ragione `--text-sm` e `--text-base` di questa tabella restano **non mappati**: i 12 e i 13 si scrivono per ora come valore arbitrario, ed è T25 a chiudere la scala.
+**Dove vivono questi nomi, aggiunto in T23.** I quattro `--num-*` stanno in un `:root` nudo e si consumano con `text-[length:var(--num-md)]`, che è l'idioma già in uso per le taglie della proiezione. In `@theme` non genererebbero niente: `--num-*` non è uno spazio dei nomi di Tailwind, e la build li scarterebbe in silenzio — la trappola del `--radius` nudo. E i nomi non si possono prestare a `--text-*`: quel prefisso **è** lo spazio delle taglie, quindi un `--text-sm` dichiarato qui sovrascriverebbe quello di Tailwind e rimpicciolirebbe a 12px le 283 utility `text-sm` già scritte, senza che nessuno le abbia rilette. Per la stessa ragione `--text-sm` e `--text-base` di questa tabella erano rimasti **non mappati** fino a T25, con i 12 e i 13 scritti come valore arbitrario.
 
-**E un token della scala va insegnato a `tailwind-merge`.** `text-micro`, `text-body`, `text-title` e `text-heading` non somigliano a niente che la libreria riconosca come una taglia, quindi finiscono nel gruppo dei *colori*: `cn('text-micro', 'text-chalk-dim')` restituisce il solo colore, e invertendo gli argomenti restituisce la sola taglia. Nessun errore, la classe scritta, la regola generata, e l'elemento della taglia che aveva. La dichiarazione sta in `lib/utils.ts` ed è sotto test.
+**Chiusa in T25, e la ragione per cui si poteva.** I due nomi sono mappati ai valori di questa tabella, e i siti si sono mossi insieme: le 240 `text-sm` sono diventate `text-base` e le 47 `text-xs` sono diventate `text-sm`. La gerarchia sullo schermo è quella di prima; a cambiare è la sola misura di lavoro, da 14 a 13. Il rischio che la riga qui sopra descriveva — «rimpicciolirebbe le utility già scritte senza che nessuno le abbia rilette» — è reale solo se si mappa il token e si lasciano i siti dov'erano.
+
+**`text-xs` non fa più parte della scala.** Vale 12px come il nuovo `text-sm`: due nomi per la stessa taglia sono la porta da cui rientra il disordine che questo passo esiste per chiudere. La scala ha sei nomi e sei taglie.
+
+**Le interlinee vanno dichiarate accanto alle taglie.** Quelle di Tailwind sono `calc(1.25 / 0.875)` e `calc(1.5 / 1)`, cioè 1,43 e 1,5: mappando la sola `font-size` si eredita in silenzio la seconda, che è l'interlinea che questa sezione assegna alla **prosa** e non all'interfaccia.
+
+**E la misura base, che era il vero debito.** Non c'era nessuna `font-size` né su `html` né su `body`, quindi tutto ciò che non portava una classe `text-*` rendeva a 16px — tre punti sopra il tetto del §15, e fuori dalla caccia del §14 passo 5, che cerca i 14 di shadcn. Sta su `body` e non su `html`: le spaziature di Tailwind sono in `rem` e i `rem` si radicano su `html`, quindi portare lì i 13px avrebbe rimpicciolito del 19% ogni `p-4` e ogni `h-10` dell'app.
+
+**E un token della scala va insegnato a `tailwind-merge`.** `text-micro`, `text-body`, `text-title` e `text-heading` non somigliano a niente che la libreria riconosca come una taglia, quindi finiscono nel gruppo dei *colori*: `cn('text-micro', 'text-fg-muted')` restituisce il solo colore, e invertendo gli argomenti restituisce la sola taglia. Nessun errore, la classe scritta, la regola generata, e l'elemento della taglia che aveva. La dichiarazione sta in `lib/utils.ts` ed è sotto test. `text-sm` e `text-base` non ne hanno bisogno: sono nomi che la libreria conosce già, e mapparli a un altro valore non cambia il gruppo in cui li smista.
 
 ### Ruoli
 
@@ -269,6 +277,14 @@ Curva unica `cubic-bezier(0.2, 0, 0, 1)`.
 
 `prefers-reduced-motion: reduce` disattiva tutto tranne il cambio di colore del lampeggio, che diventa istantaneo ma resta, perché porta informazione.
 
+**Verificato in T25, e la lista era sbagliata da tutti e due i lati.** Ne esistevano **due** — il lampeggio della cella e il conteggio dei crediti — e le altre due non erano scritte da nessuna parte. La caccia del §14 passo 5 non poteva trovarle: cerca le animazioni *di troppo*, e una lista chiusa si può sbagliare anche per difetto. Si conta con `grep '@keyframes'`, che tornava due.
+
+**La curva unica non era scritta nel sorgente**: i due lampeggi usavano `ease-out`. Ora è una variabile, `--ease`, e la portano tutte e quattro.
+
+**Il lampeggio è uno e riguarda due elenchi.** La riga della tabella dice «cella della board», e in `base.css` i `@keyframes` sono due: `flash-row` per l'acquisto registrato e `flash-lost` per l'obiettivo che qualcun altro ti ha preso, che il documento 2 §4.8 chiede per nome. Sono lo stesso movimento, la stessa durata e lo stesso mestiere — un cambio di colore che dice cosa è appena successo — quindi la riga li copre entrambi e la lista resta di quattro. Ma `flash-lost` **aggiunge una dissolvenza dell'opacità**, perché quella riga sta uscendo dall'elenco, e una dissolvenza non è un cambio di colore: sotto `prefers-reduced-motion: reduce` resta il solo colore.
+
+**Il pannello di dettaglio è quello del documento 2 §4.5, e non il gemello.** La cronologia dell'asta è anch'essa un pannello che entra da destra e **non** porta l'animazione: stenderla lì sarebbe la quinta, e il §15 dice di non aggiungerne senza toglierne.
+
 Nessuna animazione all'ingresso di una vista. Nessuna transizione al passaggio del mouse su righe e celle.
 
 ---
@@ -298,28 +314,36 @@ La parte che fa risparmiare più tempo nel refactoring. shadcn scrive i suoi com
 
 Sono **due** mappature, non una, e saltare la seconda è il modo più facile di rompere il refactoring senza vedere un errore.
 
-**La prima è il namespace delle utility dell'app.** Tailwind genera `bg-pitch-800` e `text-chalk-dim` solo da variabili dichiarate in `@theme` sotto il prefisso `--color-`. I primitivi del §3 stanno in un `:root` nudo, dove Tailwind non guarda: senza questo blocco le classi che i componenti già usano — 71 occorrenze contate su `src/renderer` — smettono di risolvere in silenzio, e l'elemento resta senza colore invece di dare errore.
+**La prima è il namespace delle utility dell'app.** Tailwind genera `bg-surface-panel` e `text-fg-muted` solo da variabili dichiarate in `@theme` sotto il prefisso `--color-`. I primitivi del §3 stanno in un `:root` nudo, dove Tailwind non guarda: senza questo blocco le classi che i componenti già usano — 71 occorrenze contate su `src/renderer` — smettono di risolvere in silenzio, e l'elemento resta senza colore invece di dare errore.
 
 ```css
 @theme {
-  --color-pitch-950: var(--pitch-950);
-  --color-pitch-900: var(--pitch-900);
-  --color-pitch-800: var(--pitch-800);
-  --color-pitch-700: var(--pitch-700);
-  --color-pitch-600: var(--pitch-600);
-  --color-pitch-500: var(--pitch-500);
+  --color-surface:       var(--surface);
+  --color-surface-panel: var(--surface-panel);
+  --color-surface-raised:var(--surface-raised);
+  --color-surface-deep:  var(--surface-deep);
 
-  --color-chalk-50:  var(--chalk-50);
-  --color-chalk-100: var(--chalk-100);
-  --color-chalk-400: var(--chalk-400);
-  --color-chalk-600: var(--chalk-600);
+  --color-fg:            var(--text);
+  --color-fg-strong:     var(--text-strong);
+  --color-fg-muted:      var(--text-muted);
+  --color-fg-disabled:   var(--text-disabled);
 
-  --color-line:      var(--line);
-  --color-money:     var(--money);
-  --color-taken:     var(--unavailable);
-  --color-target:    var(--targeted);
+  --color-line:          var(--line);
+  --color-money:         var(--money);
+  --color-unavailable:   var(--unavailable);
+  --color-targeted:      var(--targeted);
+  --color-blocking:      var(--blocking);
+  --color-confirmed:     var(--confirmed);
 }
 ```
+
+**I primitivi non sono in questo blocco, e la loro assenza è la regola del §3 resa meccanica.** Fino a T24 c'erano `--color-pitch-*` e `--color-chalk-*`, quindi `bg-pitch-700` era una classe che funzionava e il divieto «nessun componente cita mai un primitivo» viveva soltanto nella memoria di chi scriveva — 90 citazioni al momento del conto. Tolti, scriverne una non genera nessuna regola. Non dà errore: dà un elemento senza colore, che è lo stesso silenzio di prima ma dalla parte giusta, perché adesso si vede subito.
+
+**Il testo si chiama `fg` e non `text`, ed è una rinuncia obbligata.** I semantici del §3 si chiamano `--text`, `--text-strong`, `--text-muted`, `--text-disabled` e restano così; ma `--color-text-muted` genera l'utility `text-text-muted`, che nessuno scriverebbe due volte. `fg` è il nome dell'utility, il semantico del documento è il valore che porta, e `base.css` è l'unico posto dove i due livelli si incontrano.
+
+**Il ponte dei nomi vecchi è stato tolto in T25.** T22 aveva mappato anche `--color-chalk`, `--color-chalk-dim`, `--color-credit`, `--color-taken` e `--color-target`, perché il suo criterio era cambiare l'aspetto «senza che un solo componente sia modificato» e le utility scritte coi nomi vecchi erano 594. T25 le ha riscritte: 436 sostituzioni, e il ponte non ha più ragione di esistere.
+
+**Un nome che non dice quale delle due cose intende, non la dice per 45 volte.** `text-taken` risolveva in `--unavailable`, che il §12 misura a 3,09:1 e riserva per nome a «riempimento e icona, mai da testo». Delle sue 50 occorrenze, 42 erano violazioni bloccanti — che vogliono `--blocking`, 4,64:1, e che fino a T25 non erano scritte **da nessuna parte** — 5 erano icone e riempimenti veri, 2 erano avvisi non bloccanti, che il §3 vuole senza colore, e una era un segnaposto. È l'argomento del §3 per i nomi semantici, misurato: il nome sbagliato non fa scegliere male una volta, fa scegliere male ogni volta.
 
 **La seconda è il vocabolario di shadcn.**
 
@@ -646,6 +670,7 @@ L'ordine conta, perché i primi due passi cambiano tutto senza toccare quasi nie
 - ombre fuori da popover e dialog
 - `rounded-xl` o superiore
 - testo a 14px lasciato dal default di shadcn
+- **la misura base**, che non è la stessa cosa: senza una `font-size` su `html` o su `body`, tutto ciò che non porta una classe `text-*` rende a 16px, e nessuna delle altre voci di questa lista lo va a cercare
 - emoji usate come icone
 - transizioni al passaggio del mouse su righe di tabella
 - `outline: none` senza sostituto

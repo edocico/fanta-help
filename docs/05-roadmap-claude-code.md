@@ -335,6 +335,19 @@ Vista per vista, l'asta per prima. Poi la lista dei tic della sezione 14.
 
 **Debito da T10:** il pannello di dettaglio non ha l'ingresso da destra in 150ms che il documento 2 §2 gli assegna e che il §7 del documento 7 tiene in tabella. È una delle quattro animazioni ammesse, quindi entra qui e non si aggiunge senza toglierne un'altra.
 
+**Chiuso in T25, e quattro premesse hanno ceduto al conteggio.**
+
+- *«I dieci `<h1>` portano `text-lg`.»* Sono **dodici** i titoli di vista, e portavano tre cose diverse: otto `text-lg`, uno `text-sm`, uno nessuna taglia — quello del resoconto, che ereditava dalla barra e sarebbe sceso a 12px con la mappatura della scala. E **due viste non avevano nessun `<h1>`**: Giocatori, che è lo schermo su cui si passa tutta la preparazione, e il ramo «resoconto non ancora cristallizzato», che disegnava il proprio titolo con un `<p>`.
+- *«La riga da aggiungere alla lista dei tic è "la misura base a 16px".»* Vera, ed è stata aggiunta. Ma la lista aveva altre due voci che sembravano a zero e non lo erano: **due ombre** che non sono quella dell'app — `shadow-lg`, il default di Tailwind tarato su fondo chiaro — e **la transizione sull'hover di riga**, viva dentro `components/ui/table.tsx`, un file di 136 righe che nessuno importava. Sette voci su dieci erano davvero a zero, e verificarlo è costato meno che scoprire le tre.
+- *«Il debito da T10: manca l'ingresso da destra.»* Delle quattro animazioni del §7 **ne mancavano due**: anche il toast, che nessuno aveva nominato. E la curva che il §7 chiama «unica» non compariva nel sorgente. Una lista chiusa si sbaglia in tutti e due i versi, e il passo 5 del §14 ne guarda uno solo — cerca le animazioni di troppo.
+- *«Vista per vista, l'asta per prima.»* Il lavoro grosso non era nelle viste: era in `base.css`, e il task non lo nominava. Il ponte dei nomi vecchi che T22 aveva lasciato — 594 utility, con dentro `--taken` citato da un `@keyframes` che sarebbe diventato trasparente in silenzio togliendo il ponte per primo — e la scala, che senza i suoi due nomi non si poteva chiudere.
+
+**Quello che il task non nominava e che pesava più di tutto.** `text-taken` non diceva quale delle due cose intendesse. Risolveva in `--unavailable`, che il §12 del documento 7 misura a **3,09:1** sul fondo dell'app e riserva per nome a «riempimento e icona, mai da testo». Delle sue 50 occorrenze, **42 erano messaggi d'errore**, cioè testo, sotto il pavimento di 4,5:1. Il colore che il §10 prescrive per una violazione bloccante, `--blocking` a 4,64:1, non era scritto **da nessuna parte**: `text-blocking` aveva zero occorrenze in tutto il renderer. Non è un rilievo di nomenclatura: è l'argomento del §3 per i nomi semantici, misurato una volta.
+
+**E una guardia che non guardava.** `palette.sh` è l'hook che tiene l'ambra sul denaro. Discriminava sulla classe `figures`, cancellata in T23, e cercava `text-credit`, rinominato qui: la prima rottura lo faceva parlare a sproposito, la seconda lo avrebbe fatto tacere per sempre. Un hook che cerca una stringa del codice appartiene a chi quella stringa la rinomina.
+
+**Da misurare nell'app, e non è stato fatto qui.** Il `CLAUDE.md` vieta di calcolare a mente le taglie di un layout, e `/misura-layout` si invoca a mano. Le tre cose che questo task ha spostato e che vanno misurate in esecuzione: l'altezza delle due barre compatte di revisione e resoconto, ora che l'`<h1>` è a 24px invece che a 13; la riga della vista Giocatori, dove il titolo divide la larghezza col campo di ricerca; e la scaletta `--proj-*`, il cui commento dichiara già di essere misurata su una finestra che T24 ha cambiato.
+
 ---
 
 ## 2. Prompt di apertura
