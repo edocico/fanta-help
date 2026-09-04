@@ -263,10 +263,17 @@ già visibili, e la riga è stata tolta dal riferimento apposta.
 
 ### Sul secondo schermo
 
-La finestra si apre a **900×620**. Prima di collegare il televisore, portala alla
-dimensione vera e guarda quante squadre entrano: le taglie di questo layout,
-calcolate a mente, sono uscite sbagliate ogni volta. Si misurano nell'app in
-esecuzione, non si deducono.
+La finestra si apre a **1440×900** e non scende sotto i 1100 di larghezza. Prima
+di collegare il televisore, portala alla dimensione vera e guarda quante squadre
+entrano: le taglie di questo layout, calcolate a mente, sono uscite sbagliate
+ogni volta. Si misurano nell'app in esecuzione, non si deducono.
+
+La board delle rose cresce con lo schermo per gradini di **altezza**, non di
+larghezza: le celle passano da 24px a 30 sopra i 1000 di viewport e a 44 sopra i
+1440. Su un proiettore 1080p le venticinque righe di una rosa entrano tutte, con
+una trentina di pixel d'avanzo; sotto i 1000px di board — che in asta vuol dire
+una finestra sotto i 1360, perché il pannello di assegnazione ne prende 320 —
+la board cede il posto alla lista di righe.
 
 ---
 

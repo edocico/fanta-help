@@ -62,7 +62,8 @@ errore di protocollo che sembra un server MCP rotto.
 
 | Dimensione | Perché |
 |---|---|
-| `900x592x1` | La finestra come si apre — `main/index.ts` dice 900×620, e 592 è l'altezza utile tolta la barra del titolo. È la sola misura che si prova tutti i giorni |
+| `1440x872x1` | La finestra come si apre — `main/index.ts` dice 1440×900, e 872 è l'altezza utile tolta la barra del titolo su macOS. È la sola misura che si prova tutti i giorni |
+| `1100x672x1` | La finestra più stretta che l'app permette (`minWidth` 1100). Sotto la board delle rose cede alla lista di righe: è il confine da provare quando si tocca l'asta |
 | `1280x800x1` | Un portatile a schermo intero |
 | `1920x1080x1` | Il televisore del modo proiezione. Provala **vera**: a 1040 il conto tornava a undici righe e a 1080 a dodici |
 

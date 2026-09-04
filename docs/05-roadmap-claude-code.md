@@ -312,6 +312,16 @@ Sostituisce il pannello a righe con una board a colonne: squadre in colonna, slo
 
 **Fatto quando:** funziona con dieci squadre a rose piene, e la proiezione è la stessa board a scala doppia senza la striscia di assegnazione — non un secondo layout.
 
+**Chiuso in T24, e tre premesse hanno ceduto alla misura.**
+
+- *«Sotto i 1100px la board diventa una lista.»* I 1100 erano una larghezza di **finestra**, e la finestra non è la misura che decide: in asta il pannello di assegnazione ne prende 320 fissi. La soglia vera sta sulla board, è 1000px, ed è misurata sulla curva del troncamento dei 250 cognomi veri. La finestra è passata da 900×620 a 1440×900 con un minimo di 1100, perché a 900 la board non si sarebbe vista mai.
+- *«Celle a 44px in proiezione.»* Non stanno su un proiettore 1080p: 25 slot da 44 fanno 1100px di sole celle contro 929,5 disponibili. La cella sale per gradini di altezza e i 44 arrivano dai 1440 in su. Nello stesso paragrafo, «cifre a `--num-xl`» non può valere per dieci intestazioni — dieci cifre da 56px fanno un'intestazione alta 242px — e vale per la sola puntata della squadra di turno, che è la cifra che il documento 2 §2 nomina.
+- *«Reparto completo: la lettera del ruolo passa a `--confirmed`.»* Non applicabile: la lettera è condivisa da tutte le colonne e un reparto pieno è di una squadra sola. Il segnale è dentro la colonna.
+
+**I dieci colori.** Sostituiti, e `0003_team_colours.sql` rimappa le leghe esistenti posizione per posizione — il colore non entra nello snapshot né nell'export, quindi nessuna impronta si muove. Il debito su `--team-10` è pagato: `#9AA69F` è diventato `#C67DBD`, cercato su tutto il gamut e non scelto a occhio. La guardia di `domain.test.ts` non è l'uguaglianza che la riga sopra chiedeva di estendere — estenderla non avrebbe protetto da niente, perché nessuna delle due tavolozze contiene un semantico alla lettera — ma due misure: il pavimento ΔE del §3 sulle prime sei sotto deficienza cromatica, e la distanza di ogni tinta dal grigio delle etichette.
+
+**Il nome per esteso in proiezione** è innestato in `CalledPlayer`, e **non è mai stato visto**: `full_name` viene solo da FBref, lo stadio facoltativo di T6 non è mai stato eseguito, e il campo è nullo per tutti e 524. Con `spelledOut` che risponde `null` la fascia rende come prima. Da verificare il giorno che quello stadio gira.
+
 ### T25 · Viste e passata finale
 **Documenti:** 7 (§4, §10, §14, §15)
 

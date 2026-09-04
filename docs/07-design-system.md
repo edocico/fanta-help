@@ -111,7 +111,7 @@ Cercare un ottavo migliore non serve: i candidati che massimizzano il margine to
 --team-7:  #A9C34A;   /* lime       */
 --team-8:  #B78FE0;   /* violetto   */
 --team-9:  #C79B6B;   /* terra      */
---team-10: #9AA69F;   /* grigio     */
+--team-10: #C67DBD;   /* orchidea   */
 ```
 
 **L'ordine di assegnazione è parte del sistema.** Una lega di sei squadre o meno riceve il set verificato. Dalla settima in poi si entra in territorio dove nessuna palette regge, e il colore diventa un acceleratore invece che un identificatore. Non è un difetto da correggere più avanti: è il limite della cosa, ed è la ragione per cui le due regole qui sotto non sono facoltative.
@@ -120,7 +120,20 @@ Cercare un ottavo migliore non serve: i candidati che massimizzano il margine to
 
 **Regola di ridondanza.** Il nome della squadra è sempre adiacente al suo colore, e nella board la posizione della colonna è fissa. Chi non distingue due tinte legge il nome e conta le colonne.
 
-**Un debito noto su `--team-10`.** È a ΔE 3,8 da `--chalk-400`, il colore del testo secondario — in visione normale, non sotto deficienza cromatica. La regola di canale lo difende a metà: separa i colori squadra dall'ambra, non dal grigio-verde delle etichette, quindi una barra `--team-10` accanto a intestazioni `--chalk-400` legge come cromatura dell'interfaccia invece che come identità. Tocca solo la decima squadra assegnata. Da risolvere quando la board esiste e si può guardare, non prima.
+**Il debito su `--team-10`, pagato in T24.** La revisione 2 dava `#9AA69F`, un grigio a ΔE 3,8 da `--chalk-400` — il colore del testo secondario — e rimandava la decisione a quando la board fosse esistita. Guardata sulla board a dieci squadre, la barra grigia legge come una riga dell'interfaccia e non come l'identità di una squadra, esattamente come il debito prevedeva; e i numeri sono peggiori di come erano scritti, perché sotto protanopia scendeva a 2,9 e dai nove fratelli stava a 7,3 sotto deuteranopia.
+
+`#C67DBD` la sostituisce. Non scelta a occhio: cercata su tutto il gamut sotto tre vincoli — almeno ΔE 18 dal grigio delle etichette in ogni visione, almeno 12 dai cinque colori che significano già qualcosa, e un contrasto su `--pitch-900` **dentro la banda che le altre nove occupano** (5,93–9,02:1). L'ultimo vincolo non è cosmetico: senza, la ricerca risponde con la tinta più chiara che il gamut concede, e una decima colonna che è la cosa più luminosa dello schermo non è un identificatore più di quanto lo fosse un grigio.
+
+| | fratelli | etichette | contrasto |
+|---|---|---|---|
+| `#9AA69F` grigio | 7,3 | 3,8 · 2,9 | 7,03:1 |
+| `#C67DBD` orchidea | 14,4 | 52,5 · 20,8 | 5,97:1 |
+
+La colonna «fratelli» è nel caso peggiore fra visione normale, protanopia e deuteranopia. Quella delle etichette dà i due numeri, prima la visione normale: è lì che il debito era stato dichiarato ed è lì che la guardia lo misura, perché sotto deuteranopia il verde `--team-3` cade a 6,6 dallo stesso grigio e un pavimento nel caso peggiore boccerebbe una delle sei verificate. Il pavimento della tavolozza contro il grigio delle etichette passa così da 3,8 a **33,7**, ed è una guardia in `domain.test.ts`: la soglia sta in visione normale e non nel caso peggiore, perché sotto deuteranopia il verde `--team-3` cade a 6,6 dallo stesso grigio e un pavimento nel caso peggiore boccerebbe una delle sei verificate.
+
+Il secondo classificato era un verde menta `#85DFA7`, meglio separato ancora, e a escluderlo è la board stessa: «reparto completo» disegna `--confirmed` come riga piena dentro la colonna, quindi il moss è ora un **riempimento** e la regola di canale non lo tiene più distinto da un colore squadra. La menta sta a ΔE 15,4 dal moss; l'orchidea, 48,7 dal più vicino dei cinque.
+
+Quello che costa, e va detto invece che scoperto: in visione normale la sua vicina è `--team-6` rosa a 15,2, quindi la tavolozza guadagna una terza tinta nell'arco rosa-viola. È sopra il pavimento di 14,7 che il §3 dichiara per le sei verificate, e la decima tinta è comunque l'ultima assegnata.
 
 ### Semantici
 
@@ -448,7 +461,9 @@ Popover su `--surface-panel`, raggio 6px, l'unica ombra dell'applicazione. Estes
 
 > **Rivisto in T23.** Questa riga diceva «`?` apre già l'elenco delle scorciatoie, e diventa un pannello a due sezioni»: le due sezioni c'erano già dal T14, `Reference.tsx` le aveva affiancate. Il lavoro vero era un altro — far leggere la seconda dal glossario condiviso invece che da una copia locale a quindici voci e a un campo solo, e aggiungere le sezioni dei ruoli, che nel glossario non possono stare. Il commento di quel file dichiarava «every abbreviation the interface prints»: misurato, ne mancavano sedici.
 
-**E dove c'è spazio, non si abbrevia.** L'intestazione di colonna della board scrive `218 crediti · max 205`, non `218 cr · max 205`. La sigla migliore è quella che non serve.
+**E dove c'è spazio, non si abbrevia.** La sigla migliore è quella che non serve.
+
+Con un'eccezione che questo stesso paragrafo aveva sbagliato: l'intestazione di colonna della board **non** scrive `218 crediti · max 205`. Il sostantivo sta accanto a una cifra che conta e che `Figure` anima arrotondando ogni fotogramma, quindi discorda con lei a metà animazione — «0 credito», «1 crediti» — ed è il caso che il `CLAUDE.md` vieta per nome. Scrive la sola cifra in ambra, come il bozzetto qui sotto stampa già e come fa la spesa per reparto del §4.11. L'ambra è denaro e non serve dirlo due volte.
 
 ### Board delle rose
 
@@ -468,16 +483,18 @@ Il cambiamento strutturale della revisione 2. Sostituisce il pannello a righe.
       │ …          │ …           │ …             │
 ```
 
-- Intestazione di colonna: barra del colore squadra a piena larghezza, nome, poi crediti residui e puntata massima in ambra a `--num-md`.
+- Intestazione di colonna: barra del colore squadra a piena larghezza, nome, poi crediti residui e puntata massima in ambra a `--num-md`, **su due righe**. Il bozzetto qui sopra le mette su una, e su una ci stanno finché la colonna è larga — che non è una cosa che il layout possa sapere: nessun tetto limita il numero di squadre, quindi la colonna è `larghezza board / squadre`. Misurato a dieci squadre, `338 · max 323` chiede 135,6px di una colonna da 137,6 e la puntata della squadra di turno, un quarto più grande, ne chiede 147: veniva tagliata contro la colonna accanto. Due righe portano una cifra ciascuna e ci stanno in qualunque colonna l'app sappia produrre.
 - Celle piene: cognome a 12px e prezzo a destra in ambra a 11px. Altezza 22px.
 - Celle vuote: un trattino in `--text-disabled`, nessun bordo.
 - Gruppi di ruolo separati da una linea e dalla lettera del ruolo a sinistra.
-- Reparto completo: la lettera del ruolo passa a `--confirmed`.
+- Reparto completo: le celle di quella fascia, **in quella colonna**, portano una riga `--confirmed` sul lato interno. Non la lettera del ruolo: nel bozzetto la lettera sta a sinistra di tutte le colonne, una per fascia, mentre un reparto pieno è di una squadra sola — colorarla direbbe «tutti hanno finito i difensori», che è un'altra frase e quasi sempre falsa. E non il bordo sinistro, che è già preso dalla riga sotto: due segnali sulla stessa proprietà non fanno a turno, e a decidere quale vince è l'ordine in cui Tailwind emette le regole, non l'ordine in cui sono scritti.
 - Colonna della tua squadra: nome in grassetto e bordo laterale `--line-strong`.
 
 Questo risolve quello che una lista di righe non risolve: si vede a colpo d'occhio chi sta accumulando attaccanti, chi è quasi pieno, chi ha ancora soldi. È il motivo per cui Sleeper ha abbandonato la vista a lista.
 
-**Fallback a finestra stretta**: sotto i 1100px la board diventa una lista di righe con i pallini degli slot, come nella revisione 1. Non è la vista principale, è il ripiego.
+**Fallback a finestra stretta**: sotto i **1000px di board** — non di finestra — la board diventa una lista di righe con i pallini degli slot, come nella revisione 1. Non è la vista principale, è il ripiego.
+
+I 1100px della revisione 2 erano una larghezza di finestra, e la finestra non è la misura che decide: in asta il pannello di assegnazione prende 320px fissi e la barra laterale altri 40, quindi a finestra 1100 la board ne ha 740, cioè sette colonne. La soglia sta dove il troncamento smette di essere incidentale, e la curva è misurata sui 250 cognomi veri di una lega a dieci squadre — colonna 80px: 44,4% troncati · 92px: 18,8% · 98px: 10,8% · 104px: 4,8% · 110px: 2,4%. Dieci colonne da 98 più i 16 della grondaia dei ruoli fanno 996. Nessuna `@media` di larghezza può osservare quel numero, quindi lo osserva un `ResizeObserver` sul contenitore della board.
 
 ### DataTable — la tabella dati
 
@@ -572,8 +589,9 @@ Una riga di testo in `--text` e l'azione accanto, sulla stessa linea. Niente ill
 Non è una schermata separata: è **la board a scala doppia** senza la striscia di assegnazione. Un layout in meno da mantenere, ed è la ragione per cui l'asse di larghezza di Archivo entra nel sistema.
 
 - Sfondo `--pitch-950`.
-- Cifre a `--num-xl`, larghezza 125.
-- Celle a 44px invece di 22px.
+- Cifre a `--num-xl`: **non raggiunto, e la ragione è aritmetica.** I 56px e le celle da 44px del punto sotto competono per la stessa altezza, e vincono le celle — la board *è* le celle, l'intestazione è la cornice. Il numero grande resta uno solo, la puntata massima della squadra di turno che il documento 2 §2 chiama «la cifra più grande sullo schermo dopo il nome del giocatore in asta», e sta a un quarto sopra le altre: 25px al gradino basso, 32,5 ai due sopra. Non è che dieci cifre da 56 sarebbero troppe per l'altezza — una riga è alta quanto la sua cella più alta, quindi una costa quanto dieci — è che a 2560×1440 la board finisce con 7,8px d'avanzo e quei 56px non ci sono. Dieci sarebbero sbagliate per l'altro motivo: nessuna sarebbe la più grande.
+- Larghezza 125 per le cifre che arrivano ai 20px, che è il ruolo `projection` di `Figure`. I prezzi di cella restano Plex: al gradino basso misurano 13px, e il §15 vieta Archivo sotto i 20.
+- Celle a 44px invece di 22px, **dai 1440px di viewport in su**. È aritmetica, non taratura: una rosa è 25 slot, 25 celle da 44 fanno 1100px di sole celle, e su un proiettore 1080p ne restano 929,5 una volta tolte barra superiore e fascia «In asta». La cella sale per gradini di altezza — 24px alla finestra come si apre, 30 dai 1000, 44 dai 1440 — e il vincolo che li tiene è che in proiezione si vedano tutte le colonne e tutti gli slot **senza scorrere**: nessuno guida la proiezione, e quello che sta sotto la piega non esiste.
 - Barre del colore squadra da 3px a 8px: a tre metri sono l'unico modo per riconoscere una colonna.
 - Contrasto aumentato: il testo secondario passa da `--chalk-400` a `--chalk-100`.
 - Nessun elemento interattivo visibile: niente bottoni, niente campi, niente hover.
