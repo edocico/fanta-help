@@ -14,9 +14,15 @@ import { cn } from '@/lib/utils'
  * are converted here — the penalty mark and the two `fuori` of the players and
  * review tables. The `fuori listone` of the roster grid still is one, and so
  * are twenty-three others: they are the final sweep of §14, which is T25.
- * Counted and not asserted: every `title=` under `src/renderer`, minus the ten
+ * Counted and not asserted: every `title=` under `src/renderer`, minus the ones
  * that are the `title` prop of the local `Section` and the two that are prose
- * inside comments, leaves twenty-four attributes.
+ * inside comments, leaves **twenty-five** attributes.
+ *
+ * Twenty-four when this was written; T24 added the board's column heading, which
+ * is the idiom the rest of the app already uses for a truncated name. What T24
+ * did *not* add is the two hundred and sixty the board would have carried had
+ * its cells taken one each — the debt is counted here precisely so that a number
+ * like that gets noticed instead of absorbed.
  *
  * §12: "mai il colore da solo", which a bare glyph in a colour is exactly.
  *

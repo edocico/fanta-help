@@ -16,7 +16,7 @@ import AssignPanel, { type AssignInput } from './AssignPanel'
 import CalledPlayer from './CalledPlayer'
 import FreeTargets from './FreeTargets'
 import History from './History'
-import RosterGrid from './RosterGrid'
+import RosterPane from './RosterPane'
 
 /**
  * Asta live, document 2 §4.8: "schermo intero, tre zone".
@@ -413,17 +413,15 @@ function Live({ state }: { state: AuctionState }): JSX.Element {
           scrolled instead — the top bar and the search field that §4.8 says is
           always focused went off the top of the window.
         */}
-        <RosterGrid
-          state={state}
-          flash={last === null ? null : { teamId: last.teamId, token: last.purchaseId }}
-          projected={projected}
-        />
+        <RosterPane state={state} last={last} projected={projected} />
 
         {/*
           The history lies **over** the grid rather than beside it. At the
-          window's own 900px, 40 (retracted bar) + 320 (panel) + 384 (history)
-          leave the rose grid 156px, where a team name measures zero — and the
-          grid is half of §4.8. Overlaying costs nothing: the assignment panel
+          window's narrowest, 1100, 40 (retracted bar) + 320 (panel) + 384
+          (history) leave the roses 356px — three columns of a ten-team board,
+          and the fallback list is already what shows at that width. At 900,
+          which is where the window opened before T24, it was 156px and a team
+          name measured zero. Either way the roses are half of §4.8. Overlaying costs nothing: the assignment panel
           stays where it was and goes on working, which is the only thing §1
           refuses to slow down.
         */}

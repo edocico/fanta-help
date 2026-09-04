@@ -425,7 +425,13 @@
  * dall'altro lato — righe da 44.5px contro 59, cioè più *fitte* di quelle
  * normali — e nessuna lettura del codice l'aveva notato.
  *
- * Misure a 900×620, con la lista alta 484px:
+ * Misure a 900×620, che è la finestra **prima** di T24: oggi si apre a 1440×900
+ * e il minimo è 1100, quindi a 872 di viewport la scaletta parte dal gradino
+ * `min-height: 760` e non più dal primo. Le righe qui sotto restano la misura di
+ * allora, e il vincolo che reggono — in proiezione entrano almeno tante squadre
+ * quante nella schermata normale — va riverificato alla finestra nuova il giorno
+ * che questa lista torna a essere la vista principale invece del ripiego.
+ * Con la lista alta 484px:
  *   normale     riga 59px    →  8 squadre
  *   gradino 1   riga ~53px   →  9 squadre, corpo 18px invece di 14
  * A 1040px di altezza il gradino 3 punta a righe da ~78px, cioè dodici squadre:
@@ -467,6 +473,119 @@
     --proj-row-y: 0.625rem;
     --proj-bar-h: 3rem;
     --proj-called: 3.25rem;
+  }
+}
+
+/* Le taglie della board delle rose, documento 7 §10.
+ *
+ * Una famiglia sola con due bande, invece di due insiemi di nomi: la board
+ * normale e la proiezione sono **lo stesso layout**, che è precisamente ciò che
+ * il §11 chiede («non è una schermata separata: è la board a scala doppia»), e
+ * due famiglie di variabili sarebbero il primo passo verso due layout.
+ *
+ * Le variabili stanno qui e il componente le cita con valore arbitrario, per la
+ * ragione che il blocco di `.projection-scale` qui sopra argomenta: una regola
+ * discendente farebbe leggere `text-xs` nel componente e vedere 24px sullo
+ * schermo, senza niente nel file che lo dica.
+ *
+ * Questi sono i valori del documento, non misure: 22px la cella (§5), 3px la
+ * barra (§11), 12px il cognome e `--num-md` le cifre dell'intestazione (§10).
+ * I gradini della proiezione, che invece sono misurati, stanno nel blocco
+ * subito sotto. */
+
+.board {
+  --board-cell: 22px; /* §5: «Board d’asta, celle | 22px» */
+  --board-bar: 3px; /* §11: «barre del colore squadra da 3px a 8px» */
+  --board-name: 12px; /* §10: «cognome a 12px» */
+  --board-price: var(--text-micro); /* §10: «prezzo a destra in ambra a 11px» */
+  --board-head: var(--num-md); /* §10: «crediti e puntata massima in ambra a --num-md» */
+  --board-gutter: 1rem; /* la colonna della lettera di ruolo */
+  /* Il testo secondario della board: lettera di ruolo, etichetta `max`. Sta qui
+     e non nel componente per la stessa ragione delle taglie — in proiezione il
+     §11 lo alza da `--chalk-400` a `--chalk-100` («contrasto aumentato»), e una
+     regola discendente farebbe leggere `text-chalk-dim` nel componente mentre
+     sullo schermo si vede tutt’altro. */
+  --board-muted: var(--chalk-400);
+}
+
+/* I gradini della proiezione, **misurati sull’app in esecuzione** con una lega
+ * di dieci squadre e 250 celle vere, non calcolati. Il CLAUDE.md registra
+ * perché: sommare a mano padding, corpo e interlinea sbaglia di parecchio, e
+ * qui ha sbagliato tre volte di fila prima che la misura chiudesse il conto.
+ *
+ * **L’asse è cambiato, e con lui il vincolo.** La scaletta di `--proj-*` qui
+ * sopra è su `min-height` perché in una lista di righe è l’altezza a decidere
+ * quante squadre si vedono. Nella board le squadre sono colonne: a deciderle e'
+ * la larghezza, e l’altezza decide quanti slot di rosa entrano. Il vincolo
+ * diventa quindi un altro, e più stretto:
+ *
+ *   in proiezione si vedono **tutte** le colonne e **tutti** gli slot, senza
+ *   scorrere, e la cella non è mai più piccola di quella normale. Nessuno
+ *   guida la proiezione: quello che sta sotto la piega non esiste.
+ *
+ * La tabella misurata, con la lega di prova a dieci squadre:
+ *
+ *   viewport     modo         cella  intestazione  colonna  avanzo
+ *   1440x872     normale      22px      97,5px     106,4px   125,5px
+ *   1440x872     proiezione   24px     107,0px     137,6px     8,5px
+ *   1920x1080    normale      22px      97,5px     154,4px   333,5px
+ *   1920x1080    proiezione   30px     133,3px     185,2px    16,3px
+ *   2560x1440    normale      22px      97,5px     218,4px   693,5px
+ *   2560x1440    proiezione   44px     137,8px     248,8px     7,8px
+ *
+ * **I 44px che il §11 chiede arrivano dai 1440 in su, e non prima.** Su un
+ * proiettore 1080p 25 slot da 44 fanno 1100px di sole celle contro 929,5
+ * disponibili: non è una taratura da aggiustare, è il conto che il documento
+ * non ha fatto. La prima stesura metteva 34px al gradino di mezzo e sforava di
+ * 27,5px misurati.
+ *
+ * Alla finestra come si apre la proiezione ingrandisce di poco — 24px contro 22
+ * — e va detto invece che nascosto: a 872px di viewport restano 739,5px misurati per un’intestazione e
+ * venticinque celle, e non c’è nessuna disposizione che li raddoppi. Il
+ * vincolo che regge è l’altro: non è mai più piccola.
+ *
+ * Gli avanzi ai gradini di proiezione sono sottili di proposito (8,5 · 16,3 ·
+ * 7,8): la modalità spende tutto quello che ha. Chi aggiunge una riga
+ * all’intestazione o un campo alla cella rimisura questa tabella — e il modo di
+ * rimisurarla è `/misura-layout`, non la lettura di questo blocco.
+ *
+ * `--board-head` non arriva mai a `--num-xl`. Il §11 chiede «cifre a `--num-xl`»,
+ * e non può valere per tutte e dieci le intestazioni: provato e misurato, dieci
+ * cifre da 56px fanno un’intestazione alta 242px, e 242 più 1100 di celle non
+ * stanno in nessun pannello 1440p. Vale per **una** cifra, quella che il
+ * documento 2 §2 chiama «la cifra più grande sullo schermo dopo il nome del
+ * giocatore in asta»: la puntata massima della sola squadra di turno, che il
+ * componente alza di un quarto. */
+.board.projection-scale {
+  --board-cell: 24px;
+  --board-bar: 8px; /* §11: «da 3px a 8px: a tre metri sono l’unico modo per riconoscere una colonna» */
+  --board-name: 15px;
+  --board-price: 13px;
+  --board-head: 20px;
+  --board-gutter: 1.5rem;
+  --board-muted: var(--chalk-100); /* §11: «il testo secondario passa da --chalk-400 a --chalk-100» */
+}
+
+@media (min-height: 1000px) {
+  .board.projection-scale {
+    --board-cell: 30px;
+    --board-name: 19px;
+    --board-price: 16px;
+    --board-head: 26px;
+    --board-gutter: 1.75rem;
+  }
+}
+
+@media (min-height: 1440px) {
+  /* Il gradino in cui il §11 si avvera per intero: cella a 44px, cioè il doppio
+     dei 22 del §5, e le cifre a `--num-xl`. Serve un pannello più alto di
+     1080 — ed è il conto a dirlo, non una preferenza. */
+  .board.projection-scale {
+    --board-cell: 44px;
+    --board-name: 22px;
+    --board-price: 20px;
+    --board-head: 26px;
+    --board-gutter: 2rem;
   }
 }
 

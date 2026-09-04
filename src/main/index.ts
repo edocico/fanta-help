@@ -23,10 +23,37 @@ if (!app.isPackaged) {
   app.setPath('userData', `${app.getPath('userData')} (dev)`)
 }
 
+/**
+ * The window the board of document 7 §10 needs, and why it is not 900×620.
+ *
+ * The auction screen is the one the app exists for, and §10 gives its board a
+ * shape with an arithmetic the old size cannot hold. Counted rather than
+ * guessed, and each number is here with what it depends on:
+ *
+ * **Height.** A roster is 25 slots (`DEFAULT_SLOTS`, 3+8+8+6) and §5 fixes the
+ * board cell at 22px, so the cells alone are 550px — against the 484px the rose
+ * list was measured at inside a 620px window (`base.css`, the block on
+ * `--proj-*`). Add the column heading and the role separators and the board asks
+ * for about 620px of its own. 900 of window leaves it that, with the top bar
+ * and the macOS title bar paid for.
+ *
+ * **Width.** Ten columns, and a column has to hold a surname: measured on the
+ * 524 of the 2026-27 listone, the median is 7 characters, the 90th percentile
+ * 11, the longest 19 (`Milinkovic-Savic V.`). Beside it the price. During the
+ * auction the assignment panel takes 320px flat and the rail 40 more, so the
+ * board gets `width − 360`: at 1440 that is 1080, which is what ten columns
+ * want. At the 1100 minimum it is 740, and the board hands over to the narrow
+ * fallback §10 asks for — which is the point of having a minimum at all rather
+ * than letting the window go to nothing.
+ *
+ * If any of those change — the default slots, the 22px of §5, the 320px of the
+ * assignment panel — these two numbers are the ones to recount.
+ */
+const WINDOW = { width: 1440, height: 900, minWidth: 1100, minHeight: 700 }
+
 function createWindow(): void {
   const win = new BrowserWindow({
-    width: 900,
-    height: 620,
+    ...WINDOW,
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

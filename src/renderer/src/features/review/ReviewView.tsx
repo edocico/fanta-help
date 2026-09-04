@@ -351,8 +351,11 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
                   `w-full` sulla sola colonna del giocatore: in una tabella
                   automatica è così che una colonna si prende tutto lo spazio che
                   le altre non usano, e il nome è la colonna che conta.
-                  Misurato nell'app in esecuzione, alla finestra come si apre —
-                  900×620, con la barra laterale dell'applicazione e il pannello
+                  Misurato nell'app in esecuzione, alla finestra come si apriva
+                  allora — 900×620, che T24 ha portato a 1440×900 con un minimo
+                  di 1100, quindi al nome tocca oggi almeno altrettanto e la
+                  misura resta il caso peggiore — con la barra laterale
+                  dell'applicazione e il pannello
                   controlli già tolti: la sezione della tabella è 468px, le altre
                   cinque colonne ne occupano 295 (26 + 40 + 120 + 72 + 37) e al
                   nome ne restano 172. La versione precedente, con `px-3` ovunque

@@ -113,8 +113,11 @@ const SIZES: Record<'normal' | 'projected', Band> = {
     //
     // What the role does not fix: `--proj-credits` starts at 18px and
     // `--proj-small` at 13, both under the 20px floor §15 gives Archivo. That
-    // debt predates T23 — `.figures` was Archivo here too — and it is T24's,
-    // which rewrites this as the board of §11.
+    // debt predates T23 — `.figures` was Archivo here too — and T24 did not
+    // clear it: it built the board of §10 beside this file rather than out of
+    // it, because §10 keeps this list alive as the narrow fallback. The board
+    // answers the same question its own way — its cell prices are Plex below
+    // 20px — so what is left here is this component's own, for T25.
     figureRole: 'projection',
     figureRoleOnTurn: 'projection',
   },
@@ -147,7 +150,7 @@ export default function RosterGrid({
       className={`flex min-h-0 min-w-0 flex-1 flex-col ${projected ? 'projection-scale' : ''}`}
       /*
         The title goes in projection, and its 33px are what pays for the banner
-        above: at 900×620 the projected grid shows the same eleven rows as the
+        above: at 900×620 — the window before T24 widened it — the projected grid shows the same eleven rows as the
         normal one, which is the whole point of the first step of the scale. A
         section heading on a screen that has one section is also the first thing
         to cut for a reader three metres away — but the name still has to reach

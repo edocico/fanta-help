@@ -22,6 +22,13 @@
       "when": 1788454519607,
       "tag": "0002_player_full_name",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1788540919607,
+      "tag": "0003_team_colours",
+      "breakpoints": true
     }
   ]
 }

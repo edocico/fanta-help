@@ -192,11 +192,14 @@ export default function PlansView(): JSX.Element {
       ) : (
         <div className={`mt-6 grid gap-6 ${compare ? 'grid-cols-2' : ''}`}>
           {/* Due colonne senza breakpoint, e non `lg:grid-cols-2`.
-              La finestra si apre a 900px (main/index.ts) e `lg` parte da 1024:
-              col breakpoint, il confronto che il §4.7 chiede non sarebbe comparso
-              mai alla dimensione predefinita, e la funzione sarebbe sembrata
-              fatta. Il confronto lo si chiede scegliendo un secondo piano — chi
-              lo chiede lo vuole vedere, e le caselle vanno a capo da sole. */}
+              La ragione storica è caduta e la scelta resta giusta: la finestra
+              si apriva a 900px e `lg` parte da 1024, quindi col breakpoint il
+              confronto che il §4.7 chiede non sarebbe comparso mai — è il
+              difetto che T12 ha preso. T24 ha portato la finestra a 1440×900
+              con un minimo di 1100, quindi oggi `lg` si applicherebbe. Non si
+              rimette lo stesso: il confronto lo si chiede scegliendo un secondo
+              piano, chi lo chiede lo vuole vedere, e legarlo a una larghezza
+              vorrebbe dire nasconderlo a chi stringe la finestra. */}
           {[open, compare].filter((p): p is PlanDetail => p !== null).map((plan) => (
             <Grid
               key={`${plan.id}-${resync}`}
@@ -313,9 +316,13 @@ function Grid({
                 dell'etichetta, non delle cifre, che hanno già il loro dalle
                 classi di `Figure`.
 
-                Misurata con due piani affiancati, che è il caso stretto: alla
-                finestra come si apre — 900×620, `main/index.ts` — la colonna
-                sta in 310px e alla riga ne restano 276. Il peggio plausibile,
+                Misurata con due piani affiancati, che è il caso stretto, alla
+                finestra come si apriva **allora**: 900×620. La colonna stava in
+                310px e alla riga ne restavano 276. T24 ha portato la finestra a
+                1440×900 con un minimo di 1100, quindi il margine può solo essere
+                cresciuto e l'andata a capo degli 835px qui sotto non è più
+                raggiungibile stringendo — la misura resta il caso peggiore che
+                l'app sappia produrre, ed è per questo che non è stata rifatta. Il peggio plausibile,
                 «centrocampisti 500 · 100% del budget», ne occupa 244,5, quindi
                 ci sta con 31 di margine; va a capo sotto gli **835px** di
                 finestra, misurati stringendo a gradini, e andare a capo non

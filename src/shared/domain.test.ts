@@ -18,6 +18,8 @@ import {
   maxBid,
   coherenceWarnings,
   DEFAULT_SLOTS,
+  boardGrid,
+  type BoardCell,
   frozen,
   hasHistory,
   LEAGUE_STATUSES,
@@ -419,7 +421,7 @@ describe('chi può scrivere cosa, invarianti 9, 13 e 16', () => {
   })
 })
 
-describe('la rosa e le tinte, documento 2 §4.3', () => {
+describe('la rosa, documento 2 §4.3, e le tinte, documento 7 §3', () => {
   it('precompila 3/8/8/6, che fanno i 25 slot di una rosa', () => {
     expect(DEFAULT_SLOTS).toEqual({ P: 3, D: 8, C: 8, A: 6 })
     expect(totalSlots(DEFAULT_SLOTS)).toBe(25)
@@ -431,15 +433,265 @@ describe('la rosa e le tinte, documento 2 §4.3', () => {
   })
 
   /**
-   * Le tre tinte riservate del documento 2 §2 — l’ambra del denaro, il rosso del
-   * già preso, il verde acqua dell’obiettivo — non possono comparire fra i colori
-   * squadra: la stessa tinta direbbe due cose diverse nella stessa schermata.
+   * Le cinque tinte che significano già qualcosa: le tre del documento 2 §2 —
+   * l’ambra del denaro, il rosso del già preso, il verde acqua dell’obiettivo —
+   * più `--crimson` e `--moss`, che T22 ha aggiunto ai semantici per la
+   * violazione bloccante e il reparto completo. La stessa tinta direbbe due cose
+   * diverse nella stessa schermata.
+   *
+   * Da sola questa guardia non protegge granché, ed è giusto saperlo: è
+   * un’uguaglianza esatta, e nessuna delle due tavolozze ha mai contenuto uno di
+   * questi cinque valori alla lettera. Quello che protegge davvero i colori
+   * squadra dai semantici non è la distanza — verde #3FAE83 sta a ΔE 11,1 da
+   * `--moss` e vermiglio #E8735A a 11,4 da `--crimson`, sotto il pavimento che
+   * il §3 dichiara — ma la **regola di canale**: un colore squadra è sempre e
+   * solo un riempimento, l’ambra è sempre e solo testo. Una soglia di distanza
+   * qui boccerebbe due tinte che il documento 7 §3 prescrive.
    */
-  it('non riusa nessuno dei tre colori che significano già qualcosa', () => {
-    const reserved = ['#E8B33D', '#A8483E', '#4FB8A8']
+  it('non riusa nessuno dei cinque colori che significano già qualcosa', () => {
+    const reserved = ['#E8B33D', '#A8483E', '#4FB8A8', '#D06058', '#6FB584']
+    // La lista è la parte che marcisce: un semantico aggiunto ai token e non
+    // qui lascia la guardia verde mentre smette di guardare. Il ciclo sotto da
+    // solo passerebbe anche con la lista vuota.
+    expect(reserved).toHaveLength(5)
     for (const { value } of TEAM_COLORS) expect(reserved).not.toContain(value.toUpperCase())
   })
+
+  /**
+   * L’affermazione che il documento 7 §3 fa davvero, e che regge tutta la scelta
+   * della tavolozza: «fino a 6 squadre, margine minimo ΔE 14,7, verificato».
+   *
+   * È il numero che decide perché le prime sei sono queste sei e in quest’ordine
+   * — «l’ordine di assegnazione è parte del sistema» — quindi è il numero che va
+   * eseguito, non creduto. Riprodotto qui in CIE76 su protanopia e deuteranopia
+   * simulate, il pavimento esce 15,0: la soglia del test sta a 14 perché le
+   * matrici di simulazione non sono una sola e il documento, con la sua, misura
+   * 14,7 sulle stesse coppie.
+   *
+   * Vale per le prime sei e per nessun’altra, di proposito: il §3 dichiara che
+   * dalla settima in poi il pavimento crolla a 7,4 e poi a 3,9, e che non esiste
+   * una scelta migliore perché i candidati tornano tutti gialli. Un test che
+   * chiedesse il pavimento a tutte e dieci starebbe chiedendo alla tavolozza una
+   * cosa che il documento dichiara impossibile.
+   */
+  it('tiene il pavimento del §3 sulle prime sei, anche sotto deficienza cromatica', () => {
+    const verified = TEAM_COLORS.slice(0, 6).map((c) => c.value)
+    let floor = Infinity
+    for (let i = 0; i < verified.length; i++)
+      for (let j = i + 1; j < verified.length; j++)
+        for (const vision of ['normale', 'protanopia', 'deuteranopia'] as const)
+          floor = Math.min(floor, deltaE76(simulate(verified[i], vision), simulate(verified[j], vision)))
+
+    expect(floor).toBeGreaterThan(14)
+  })
+
+  /**
+   * Il debito che il §3 aveva aperto su `--team-10` e mandato a T24: una tinta
+   * squadra vicina a `--chalk-400` non legge come identità di una squadra, legge
+   * come una riga dell’interfaccia — le etichette di colonna sono di quel
+   * colore. Il grigio `#9AA69F` ci stava a **ΔE 3,8**, guardato sulla board fa
+   * esattamente quell’effetto, e `#C67DBD` lo sostituisce.
+   *
+   * La soglia è in visione normale e non nel caso peggiore, ed è una scelta, non
+   * una scorciatoia: sotto deuteranopia il verde `--team-3` del documento cade a
+   * 6,6 dallo stesso grigio, quindi un pavimento nel caso peggiore boccerebbe
+   * una delle sei tinte verificate. Il debito riguardava la visione normale, ed
+   * è lì che si misura. Pavimento vero della tavolozza: 33,7 (celeste e terra).
+   */
+  it('tiene ogni tinta lontana dal grigio delle etichette, che è il debito del §3', () => {
+    const etichette = '#8FA096' // --chalk-400
+    for (const { value, label } of TEAM_COLORS) {
+      const distanza = deltaE76(simulate(value, 'normale'), simulate(etichette, 'normale'))
+      expect(distanza, `${label} ${value}`).toBeGreaterThan(20)
+    }
+  })
 })
+
+describe('la board delle rose, documento 7 §10', () => {
+  const SLOTS = { P: 3, D: 8, C: 8, A: 6 }
+  // I nomi del bozzetto del §10, che sono tutti nel listone 2026-27 col ruolo
+  // che il bozzetto gli dà — verificato sul dataset costruito, non a memoria.
+  const cell = (slotRole: ClassicRole, price: number, name: string): BoardCell & { name: string } => ({
+    slotRole,
+    price,
+    name,
+  })
+
+  it('dà a ogni ruolo tante righe quanti slot, quando nessuno sfora', () => {
+    const { groups } = boardGrid(SLOTS, [[cell('P', 14, 'Meret')], [cell('D', 24, 'Bastoni')]])
+
+    expect(groups.map((g) => [g.role, g.rows, g.beyond])).toEqual([
+      ['P', 3, 0],
+      ['D', 8, 0],
+      ['C', 8, 0],
+      ['A', 6, 0],
+    ])
+  })
+
+  /**
+   * §9 lascia a una lega il diritto di non avere portieri. Una fascia «P»
+   * seguita da niente si legge come un guasto del disegno, non come una scelta.
+   */
+  it('salta il ruolo che non ha né slot né acquisti', () => {
+    const { groups } = boardGrid({ P: 0, D: 8, C: 8, A: 6 }, [[cell('D', 31, 'Dimarco')]])
+
+    expect(groups.map((g) => g.role)).toEqual(['D', 'C', 'A'])
+  })
+
+  it('lo disegna lo stesso se qualcuno ce l’ha comprato comunque', () => {
+    const { groups, columns } = boardGrid({ P: 0, D: 8, C: 8, A: 6 }, [[cell('P', 9, 'Carnesecchi')]])
+
+    expect(groups[0]).toEqual({ role: 'P', rows: 1, beyond: 1 })
+    expect(columns[0].cells.P.map((c) => c?.name)).toEqual(['Carnesecchi'])
+  })
+
+  /**
+   * L’ordine che il bozzetto del §10 stampa: `Meret 14` sopra `Falcone 3`. La
+   * lettura è chi hai davanti, non in che ordine hai comprato.
+   */
+  it('ordina una fascia per prezzo pagato, dal più caro', () => {
+    const { columns } = boardGrid(SLOTS, [
+      [cell('P', 3, 'Falcone'), cell('P', 14, 'Meret'), cell('P', 2, 'Sportiello')],
+    ])
+
+    expect(columns[0].cells.P.map((c) => c?.name)).toEqual(['Meret', 'Falcone', 'Sportiello'])
+  })
+
+  /**
+   * A parità di prezzo l’ordine dato resta, ed è `purchase.sequence` crescente
+   * come lo consegna `auctionState`. Senza questo due giocatori pagati uguale si
+   * scambierebbero di posto a ogni ridisegno — un movimento che il §7 non elenca
+   * fra i quattro ammessi, in mezzo a un’asta dal vivo.
+   */
+  it('a parità di prezzo lascia le celle dove stavano', () => {
+    const roster = [cell('D', 12, 'Gatti'), cell('D', 12, 'Bastoni'), cell('D', 12, 'Dimarco')]
+    const { columns } = boardGrid(SLOTS, [roster])
+
+    expect(columns[0].cells.D.slice(0, 3).map((c) => c?.name)).toEqual(['Gatti', 'Bastoni', 'Dimarco'])
+  })
+
+  it('riempie di celle vuote fino in fondo alla fascia', () => {
+    const { columns } = boardGrid(SLOTS, [[cell('P', 14, 'Meret')]])
+
+    expect(columns[0].cells.P).toHaveLength(3)
+    expect(columns[0].cells.P.slice(1)).toEqual([null, null])
+    expect(columns[0].cells.A).toEqual([null, null, null, null, null, null])
+  })
+
+  /**
+   * L’invariante 11: la revisione lascia passare come avviso quello che l’asta
+   * rifiuta come violazione. Il nono difensore deve **vedersi** — è l’anomalia
+   * che il §4.10 esiste per mostrare — e la fascia cresce per tutte le colonne,
+   * perché colonne che non si allineano non sono una board.
+   */
+  it('fa crescere la fascia per tutti quando una squadra sfora, e non perde nessuno', () => {
+    const troppi = Array.from({ length: 9 }, (_, i) => cell('D', 30 - i, `difensore ${i + 1}`))
+    const { groups, columns } = boardGrid(SLOTS, [troppi, [cell('D', 24, 'Bastoni')]])
+
+    expect(groups.find((g) => g.role === 'D')).toEqual({ role: 'D', rows: 9, beyond: 1 })
+    expect(columns[0].cells.D.filter(Boolean)).toHaveLength(9)
+    expect(columns[1].cells.D).toHaveLength(9)
+    expect(columns[1].cells.D.slice(1)).toEqual(Array(8).fill(null))
+  })
+
+  /**
+   * Il ramo che nessuna mutazione poteva toccare finché stava nel componente:
+   * `canStartAuction` chiede solo che il totale degli slot sia positivo, quindi
+   * una lega senza portieri è ammessa. Lì `filled >= slots` diventa `0 >= 0`,
+   * cioè vero per tutte e dieci le colonne, e la fascia — che esiste solo
+   * perché la revisione ha lasciato passare un portiere — direbbe che ogni
+   * squadra l'ha completata.
+   */
+  it('non dichiara completo un reparto che la lega non ha', () => {
+    const { columns } = boardGrid({ P: 0, D: 8, C: 8, A: 6 }, [
+      [cell('P', 9, 'Carnesecchi')],
+      [cell('D', 24, 'Bastoni')],
+    ])
+
+    expect(columns[0].complete.P).toBe(false)
+    expect(columns[1].complete.P).toBe(false)
+  })
+
+  it('dichiara completo il reparto pieno, e solo quello', () => {
+    const pieni = Array.from({ length: 3 }, (_, i) => cell('P', 10 - i, `portiere ${i + 1}`))
+    // Tre squadre sul filo del confronto: piena, **a uno dalla fine**, e a due.
+    // Senza quella di mezzo `>= slots` e `>= slots - 1` si comportano uguale, e
+    // la mutazione che sposta la soglia di uno sopravvive.
+    const quasi = [cell('P', 9, 'Svilar'), cell('P', 4, 'Falcone')]
+    const { columns } = boardGrid(SLOTS, [pieni, quasi, [cell('P', 14, 'Meret')]])
+
+    expect(columns[0].complete).toEqual({ P: true, D: false, C: false, A: false })
+    expect(columns[1].complete.P).toBe(false)
+    expect(columns[2].complete.P).toBe(false)
+  })
+
+  it('regge una lega senza nemmeno un acquisto', () => {
+    const { groups, columns } = boardGrid(SLOTS, [[], []])
+
+    expect(groups.map((g) => g.rows)).toEqual([3, 8, 8, 6])
+    expect(columns).toHaveLength(2)
+    expect(columns[0].cells.P.every((c) => c === null)).toBe(true)
+  })
+})
+
+/**
+ * Il minimo di scienza del colore che serve a eseguire i numeri del documento 7
+ * §3, invece di crederci.
+ *
+ * Sta nel file di test e non in `domain.ts` perché non è dominio: nessuna
+ * schermata converte un colore in Lab: è uno strumento di verifica, e vive
+ * accanto alla cosa che verifica. Non importa niente, quindi il guardrail del
+ * documento 6 — i test girano su Node e non toccano il database — regge.
+ */
+type Vision = 'normale' | 'protanopia' | 'deuteranopia'
+
+const linear = (c: number): number => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+const gamma = (c: number): number => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055)
+const channels = (hex: string): number[] => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+
+/** sRGB → XYZ (D65) → CIE Lab. */
+function lab(rgb: readonly number[]): number[] {
+  const [r, g, b] = rgb.map(linear)
+  const f = (t: number): number => (t > 216 / 24389 ? Math.cbrt(t) : (841 / 108) * t + 4 / 29)
+  const fx = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047)
+  const fy = f(0.2126 * r + 0.7152 * g + 0.0722 * b)
+  const fz = f((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883)
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)]
+}
+
+function deltaE76(a: readonly number[], b: readonly number[]): number {
+  const [la, lb] = [lab(a), lab(b)]
+  return Math.hypot(la[0] - lb[0], la[1] - lb[1], la[2] - lb[2])
+}
+
+/**
+ * Protanopia e deuteranopia alla Viénot, in LMS (Hunt-Pointer-Estevez).
+ * `normale` torna il colore com’è, così le tre visioni si scorrono in un ciclo
+ * solo invece che con un ramo.
+ */
+const RGB_TO_LMS = [
+  [0.31399022, 0.63951294, 0.04649755],
+  [0.15537241, 0.75789446, 0.08670142],
+  [0.01775239, 0.10944209, 0.87256922],
+]
+const LMS_TO_RGB = [
+  [5.47221206, -4.6419601, 0.16963708],
+  [-1.1252419, 2.29317094, -0.1678952],
+  [0.02980165, -0.19318073, 1.16364789],
+]
+const COLLAPSE: Record<Exclude<Vision, 'normale'>, number[][]> = {
+  protanopia: [[0, 1.05118294, -0.05116099], [0, 1, 0], [0, 0, 1]],
+  deuteranopia: [[1, 0, 0], [0.9513092, 0, 0.04866992], [0, 0, 1]],
+}
+const apply = (m: number[][], v: readonly number[]): number[] =>
+  m.map((row) => row.reduce((sum, k, i) => sum + k * v[i], 0))
+
+function simulate(hex: string, vision: Vision): number[] {
+  const rgb = channels(hex)
+  if (vision === 'normale') return rgb
+  const seen = apply(LMS_TO_RGB, apply(COLLAPSE[vision], apply(RGB_TO_LMS, rgb.map(linear))))
+  return seen.map((c) => Math.min(1, Math.max(0, gamma(c))))
+}
 
 describe('lo spostamento di una squadra nell’ordine', () => {
   const teams = ['a', 'b', 'c', 'd']

@@ -1,6 +1,7 @@
 import Abbr from '@/components/Abbr'
 import Figure from '@/components/Figure'
 import { useAuctionStore } from '@/stores/auction'
+import { spelledOut } from '@shared/domain'
 import type { PlayerRow } from '@shared/types'
 
 /**
@@ -29,6 +30,7 @@ export default function CalledPlayer({ players }: { players: readonly PlayerRow[
   // Null when the id names nobody in this listone — an import between one
   // keystroke and the next, which nothing forbids. Same reasoning as the panel.
   const player = chosenPlayerId === null ? null : players.find((p) => p.id === chosenPlayerId) ?? null
+  const spelled = player === null ? null : spelledOut(player.name, player.fullName)
 
   return (
     <section className="projection-scale shrink-0 border-b border-line px-3 py-2">
@@ -56,11 +58,67 @@ export default function CalledPlayer({ players }: { players: readonly PlayerRow[
           </p>
         ) : (
           <>
-            {/* `min-w-0` on the flex item, or `truncate` keeps the intrinsic
-                width and a long name pushes the role and the quotation off the
-                screen — the trap T14 paid for in the header above this one. */}
-            <span className="min-w-0 flex-1 truncate text-[length:var(--proj-called)] leading-tight">
-              {player.name}
+            {/* `min-w-0` on the wrapper, or `truncate` on the spelled-out name
+                inside keeps the intrinsic width and pushes the role and the
+                quotation off the screen — the trap T14 paid for in the header
+                above this one. The surname itself does not truncate: the longest
+                of the 524 is `Milinkovic-Savic V.`, and this strip is as wide as
+                the window. */}
+            <span className="flex min-w-0 flex-1 items-baseline gap-3">
+              <span className="shrink-0 text-[length:var(--proj-called)] leading-tight">
+                {player.name}
+              </span>
+              {/*
+                The debt T14b left, and the reason it is paid here: this is the
+                one screen of the auction that is read by people who did not
+                type. The listone names by surname — 407 of the 524 names are a
+                single word, and 89 carry a disambiguating abbreviation — so in
+                large it says `Martinez L.` while the auctioneer is shouting
+                "Lautaro". `spelledOut` answers null when the full name adds
+                nothing, which is what keeps `Bremer · Bremer` off the wall.
+
+                Inline, and on the same line, for a reason the vertical budget
+                decides: 25 slots of board do not fit a 1080p projector as it is,
+                so a second line here would be taken out of the rose it exists to
+                support. It also cannot jump — a line appearing when a name has a
+                full form would shift the whole board down, which is the movement
+                §2 does not list.
+
+                T14b chose inline in the players table on the premise that the
+                full name concerns "few rows", and the premise was backwards.
+                Here it is assumed to be there for everybody, and the line box
+                holds it either way.
+
+                Not visible today: `full_name` comes only from FBref, the
+                optional stage of T6 has never run, and the field is null for all
+                524. So this renders exactly as before until that stage runs —
+                which is a limit of the data, not of the code, and it is written
+                here so the next reader does not take a quiet screen for a bug.
+
+                `text-chalk` and not `text-chalk-dim`: §11 raises the contrast of
+                secondary text from `--chalk-400` to `--chalk-100`, and this is
+                the projection band.
+              */}
+              {/*
+                The middle dot, which the other four places that draw this pair
+                all write — `AssignPanel`, `PlansView`, `review/Row` — and which
+                document 2 §4.8 writes into the form itself: "`Zortea` diventa
+                `Zortea · Nadir Zortea`". Here it does more work than there: §11
+                takes the attenuation away (secondary text goes to `--chalk-100`
+                in projection), so without the dot two names in the same colour,
+                12px apart, read as two entries at three metres.
+
+                The value `spelledOut` returns and not `player.fullName`: today
+                they are the same string, and the other four callers draw the
+                return. One copy reading the field directly is the one that comes
+                apart in silence the day the function starts normalising what it
+                gives back.
+              */}
+              {spelled !== null && (
+                <span className="min-w-0 truncate text-[length:var(--proj-small)] leading-tight text-chalk">
+                  · {spelled}
+                </span>
+              )}
             </span>
             <span className="label shrink-0 text-[length:var(--proj-small)] text-chalk-dim">
               {player.roleClassic} · {player.teamCode ?? player.teamName}

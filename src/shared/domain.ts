@@ -399,32 +399,80 @@ export function totalSlots(slots: Readonly<Record<ClassicRole, number>>): number
 }
 
 /**
- * The ten hues of document 2 §4.3, "una palette predefinita di dieci tinte
- * distinguibili".
+ * The ten hues of document 7 §3, replacing the walk around the wheel that
+ * document 2 §4.3 asked for and T22 deliberately left alone.
  *
- * The document does not list them, and the three constraints that decide them
- * are all in §2. They have to read on `--pitch-900`, they have to stay apart
- * from each other, and they have to stay away from the three colours that
- * already mean something: amber `#E8B33D` is money and "nient'altro usa quel
- * colore", `#A8483E` is a player already taken, `#4FB8A8` is a target. So the
- * wheel is walked leaving the amber-yellow arc and the teal around 172° empty,
- * and every hue is brighter and more saturated than the semantic three — a team
- * colour is an identity badge beside a name, never a number.
+ * **The order is part of the system, not an arrangement of the list.** The
+ * first six derive from Okabe-Ito, built to stay apart under colour vision
+ * deficiency, lightened for a dark ground; §3 measures their floor at ΔE 14,7
+ * under protanopia and deuteranopia. The last four are additions and §3 says
+ * so: the seventh drops the floor to 7,4 and the eighth to 3,9, and no better
+ * candidate exists because every one that maximises the margin comes back
+ * yellow — which is the amber of money, and §2 does not lend it. So a league of
+ * six teams or fewer gets a set that is verified, and past that the colour is
+ * an accelerator rather than an identifier. That is the limit of the thing, and
+ * it is why the two rules of §3 are not optional: a team colour is only ever a
+ * **fill** (never a text or a number, which is amber's channel), and the name
+ * is always adjacent to it with the board column in a fixed position.
  *
- * The hex is what goes in `fanta_team.color`, not the name: a palette that gains
- * or loses a tint later must not repaint the teams of a league already played.
+ * Reproduced rather than trusted, in CIE76 on simulated dichromat vision, which
+ * is the metric that gives §3 its own figures back: 15,0 / 7,5 / 3,7 against
+ * the 14,7 / 7,4 / 3,9 the document prints, on the same pairs it names. Each is
+ * the floor across both simulations and not the friendlier of the two: the six
+ * measure 15,8 under protanopia and 15,0 under deuteranopia, and 15,0 is the
+ * one that means anything.
+ *
+ * **`--team-10` is not the grey the document printed**, and that is the debt §3
+ * opened and sent here — "da risolvere quando la board esiste e si può
+ * guardare". Looked at on the board, `#9AA69F` reads as a rule of the interface
+ * rather than as a team: at ΔE 3,8 from `--chalk-400` in normal vision, 2,9
+ * under protanopia, and 7,3 from its nearest sibling under deuteranopia.
+ *
+ * `#C67DBD` replaces it, chosen by measuring the whole gamut under three
+ * constraints rather than by eye: at least 18 from the label grey in every
+ * vision, at least 12 from the five colours that already mean something, and a
+ * contrast on `--pitch-900` inside the band the other nine occupy (5,93 to
+ * 9,02:1) — without that last one the search answers with the brightest tint
+ * the gamut allows, and a tenth column that is the lightest thing on screen is
+ * no more an identity than a grey one. What it buys, worst case across normal,
+ * protanopia and deuteranopia:
+ *
+ *   #9AA69F   fratelli 7,3    etichette 3,8 / 2,9     contrasto 7,03:1
+ *   #C67DBD   fratelli 14,4   etichette 52,5 / 20,8   contrasto 5,97:1
+ *
+ * `fratelli` is the worst case across the three visions. The label column gives
+ * both, normal vision first, because the debt §3 opened was stated in normal
+ * vision — and the guard in `domain.test.ts` measures it there for a reason it
+ * writes out: under deuteranopia `--team-3` falls to 6,6 from the same grey, so
+ * a floor on the worst case would reject one of the six verified tints.
+ *
+ * The runner-up was a mint `#85DFA7`, better separated still, and the board
+ * itself rules it out: "reparto completo" draws `--confirmed` as an inset rule,
+ * so moss is now a **fill** and §3's channel rule no longer holds it apart from
+ * a team colour. The mint sits ΔE 15,4 from moss; the orchid, 48,7 from the
+ * nearest of the five.
+ *
+ * What it costs, and it should be said rather than discovered: in normal vision
+ * its nearest sibling is `--team-6` rosa at 15,2, so the palette gains a third
+ * tint in the pink-violet arc. That is above the 14,7 floor §3 claims for the
+ * verified six, and the tenth colour is assigned last in any case.
+ *
+ * The hex is what goes in `fanta_team.color`, not the name: a palette that
+ * gains or loses a tint later must not repaint the teams of a league already
+ * played. When it does have to — as here, where the two lists share no value —
+ * it takes a migration, and `0003_team_colours.sql` is the one that did it.
  */
 export const TEAM_COLORS = [
-  { value: '#F2564D', label: 'corallo' },
-  { value: '#E8703A', label: 'ruggine' },
-  { value: '#C3D63F', label: 'lime' },
-  { value: '#5FC46B', label: 'prato' },
-  { value: '#2FBF91', label: 'smeraldo' },
-  { value: '#35B5D6', label: 'ciano' },
-  { value: '#4A8CF0', label: 'azzurro' },
-  { value: '#8B7BF0', label: 'indaco' },
-  { value: '#C46BE8', label: 'viola' },
-  { value: '#EE5FA7', label: 'magenta' },
+  { value: '#E89A3C', label: 'arancio' },
+  { value: '#6FC3EC', label: 'celeste' },
+  { value: '#3FAE83', label: 'verde' },
+  { value: '#7E9DE8', label: 'blu' },
+  { value: '#E8735A', label: 'vermiglio' },
+  { value: '#D48FB5', label: 'rosa' },
+  { value: '#A9C34A', label: 'lime' },
+  { value: '#B78FE0', label: 'violetto' },
+  { value: '#C79B6B', label: 'terra' },
+  { value: '#C67DBD', label: 'orchidea' },
 ] as const
 
 /**
@@ -1282,4 +1330,102 @@ export function planCells<T extends PlanItemLike>(
     }
   }
   return cells
+}
+
+/** One band of rows in the board of document 7 §10, shared by every column. */
+export type BoardGroup = {
+  role: ClassicRole
+  /** Rows drawn for this role, the same number in every column. */
+  rows: number
+  /**
+   * How many of those rows sit past the league's own slots — zero in an auction,
+   * and only ever positive because revision let a violation through.
+   */
+  beyond: number
+}
+
+export type BoardCell = { slotRole: ClassicRole; price: number }
+
+/**
+ * The board of document 7 §10 — "squadre in colonna, slot in riga, raggruppati
+ * per ruolo" — as rows and cells, for a whole league at once.
+ *
+ * **One function and not two, deliberately.** Splitting it into "how many rows
+ * per role" and "the cells of one column" gives the caller two results it can
+ * disagree with itself about, and the disagreement has a worst case rather than
+ * an awkward one: padding a column to a row count computed from a different set
+ * of teams drops the players past it *silently*. That is the ninth defender of
+ * invariant 11 — the anomaly §4.10 exists to show — vanishing from the screen.
+ * Deriving both from the same argument makes it impossible instead of unlikely.
+ *
+ * **Rows are the maximum across the league, not the league's slots.** A team can
+ * hold more than its slots for one role: the auction refuses it (invariant 3,
+ * `ROLE_SLOTS_FULL` blocking), revision allows it as an advisory. When that
+ * happens the whole band grows by a row and the other columns show an empty
+ * cell there, because columns that do not line up are not a board. `Dots` had
+ * the same rule before this and drew the excess in `taken`; `planCells` has the
+ * opposite one and cuts it into an `overflow` list, which is right for a grid
+ * that stands alone and wrong for one whose rows are shared.
+ *
+ * **A role with no rows at all is left out**, not drawn empty — §9 lets a league
+ * decide it has no goalkeepers, and a "P" followed by nothing reads as a
+ * rendering fault. `rows` is zero only when the league gave the role no slots
+ * *and* nobody bought one.
+ *
+ * **Order inside a band is the price paid, descending**, which is the reading
+ * the sketch in §10 prints (`Meret 14` over `Falcone 3`) and the one the
+ * expanded roster already used: the question is who a team has up front, not in
+ * what order it bought. Ties keep the order given — `Array.prototype.sort` is
+ * stable, and the rosters arrive ordered by `purchase.sequence` — so two players
+ * bought at the same price stay put instead of trading places on every redraw.
+ *
+ * **`complete` per role comes back with the cells**, and it is here rather than
+ * in the component for the reason document 6 gives: it is arithmetic on slots,
+ * so it is testable without a database — and the one way it goes wrong is a
+ * comparison that reads true on a role the league does not have.
+ *
+ * Counted off the rosters and not off `team.filled`, though the two agree by
+ * construction (`auctionState` builds them from one query). What has to match
+ * here is the number of cells and the number of players *drawn in them*, and
+ * that is a fact about this function, not an invariant of the main process.
+ */
+export function boardGrid<T extends BoardCell>(
+  slots: Readonly<Record<ClassicRole, number>>,
+  rosters: readonly (readonly T[])[],
+): {
+  groups: BoardGroup[]
+  columns: { cells: Record<ClassicRole, (T | null)[]>; complete: Record<ClassicRole, boolean> }[]
+} {
+  const byRole = rosters.map((roster) => {
+    const grouped = {} as Record<ClassicRole, T[]>
+    for (const role of CLASSIC_ROLES) {
+      grouped[role] = roster.filter((item) => item.slotRole === role).sort((a, b) => b.price - a.price)
+    }
+    return grouped
+  })
+
+  const groups: BoardGroup[] = []
+  for (const role of CLASSIC_ROLES) {
+    const rows = Math.max(slots[role], ...byRole.map((grouped) => grouped[role].length))
+    if (rows > 0) groups.push({ role, rows, beyond: rows - slots[role] })
+  }
+
+  const columns = byRole.map((grouped) => {
+    const cells = {} as Record<ClassicRole, (T | null)[]>
+    const complete = {} as Record<ClassicRole, boolean>
+    for (const role of CLASSIC_ROLES) {
+      const rows = groups.find((group) => group.role === role)?.rows ?? 0
+      cells[role] = Array.from({ length: rows }, (_, i) => grouped[role][i] ?? null)
+      // `slots > 0` before the comparison, and it is not defensive padding:
+      // `canStartAuction` only asks that the slots add up to something, so a
+      // league with no goalkeepers at all is allowed and §9 says as much. There
+      // `filled >= slots` is `0 >= 0` — true for every column — and the band,
+      // which exists only because revision let a goalkeeper through, would
+      // announce that all ten teams had completed it.
+      complete[role] = slots[role] > 0 && grouped[role].length >= slots[role]
+    }
+    return { cells, complete }
+  })
+
+  return { groups, columns }
 }
