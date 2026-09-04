@@ -157,6 +157,8 @@ Cinque modi in cui quella prova mente, incontrati tutti:
 
 **Il guardrail.** I test girano su Node, quindi non possono toccare il database. Se un test ha bisogno di importare `better-sqlite3`, `electron` o qualcosa da `src/main/db/`, non è il test a essere sbagliato: è la logica che sta nel posto sbagliato e va spostata in `src/shared/domain.ts` come funzione pura. Le invarianti che contano sono aritmetica su crediti e slot: non hanno bisogno di SQLite.
 
+**Il guardrail vale nel verso giusto.** Spinge in `domain.ts` la logica di *dominio*, non gli strumenti che la verificano: la conversione in Lab e la simulazione di protanopia che eseguono i ΔE del documento 7 §3 stanno in `domain.test.ts`, perché nessuna schermata converte un colore e un attrezzo vive accanto a ciò che misura. La regola è chi lo chiama, non quanto è puro.
+
 **Provare un servizio del main.** Il guardrail vale per Vitest, non per te. I difetti che i tipi non vedono — un rifiuto senza il suo messaggio, una transazione che non torna indietro, una grammatica che non sa contare fino a uno — escono solo esercitando il servizio vero su un database di scorta, ed è così che T12 e T13 li hanno trovati. Lo fa **`/prova-servizio`**: copi il modello, scrivi le prove in fondo, lo lanci. Il documento 6 §5 chiama questa strada «uno script separato eseguito sotto Electron, non Vitest».
 
 ---
@@ -183,6 +185,8 @@ Per leggere cosa mostra davvero l'app: **`/prova-pacchetto`** (`dev` o `pack`) c
 **Strumenti del progetto.** Skill: `/apri-task <n>` apre un task leggendo solo i documenti che indica · `/chiudi-fase` è il rituale opposto, revisione e pacchetto e commit separati · `/muta` rompe le guardie e verifica che i test se ne accorgano · `/prova-servizio` esegue un servizio contro un database vero sotto l'ABI di Electron · `/misura-layout` misura le taglie vere nell'app in esecuzione, invece di calcolarle.
 
 Agenti: `revisore-fase`, `deriva-documenti`, e `revisore-copy` che guarda i soli testi italiani — la categoria che è sfuggita a tre task di fila.
+
+**Una variante non è una ripartenza.** Quando serve qualcosa che lo script non copre — un database di scorta, una serie di viewport, una porta diversa — si copia da lui, non si riparte da zero: le trappole stanno lì dentro, e riscrivendo il lancio a mano si perdono in silenzio. In T24 è andata così con il `npm run build` senza ricaricare il renderer, che `/misura-layout` chiama «l'errore più facile di tutto il giro» e che ha prodotto sei misure plausibili e tutte vecchie.
 
 In `.claude/hooks/`, `boundaries` e `typecheck` **bloccano**; `palette`, `copy` e `untracked-guard` **avvisano e basta**. Non è pigrizia: l'ambra sul denaro è corretta e frequente, un titolo minuscolo può essere voluto, e un file non tracciato può essere una nota locale. Una guardia che rifiutasse un caso legittimo verrebbe aggirata dentro un task, ed è il modo in cui una guardia smette di esistere.
 
