@@ -80,7 +80,6 @@ export default function PriceField({
       min={0}
       inputMode="numeric"
       aria-label={label}
-      title={label}
       disabled={disabled}
       className={`figure-column w-14 rounded-md border border-line bg-surface px-1 py-0.5 text-right text-base text-money disabled:opacity-40 ${className}`}
       value={draft}

@@ -68,7 +68,6 @@ export default function AppShell(): JSX.Element {
           <NavLink
             to={`/lega/${openId}`}
             className="rounded-md border border-line px-2 py-1 text-base leading-none text-fg-muted hover:text-fg"
-            title="torna alla lega"
             aria-label="torna alla lega"
           >
             ←
@@ -124,7 +123,6 @@ function LeaguePicker({ leagues }: { leagues: LeagueSummary[] }): JSX.Element {
       <NavLink
         to="/lega/nuova"
         className="rounded-md border border-line px-2 py-1.5 text-base leading-none text-fg-muted hover:text-fg"
-        title="Nuova lega"
         aria-label="Nuova lega"
       >
         +
@@ -159,9 +157,12 @@ function LeagueSections(): JSX.Element {
             key={section.label}
             className="px-2 py-1.5 text-base text-fg-disabled"
             aria-disabled="true"
-            title="Non ancora disponibile"
           >
             {section.label}
+            {/* La ragione, non il tooltip nativo che il §15 vieta: `aria-disabled`
+                dice che e' spenta e non perche'. Uno `sr-only` la dice a chi non
+                vede il colore attenuato, che e' l'unico altro segnale. */}
+            <span className="sr-only"> — non ancora disponibile</span>
           </span>
         ),
       )}

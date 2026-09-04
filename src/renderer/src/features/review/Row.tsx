@@ -169,11 +169,6 @@ export default function Row({
                                 shown, as in the auction panel. */}
                             <span
                               className="min-w-0 flex-1 truncate"
-                              title={
-                                spelledOut(p.name, p.fullName) === null
-                                  ? p.name
-                                  : `${p.name} · ${spelledOut(p.name, p.fullName)}`
-                              }
                             >
                               {p.name}
                               {spelledOut(p.name, p.fullName) !== null && (

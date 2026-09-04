@@ -546,7 +546,6 @@ function TopBar({
           {state.league.auctionFormat === 'call' && (
             <button
               className="shrink-0 rounded-md border border-line px-1.5 leading-none text-fg-muted hover:text-fg"
-              title="passa il turno alla squadra successiva"
               aria-label="passa il turno alla squadra successiva"
               onClick={nextTurn}
             >
@@ -572,9 +571,13 @@ function TopBar({
           className="label shrink-0 rounded-md border border-line px-2 py-1 text-micro text-fg-muted hover:text-fg"
           onClick={onProjection}
           aria-pressed={projected}
-          title="Ctrl/Cmd+P"
         >
           {projected ? 'Esci dalla proiezione' : 'Proiezione'}
+          {/* §10, «Scorciatoie visibili»: «ogni azione con una scorciatoia la
+              mostra accanto a se', in --text-muted a 11px». Stava in un `title`,
+              che il §15 vieta e che comunque non compare al fuoco da tastiera —
+              cioe' proprio a chi le scorciatoie le sta cercando. */}
+          <span className="pl-1.5 text-fg-disabled">Ctrl/Cmd+P</span>
         </button>
 
         {/*
@@ -595,9 +598,9 @@ function TopBar({
             <button
               className="label shrink-0 rounded-md border border-line px-2 py-1 text-micro text-fg-muted hover:text-fg"
               onClick={onHistory}
-              title="Ctrl/Cmd+H"
             >
               Cronologia
+              <span className="pl-1.5 text-fg-disabled">Ctrl/Cmd+H</span>
             </button>
 
             <button

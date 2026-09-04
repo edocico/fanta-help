@@ -419,13 +419,12 @@ export default function AssignPanel({
 
       {chosen && (
         <>
-          {/* Both halves in the tooltip, for the reason spelled out at the result
-              row below: this line truncates too, and what an ellipsis eats is the
-              end of the *second* name. */}
-          <p
-            className="truncate pt-1 text-body text-fg"
-            title={chosenSpelled === null ? chosen.name : `${chosen.name} · ${chosenSpelled}`}
-          >
+          {/* Both halves inline, and no `title`: §15 forbids the native attribute
+              "per nient'altro", and T25 took the twenty-five of them out. What an
+              ellipsis eats here is the end of the *second* name — the spelled-out
+              one, which is the half a reader can reconstruct, while the listone
+              name that stays is the one the auctioneer is not shouting. */}
+          <p className="truncate pt-1 text-body text-fg">
             {chosen.name}{' '}
             {chosenSpelled !== null && (
               <span className="text-body text-fg-muted">· {chosenSpelled} </span>
@@ -766,7 +765,6 @@ function Results({
               */}
               <span
                 className="min-w-0 flex-1 truncate text-fg"
-                title={spelled === null ? p.name : `${p.name} · ${spelled}`}
               >
                 {p.name}
                 {spelled !== null && <span className="pl-1.5 text-fg-muted">· {spelled}</span>}

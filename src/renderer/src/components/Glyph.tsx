@@ -10,19 +10,26 @@ import { cn } from '@/lib/utils'
  * of document 7 need a mechanism and neither had one. §15: "non usare
  * l'attributo `title` nativo per spiegare una sigla, **né per nient'altro**" —
  * and `title` is how these marks were explained, with a delay nobody controls,
- * drawn by the operating system, and invisible to a keyboard. Three of them
- * are converted here — the penalty mark and the two `fuori` of the players and
- * review tables. The `fuori listone` of the roster grid still is one, and so
- * are twenty-three others: they are the final sweep of §14, which is T25.
- * Counted and not asserted: every `title=` under `src/renderer`, minus the ones
- * that are the `title` prop of the local `Section` and the two that are prose
- * inside comments, leaves **twenty-five** attributes.
+ * drawn by the operating system, and invisible to a keyboard. Three of them were
+ * converted when this was written — the penalty mark and the two `fuori` of the
+ * players and review tables — and twenty-five others were left standing and
+ * counted here, so that a number like that would get noticed instead of
+ * absorbed.
  *
- * Twenty-four when this was written; T24 added the board's column heading, which
- * is the idiom the rest of the app already uses for a truncated name. What T24
- * did *not* add is the two hundred and sixty the board would have carried had
- * its cells taken one each — the debt is counted here precisely so that a number
- * like that gets noticed instead of absorbed.
+ * **T25 took all twenty-five out, and only four of them needed this component.**
+ * Twelve were pure duplication: the element already carried an `aria-label` with
+ * the same words, so the `title` gave nothing to a screen reader and gave a
+ * system tooltip to everyone else. Seven were full names behind a `truncate`,
+ * and those stay truncated — §15 has no exception, and inventing a popover for
+ * every clipped name in a list is the thing §10 warns about one line later. Two
+ * were keyboard shortcuts hidden in a tooltip that never opens on focus, which
+ * is exactly the reader who is hunting for them: §10 wants those *visible*, and
+ * now they are. The rest became words on the page or in an `sr-only`.
+ *
+ * There are now **zero** native `title` attributes under `src/renderer`. The
+ * four that became this component are the penalty mark, the two `fuori` of the
+ * players and review tables, and the `fuori listone` of the roster grid — the
+ * one this docblock had named and left standing.
  *
  * §12: "mai il colore da solo", which a bare glyph in a colour is exactly.
  *
@@ -48,7 +55,7 @@ export default function Glyph({
         </span>
       </TooltipTrigger>
       <TooltipContent>
-        <p className="text-[13px] text-fg">{says}</p>
+        <p className="text-base text-fg">{says}</p>
       </TooltipContent>
     </Tooltip>
   )

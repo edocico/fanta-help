@@ -869,7 +869,6 @@ function Star({
                 : 'text-line hover:text-fg-muted'
             }`}
             aria-label={`${star} su ${MAX_RATING} a ${player.name}`}
-            title={`${star} su ${MAX_RATING}`}
             onClick={(e) => {
               e.stopPropagation()
               objectives.patch({
@@ -884,7 +883,6 @@ function Star({
       <button
         className={`ml-0.5 text-base leading-none ${target ? 'text-targeted' : 'text-fg-muted'}`}
         aria-label={target ? `togli ${player.name} dagli obiettivi` : `aggiungi ${player.name} agli obiettivi`}
-        title={target ? 'togli dagli obiettivi' : 'aggiungi agli obiettivi'}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         onClick={(e) => {

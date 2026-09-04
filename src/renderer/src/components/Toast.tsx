@@ -64,7 +64,6 @@ export default function Toast({
       <button
         className="label text-micro text-fg-muted hover:text-fg"
         aria-label="chiudi l’avviso"
-        title="chiudi"
         onClick={onDismiss}
       >
         ✕

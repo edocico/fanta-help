@@ -254,7 +254,7 @@ function Grid({
         <button
           className="text-base text-fg-muted hover:text-blocking"
           onClick={onDelete}
-          title="cancella il piano"
+          aria-label="cancella il piano"
         >
           cancella
         </button>
@@ -456,7 +456,7 @@ function Cell({
       }`}
     >
       <div className="flex items-baseline gap-1">
-        <span className="min-w-0 flex-1 truncate text-base" title={name}>
+        <span className="min-w-0 flex-1 truncate text-base">
           {name}
         </span>
         <button
@@ -564,11 +564,6 @@ function Picker({
                   now, so a row that answered `lauta` has to say why. */}
               <span
                 className="min-w-0 flex-1 truncate"
-                title={
-                  spelledOut(player.name, player.fullName) === null
-                    ? player.name
-                    : `${player.name} · ${spelledOut(player.name, player.fullName)}`
-                }
               >
                 {player.name}
                 {spelledOut(player.name, player.fullName) !== null && (

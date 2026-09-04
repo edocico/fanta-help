@@ -304,14 +304,13 @@ function Tile({
       className="cursor-grab rounded-md bg-surface-raised p-1.5"
     >
       <div className="flex items-baseline gap-1">
-        <span className="min-w-0 flex-1 truncate text-base" title={target.name}>
+        <span className="min-w-0 flex-1 truncate text-base">
           {target.name}
         </span>
         <span className="label text-micro text-fg-muted">{target.teamCode ?? target.teamName}</span>
         <button
           className="px-1 text-base text-fg-muted hover:text-blocking"
           aria-label={`togli ${target.name} dagli obiettivi`}
-          title="togli dagli obiettivi"
           onClick={() => onRemove(target.playerId)}
         >
           ×
@@ -362,7 +361,6 @@ function Rating({
             value !== null && star <= value ? 'text-targeted' : 'text-line hover:text-fg-muted'
           }`}
           aria-label={`${star} su ${MAX_RATING} a ${name}`}
-          title={`${star} su ${MAX_RATING}`}
           onClick={() => onChange(value === star ? null : star)}
         >
           ★

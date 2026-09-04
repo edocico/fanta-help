@@ -173,7 +173,6 @@ function ColumnHead({
       <span
         className={`block truncate ${team.isMine ? 'font-semibold text-fg' : 'font-normal text-fg'}`}
         style={{ fontSize: 'var(--board-name)' }}
-        title={team.name}
       >
         {team.name}
       </span>

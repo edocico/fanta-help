@@ -87,7 +87,6 @@ export default function TeamRows({
             className={`w-6 text-right text-base text-fg-muted ${
               locked || frozen ? '' : 'cursor-grab'
             }`}
-            title={locked || frozen ? undefined : 'Trascina per cambiare il turno'}
           >
             <Figure value={index + 1} />
           </span>
@@ -142,7 +141,6 @@ export default function TeamRows({
             <button
               className="px-1.5 py-0.5 text-base text-fg-muted hover:text-blocking disabled:opacity-30 disabled:hover:text-fg-muted"
               disabled={locked || frozen}
-              title={locked ? 'Le squadre si tolgono prima dell’asta' : 'Togli la squadra'}
               aria-label={`Togli ${row.name || 'la squadra'}`}
               onClick={() => onRemove(index)}
             >
@@ -243,7 +241,6 @@ function Swatch({
               }`}
               style={{ backgroundColor: tint.value }}
               aria-label={tint.label}
-              title={tint.label}
               onClick={() => {
                 onPick(tint.value)
                 setOpen(false)
@@ -276,7 +273,6 @@ function Arrow({
       className="px-1 py-0.5 text-base text-fg-muted hover:text-fg disabled:opacity-30 disabled:hover:text-fg-muted"
       disabled={disabled}
       aria-label={label}
-      title={label}
       onClick={onClick}
     >
       {glyph}

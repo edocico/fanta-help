@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Abbr from '@/components/Abbr'
 import Figure from '@/components/Figure'
+import Glyph from '@/components/Glyph'
 import { CLASSIC_ROLES, type ClassicRole } from '@shared/domain'
 import { notices } from '@shared/errors'
 import type { AuctionState, AuctionTeam } from '@shared/types'
@@ -358,9 +359,11 @@ function Roster({ team, band }: { team: AuctionTeam; band: Band }): JSX.Element 
             <span className="min-w-0 flex-1 truncate">{bought.name}</span>
             {/* "Resta in rosa, marcato", §7. The purchase stands; the listing does not. */}
             {bought.delisted && (
-              <span className="label text-micro shrink-0 text-unavailable" title={notices.DELISTED()}>
-                fuori listone
-              </span>
+              <Glyph
+                mark="fuori listone"
+                says={notices.DELISTED()}
+                className="label text-micro shrink-0 text-unavailable"
+              />
             )}
             {/* The club code is data — all twenty are derived from the club
                 name and change with every promotion — so it is not in the
