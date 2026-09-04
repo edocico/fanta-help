@@ -104,7 +104,7 @@ export default function PlansView(): JSX.Element {
 
   return (
     <Frame>
-      <h1 className="text-lg font-medium">Piani</h1>
+      <h1 className="font-display text-heading font-medium">Piani</h1>
       <p className="mt-1 text-base text-fg-muted">
         {openLeague.name} · budget <Figure value={openLeague.budget} kind="money" />
       </p>

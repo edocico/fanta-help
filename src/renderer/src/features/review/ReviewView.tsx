@@ -289,9 +289,15 @@ function Table({ state }: { state: AuctionState }): JSX.Element {
   return (
     <div className="flex h-screen min-h-0 flex-col">
       <header className="flex items-baseline gap-3 border-b border-line px-4 py-2">
-        <h1 className="min-w-0 truncate text-base">
-          {state.league.name} <span className="text-fg-muted">· revisione</span>
+        <h1 className="min-w-0 truncate font-display text-heading font-medium">
+          {state.league.name}
         </h1>
+        {/* Fuori dall'h1, e senza il `·`. Dentro era una coda muta in fondo a un
+            titolo — a 13px passava, a 24px è la «parola sola evidenziata» che il
+            §4 vieta, letta al rovescio. E il `·` il §4 lo ammette nella barra di
+            stato «per unire al massimo tre fatti dello stesso tipo»: il nome
+            della vista non è dello stesso tipo dei due conteggi qui accanto. */}
+        <span className="shrink-0 text-base text-fg-muted">revisione</span>
         <span className="ml-auto shrink-0 text-base text-fg-muted">
           {purchases(lines.length)} · {anomalies(anomalyCount)}
         </span>

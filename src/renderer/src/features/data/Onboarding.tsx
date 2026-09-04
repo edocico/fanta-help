@@ -73,7 +73,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }): JSX.Elem
   if (report) {
     return (
       <Frame>
-        <h1 className="text-lg font-medium">Listone importato</h1>
+        <h1 className="font-display text-heading font-medium">Listone importato</h1>
         <p className="mt-2 text-base text-fg-muted">
           {report.label} · {report.added + report.updated} giocatori, {report.teams} squadre.
           {report.delisted > 0 && ` ${report.delisted} non sono più nel listone e restano marcati.`}
@@ -92,7 +92,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }): JSX.Elem
 
   return (
     <Frame>
-      <h1 className="text-lg font-medium">Servono i giocatori</h1>
+      <h1 className="font-display text-heading font-medium">Servono i giocatori</h1>
       <p className="mt-2 text-base text-fg-muted">
         Fanta Help parte da un listone di Serie A. Puoi scaricarlo o importarlo da un file.
       </p>

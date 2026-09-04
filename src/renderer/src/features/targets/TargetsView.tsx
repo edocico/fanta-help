@@ -243,7 +243,7 @@ function Board({
 function Header({ league }: { league: LeagueDetail }): JSX.Element {
   return (
     <div>
-      <h1 className="text-lg font-medium">Obiettivi</h1>
+      <h1 className="font-display text-heading font-medium">Obiettivi</h1>
       <p className="mt-1 text-base text-fg-muted">
         {league.name} · budget <Figure value={league.budget} kind="money" />
       </p>

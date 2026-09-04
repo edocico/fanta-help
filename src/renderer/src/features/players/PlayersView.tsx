@@ -445,7 +445,14 @@ export default function PlayersView(): JSX.Element {
   return (
     <Shell>
       <header className="border-b border-line px-6 py-3">
+        {/* La vista Giocatori era l'unica delle undici senza nessun `<h1>`: chi
+            naviga per intestazioni non trovava lo schermo in cui si passa tutta
+            la preparazione. Sta sulla stessa riga della ricerca e non sopra,
+            perché è la vista più densa dell'app e una riga in più la paga la
+            tabella; `shrink-0` perché a restringersi sia il campo, che ha già
+            `min-w-0 flex-1`. */}
         <div className="flex items-baseline gap-4">
+          <h1 className="shrink-0 font-display text-heading font-medium">Giocatori</h1>
           <input
             ref={searchRef}
             className="min-w-0 flex-1 rounded-md border border-line bg-surface-panel px-3 py-1.5 text-base placeholder:text-fg-muted"

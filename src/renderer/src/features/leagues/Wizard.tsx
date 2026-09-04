@@ -129,7 +129,7 @@ export default function Wizard(): JSX.Element {
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-8">
-      <h1 className="text-lg font-medium">Nuova lega</h1>
+      <h1 className="font-display text-heading font-medium">Nuova lega</h1>
 
       <ol className="mt-4 flex gap-1 text-base">
         {([1, 2, 3] as Step[]).map((n) => (

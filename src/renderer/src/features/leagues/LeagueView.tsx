@@ -149,7 +149,7 @@ function Loaded({ league }: { league: LeagueDetail }): JSX.Element {
   return (
     <Frame>
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h1 className="text-lg font-medium">{league.name}</h1>
+        <h1 className="font-display text-heading font-medium">{league.name}</h1>
         {/* Not a figure: "2026-27" is the name of a season, not a quantity, and
             this header wraps rather than aligning, so there is no column for
             tabular digits to hold. Document 7 §4 gives the numeric roles to

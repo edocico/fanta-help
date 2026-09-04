@@ -81,7 +81,7 @@ export default function AuctionView(): JSX.Element {
 function Frame({ children }: { children: React.ReactNode }): JSX.Element {
   return (
     <div className="p-6">
-      <h1 className="pb-4 text-lg">Asta</h1>
+      <h1 className="pb-4 font-display text-heading font-medium">Asta</h1>
       {children}
     </div>
   )

@@ -110,9 +110,10 @@ export default function ReportView(): JSX.Element {
     const status = league.data.league.status
     return (
       <Frame>
-        <p className="pb-1 text-base text-fg-muted">
-          {league.data.league.name} <span>· resoconto</span>
-        </p>
+        <h1 className="pb-1 font-display text-heading font-medium">
+          {league.data.league.name}
+        </h1>
+        <p className="text-base text-fg-muted">resoconto</p>
         <p className="max-w-xl pt-2 text-base text-fg-muted">
           {status === 'review'
             ? 'Non c’è ancora un resoconto: lo crea «Cristallizza il resoconto», in fondo alla revisione.'
@@ -216,9 +217,10 @@ function Report({
     <div className="flex h-screen min-h-0 flex-col">
       {/* «In cima, una barra che dice quale versione stai guardando.» §4.11 */}
       <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-4 py-2 text-base">
-        <h1 className="min-w-0 truncate">
-          {file.league.name} <span className="text-fg-muted">· resoconto</span>
+        <h1 className="min-w-0 truncate font-display text-heading font-medium">
+          {file.league.name}
         </h1>
+        <span className="shrink-0 text-fg-muted">resoconto</span>
         {/*
           «firmato da PC di Edoardo» solo quando l'istanza ha un nome. Senza, la
           colonna ripiega sull'uuid — che è l'identità giusta nel file e una

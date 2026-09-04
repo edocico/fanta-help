@@ -23,7 +23,7 @@ export default function Home(): JSX.Element {
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
       <header className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-lg font-medium">Leghe</h1>
+        <h1 className="font-display text-heading font-medium">Leghe</h1>
         <div className="flex items-center gap-3">
           {/* L'import sta qui perché porta una lega: è l'altra metà di «Nuova
               lega», non un'azione dentro una lega che esiste già. Il suo
