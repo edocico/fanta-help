@@ -35,6 +35,12 @@ publish:
   provider: github
   owner: edocico
   repo: fanta-help
+  # `@default draft` nei tipi di builder-util-runtime, e una Release draft
+  # l'updater non la vede: `/releases/latest` la salta. Senza questa riga
+  # `--publish always` produrrebbe una Release invisibile, che si legge come
+  # «il meccanismo non funziona» invece che come «manca una riga di
+  # configurazione».
+  releaseType: release
 
 # Every target pins its architectures explicitly. Without `arch`, electron-builder
 # builds only for the architecture of the machine that runs it, so a build on an
