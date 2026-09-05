@@ -73,8 +73,14 @@ export function corpo(righe: readonly string[], versione: string, da: string | n
       ? 'Nessun cambiamento registrato fra le due versioni.'
       : righe.map((r) => `- ${r}`).join('\n')
 
+  // Niente link quando i due capi coincidono. In CI non capita — il checkout
+  // sta sul tag, quindi `package.json` porta già la versione nuova — ma
+  // eseguendolo in locale *prima* del salto il lato «a» è ancora quello vecchio,
+  // e ne usciva `compare/v0.1.1...v0.1.1`: un link a un confronto vuoto, dentro
+  // un'anteprima che serve a decidere se pubblicare. L'ha preso il pre-volo.
+  const degenere = da === `v${versione}`
   const confronto =
-    da === null
+    da === null || degenere
       ? ''
       : `\n\nConfronto completo: https://github.com/edocico/fanta-help/compare/${da}...v${versione}`
 

@@ -38,6 +38,15 @@ describe('corpo', () => {
     expect(c).toBe('- la prima cosa')
   })
 
+  test('nessun link quando i due capi sono lo stesso tag', () => {
+    // Succede eseguendo l'anteprima in locale prima del salto di versione:
+    // `package.json` porta ancora la vecchia, e ne usciva
+    // `compare/v0.1.1...v0.1.1` — un link a un confronto vuoto.
+    const c = corpo(['una riga'], '0.1.1', 'v0.1.1')
+    expect(c).not.toContain('/compare/')
+    expect(c).toBe('- una riga')
+  })
+
   test('non lascia entrare inglese', () => {
     // La ragione per cui questo file esiste: `--generate-notes` metteva
     // «Full Changelog» dentro l'interfaccia italiana dell'app.
