@@ -13,8 +13,12 @@ dist-ssr
 *.local
 
 # electron-vite build output and electron-builder installers
-out
-release
+/out/
+# La barra in testa e in coda: `release` nudo combacia con QUALUNQUE
+# componente di percorso chiamato così, a qualsiasi profondità, quindi si
+# portava via anche `tools/release/`. I file c'erano, typecheck e test
+# passavano, e in CI non sarebbero mai arrivati.
+/release/
 *.tsbuildinfo
 
 # note e impostazioni locali per Claude Code, non condivise.
