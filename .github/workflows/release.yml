@@ -250,7 +250,6 @@ jobs:
 
       - name: Costruisci i pacchetti senza pubblicare
         if: github.ref_type != 'tag'
-        env:
         # Anche con `--publish never` i `latest*.yml` vengono scritti in
         # `release/`: la loro creazione sta fuori dal ramo `if (this.isPublish)`
         # di `PublishManager.js:149-162`. Così il giro di prova mostra il feed
