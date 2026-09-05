@@ -52,6 +52,18 @@
             "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/tabella.sh\"",
             "timeout": 15,
             "statusMessage": "le righe della tabella hanno tre pipe"
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/workflow.sh\"",
+            "timeout": 20,
+            "statusMessage": "il workflow deve essere valido per GitHub"
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/ignorato.sh\"",
+            "timeout": 20,
+            "statusMessage": "un file nuovo che git ignora"
           }
         ]
       }
