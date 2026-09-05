@@ -14,6 +14,12 @@ permanenti**, e nessuno dei due si vede leggendo il codice.
 
 Questa skill è la sequenza che ha funzionato, con dentro le trappole.
 
+**La via normale però non è più questa.** Da quando esiste
+`.github/workflows/release.yml`, si pubblica spingendo un tag: la CI costruisce
+i tre sistemi su runner nativi, apre una Release in bozza e la rende visibile
+solo quando tutti e quattro i feed ci sono. Questa procedura resta per quando la
+CI non è disponibile, o per capire cosa fa.
+
 ## Cosa può andare storto in silenzio
 
 **La Release nasce draft.** `releaseType` ha `@default draft` nei tipi di
@@ -57,10 +63,16 @@ git tag v<version> && git push origin v<version>
 npm run build && npx electron-builder --linux AppImage deb --x64
 ```
 
-Da Fedora esce solo Linux x64, e non è colpa del modulo nativo —
-`better-sqlite3` pubblica prebuild per l'ABI di Electron. NSIS vuole wine
-(`⨯ wine is required`), il dmg muore su `Cannot find module 'dmg-license'`, che
-npm non installa fuori da macOS. macOS si costruisce dal Mac.
+Da Fedora escono **Linux e Windows** (`command -v wine` per verificarlo: senza,
+NSIS muore con `⨯ wine is required`). Il dmg no — `Cannot find module
+'dmg-license'`, che npm non installa fuori da macOS — e va fatto dal Mac. Non è
+colpa del modulo nativo: `better-sqlite3` pubblica prebuild per l'ABI di
+Electron su tutte le combinazioni.
+
+**Una build Windows da qui lascia `better-sqlite3` compilato per Windows** (un
+`PE32+` dove serve un ELF), e `npm run dev` muore finché non lanci
+`npx electron-builder install-app-deps`. È la ragione migliore per lasciar fare
+alla CI.
 
 **3. Il nome, e le impronte.** Questo passo non è cortesia.
 
@@ -82,11 +94,15 @@ gh release create v<version> \
   release/fanta-help_<version>_amd64.deb \
   --repo edocico/fanta-help \
   --title "Fanta Help <version>" \
-  --notes "..."
+  --notes "$(npm run release:note --silent)"
 ```
 
-Le note finiscono nello stato `available` dell'app, che le legge dal feed Atom
-in HTML e le mostra come testo: scrivile per chi le leggerà lì.
+**Le note non si scrivono a mano**, e non si lasciano a `--generate-notes`.
+`npm run release:note` le ricava dai soggetti dei commit dall'ultimo tag: sono
+già italiane e già scritte. Il testo automatico di GitHub invece è inglese
+(«Full Changelog»), e non resta su GitHub — `electron-updater` legge il corpo
+della Release e la schermata «La versione X è disponibile» lo stampa dentro
+l'interfaccia dell'app. Visto a schermo provando l'aggiornamento della 0.1.1.
 
 ## Verifica, e non è facoltativa
 
@@ -114,8 +130,12 @@ grep -iE "update|checking" /tmp/appimage.log
 kill "$(cat /tmp/appimage.pid)"
 ```
 
-`--appimage-extract-and-run` perché su questa macchina manca FUSE2. Si chiude
-per PID salvato, mai con `pkill -f`.
+`--appimage-extract-and-run` serve solo se manca FUSE2 (`ldconfig -p | grep
+libfuse.so.2` per saperlo; su Fedora il pacchetto è `fuse-libs`). **Ma con quel
+flag `APPIMAGE` non viene impostata**, e senza, `AppImageUpdater` rifiuta il
+download con `ERR_UPDATER_OLD_FILE_NOT_FOUND`: il controllo funziona e arriva
+fino a «è disponibile», il bottone Scarica no. Misurato. Si chiude per PID
+salvato, mai con `pkill -f`.
 
 Pubblicando la versione che stai eseguendo, la risposta giusta è
 `Update for version X is not available` — ed è la risposta **positiva** più

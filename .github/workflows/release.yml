@@ -47,8 +47,17 @@ jobs:
   verifica:
     name: Test e coerenza della versione
     runs-on: ubuntu-latest
+    outputs:
+      # Le note della Release, calcolate qui perché questo job ha già il
+      # checkout, Node e le dipendenze. `bozza` non ha nemmeno il checkout.
+      note: ${{ steps.note.outputs.note }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          # La storia intera e i tag: senza, `git log <tag>..HEAD` non ha niente
+          # da elencare e `git describe` non trova il tag precedente. Il default
+          # di checkout è un commit solo.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v7
         with:
@@ -93,6 +102,21 @@ jobs:
       - name: Test
         run: npm test
 
+      # Le note escono dai soggetti dei commit: sono gia italiane e gia
+      # scritte. Prima le faceva `--generate-notes`, e il testo di GitHub —
+      # «Full Changelog» — finiva dentro l'interfaccia dell'app, perche
+      # electron-updater legge il corpo della Release e la schermata lo stampa.
+      - name: Le note della Release
+        id: note
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo 'note<<FINE_DELLE_NOTE'
+            npm run release:note --silent
+            echo 'FINE_DELLE_NOTE'
+          } >> "$GITHUB_OUTPUT"
+
   # ---------------------------------------------------------------------------
   # 2. La Release in bozza, creata una volta sola, prima della matrice.
   #
@@ -109,6 +133,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      NOTE: ${{ needs.verifica.outputs.note }}
     steps:
       - name: Crea la bozza, o riusa quella che c'è
         shell: bash
@@ -125,7 +150,7 @@ jobs:
             --draft \
             --verify-tag \
             --title "Fanta Help ${GITHUB_REF_NAME#v}" \
-            --generate-notes
+            --notes "${NOTE}"
 
   # ---------------------------------------------------------------------------
   # 3. I pacchetti, un job per sistema.

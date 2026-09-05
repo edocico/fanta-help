@@ -26,6 +26,7 @@
     "dataset:verify-ids": "tsx tools/dataset/verify-ids.ts",
     "dataset:build": "tsx tools/dataset/build.ts",
     "release:bump": "tsx tools/release/bump.ts",
+    "release:note": "tsx tools/release/notes.ts",
     "build": "npm run typecheck && electron-vite build",
     "package": "npm run build && electron-builder",
     "package:mac": "npm run build && electron-builder --mac",
