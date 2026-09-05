@@ -16,6 +16,7 @@ import {
   updatePurchase,
 } from '../services/auction'
 import { importDataset } from '../services/dataset-import'
+import type { UpdateService } from '../services/update'
 import type { SnapshotIoContext } from '../services/snapshot-io'
 import { crystallise, listSnapshots, readSnapshot, reopen } from '../services/snapshot'
 import {
@@ -73,6 +74,16 @@ export type HandlerContext = {
    */
   backup: () => Promise<string>
   emit: <T extends EventTopic>(topic: T, payload: EventPayload<T>) => void
+  /**
+   * L'aggiornamento dell'app, T20. Costruito una volta in `index.ts` e non a
+   * ogni chiamata: tiene l'ultimo stato e resta in ascolto dell'updater per
+   * tutta la vita del processo.
+   *
+   * Solo il tipo attraversa questo file. L'implementazione importa
+   * `electron-updater`, che importa `electron`, e `coverage.test.ts` carica
+   * questo modulo su Node puro.
+   */
+  update: UpdateService
   /** The native file dialog. Null when it was cancelled. */
   chooseXlsx: () => Promise<string | null>
   /**
@@ -117,6 +128,16 @@ export type HandlerMap = { [C in Channel]: Handler<C> }
 
 export const handlers: HandlerMap = {
   'app.instance': (_input, ctx) => ctx.instance,
+
+  /* ------------------------------------------------- aggiornamento, T20 */
+  // Quattro righe e nessuna logica: il servizio è uno solo e vive nel contesto,
+  // quindi qui non c'è niente da comporre. Il rifiuto «asta in corso» sta
+  // dentro `install`, non qui, perché è un'invariante e le invarianti stanno
+  // nei servizi — regola 2.
+  'update.state': (_input, ctx) => ctx.update.state(),
+  'update.check': (_input, ctx) => ctx.update.check(),
+  'update.download': (_input, ctx) => ctx.update.download(),
+  'update.install': (_input, ctx) => ctx.update.install(),
 
   'dataset.list': (_input, ctx) => {
     /**

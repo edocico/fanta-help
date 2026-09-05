@@ -262,6 +262,10 @@ Servizio `availability`, client su `fetch` nativo con timeout e retry, aggancio 
 
 electron-updater su GitHub Releases, i sette stati, download mai automatico, installazione bloccata con asta in corso, stato `manual` su macOS che apre la pagina di download.
 
+**Fatto quando:** tutti gli stati si guardano nell'app **senza pubblicare una Release**, e il rifiuto dell'installazione con una lega in `auction` si vede davvero. In sviluppo l'updater vero è inerte per due guardie sue, quindi la porta `UpdaterPort` riceve un doppione (`FANTA_FAKE_UPDATER`, solo fuori dal pacchetto) che percorre la scaletta. La prova da Release a Release resta aperta ed è la precondizione della prima pubblicazione.
+
+**Attenzione:** T20 tira dentro il minimo di T21 — la vista Impostazioni esiste con la sola sezione Aggiornamenti, più la voce e il pallino nella barra laterale. Dati, Aspetto e Backup restano a T21, che dipende da T19 per la chiave API e la quota residua.
+
 ### T21 · Impostazioni
 **Documenti:** 2 (§4.12), 4 (§7, §9)
 

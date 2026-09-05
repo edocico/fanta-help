@@ -1,5 +1,7 @@
-import { app, BrowserWindow, dialog } from 'electron'
+import { app, BrowserWindow, dialog, shell } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import { join } from 'node:path'
+import type { EventPayload, EventTopic } from '@shared/contracts'
 import {
   closeDb,
   databasePath,
@@ -9,6 +11,8 @@ import {
   takeBackup,
 } from './db/client'
 import { registerAll, registerUnavailable } from './ipc/register'
+import { createUpdateService, type UpdaterPort } from './services/update'
+import { makeFakeUpdaterPort } from './services/update-fake'
 import { readGrid } from './services/xlsx-reader'
 import { writeGrid } from './services/xlsx-writer'
 
@@ -65,7 +69,10 @@ function createWindow(): void {
 
   win.once('ready-to-show', () => win.show())
 
-  // No external links exist yet. The allowlist arrives with the first one.
+  // Il renderer non apre link, e con T20 resta vero anche ora che un link
+  // esterno esiste: lo stato `manual` del §8 apre la pagina della Release con
+  // `shell.openExternal` **dal main**, e l'URL non passa mai di qua. Questa
+  // riga nega quindi ancora tutto, e non c'è nessuna allowlist da tenere.
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
 
   // electron-vite sets ELECTRON_RENDERER_URL in dev. The isPackaged guard is not
@@ -78,11 +85,124 @@ function createWindow(): void {
   }
 }
 
+/**
+ * Chi trasmette un topic ai renderer.
+ *
+ * Estratto dal letterale di `registerAll` perché ha due chiamanti che non si
+ * incontrano: gli handler, e il servizio di aggiornamento, che emette da solo
+ * quando l'updater gli parla — anche mentre nessuno ha invocato niente.
+ * Duplicarlo sarebbe due copie che divergono al primo cambiamento.
+ *
+ * Ogni finestra aperta, non una `webContents` ricordata: su macOS una finestra
+ * si chiude e si riapre, e un riferimento stantio manda i messaggi dentro un
+ * renderer distrutto invece che in quello vivo.
+ */
+function emit<T extends EventTopic>(topic: T, payload: EventPayload<T>): void {
+  for (const w of BrowserWindow.getAllWindows()) {
+    w.webContents.send(`event:${topic}`, payload)
+  }
+}
+
+/**
+ * L'unico posto in cui `electron-updater` viene toccato, documento 3 §8.
+ *
+ * **I due interruttori sono due, e il secondo è quello che tradisce.**
+ * `autoDownload` è vero per default e scaricherebbe centoventi megabyte senza
+ * chiedere; `autoInstallOnAppQuit` è vero per default e installerebbe **alla
+ * chiusura dell'app**, saltando in silenzio il rifiuto «asta in corso» che
+ * questo task esiste per garantire. Spegnere solo il primo lascia il buco
+ * peggiore dei due: verificati leggendo `AppUpdater.js` del pacchetto 6.8.9,
+ * righe 109 e 114.
+ */
+function makeUpdaterPort(): UpdaterPort {
+  autoUpdater.autoDownload = false
+  autoUpdater.autoInstallOnAppQuit = false
+
+  return {
+    check: async () => {
+      await autoUpdater.checkForUpdates()
+    },
+    download: async () => {
+      await autoUpdater.downloadUpdate()
+    },
+    install: () => autoUpdater.quitAndInstall(),
+    /**
+     * Il primo link esterno dell'applicazione, e la riga sopra
+     * `setWindowOpenHandler` lo prevedeva: «No external links exist yet. The
+     * allowlist arrives with the first one.» Arriva qui, e non passa dal
+     * renderer: `shell.openExternal` sta nel main, e l'unico URL che raggiunge
+     * questa funzione è quello che l'updater ha letto dal feed della repo.
+     */
+    openDownloadPage: (url) => void shell.openExternal(url),
+    listen: (h) => {
+      autoUpdater.on('checking-for-update', () => h.checking())
+      autoUpdater.on('update-available', (info) =>
+        h.available({
+          version: info.version,
+          // Il feed Atom di GitHub le dà in HTML. Il tipo le ammette anche come
+          // elenco di note per versione: lì non c'è niente da mostrare in una
+          // riga sola, e una stringa vuota direbbe «nessuna nota» sbagliando.
+          notes: typeof info.releaseNotes === 'string' ? info.releaseNotes : undefined,
+          url: `https://github.com/edocico/fanta-help/releases/tag/v${info.version}`,
+        }),
+      )
+      autoUpdater.on('update-not-available', () => h.none())
+      autoUpdater.on('download-progress', (p) => h.progress(p.percent))
+      autoUpdater.on('update-downloaded', (info) => h.downloaded(info.version))
+      autoUpdater.on('error', (e) => h.failed(e.message))
+    },
+    /**
+     * Se questa app, qui dove sta girando, sa installarsi da sé.
+     *
+     * Due fatti di natura diversa, e tenerli separati è ciò che rende la riga
+     * giusta su tutti e tre i sistemi. **La piattaforma è un fatto di
+     * runtime** — `process.platform` qui è la macchina che *esegue*, sempre
+     * vera. **La firma è un fatto di build**, e arriva dalla costante.
+     *
+     * Fusi in una costante sola leggevano tutti e due la macchina che
+     * costruisce: un pacchetto Windows nato sul Mac avrebbe detto per sempre
+     * «Apri la pagina di download», su un sistema che il §8 dichiara capace di
+     * aggiornarsi anche senza firma. Il giorno del certificato si danno le
+     * `CSC_*` alla build e questa riga non si tocca, che è la promessa scritta
+     * nel documento.
+     */
+    canInstallItself: process.platform !== 'darwin' || __MAC_SIGNED__,
+  }
+}
+
 void app.whenReady().then(() => {
   try {
     // openDb runs the migrations. If they fail here, they fail loudly.
     const db = openDb()
     const { uuid, label } = ensureInstance(db)
+
+    /**
+     * Costruito qui e non dentro `handlers.ts` per due ragioni che tirano nello
+     * stesso verso: importa `electron-updater`, che `coverage.test.ts` non può
+     * caricare, e vive quanto il processo — tiene l'ultimo stato e resta in
+     * ascolto, quindi non può nascere a ogni invocazione.
+     *
+     * Il topic lo nomina questa riga invece dell'handler, che è la forma di
+     * `dataset.progress`: là il servizio è chiamato una volta per import e
+     * l'handler lo compone, qui è un ascoltatore permanente e l'handler non ha
+     * nessun momento in cui legarlo.
+     */
+    /**
+     * Il finto solo fuori dal pacchetto, e solo se qualcuno lo chiede.
+     *
+     * Le due condizioni sono legate da `&&` e non da `||` per una ragione che
+     * vale la riga in più: `app.isPackaged` da solo lascerebbe la variabile
+     * capace di spegnere gli aggiornamenti di un'app installata, e una
+     * variabile d'ambiente che disattiva in silenzio il meccanismo di
+     * aggiornamento è il genere di interruttore che si scopre un anno dopo.
+     */
+    const fake = !app.isPackaged ? process.env.FANTA_FAKE_UPDATER : undefined
+    const update = createUpdateService({
+      db,
+      updater:
+        fake === undefined ? makeUpdaterPort() : makeFakeUpdaterPort(fake),
+      emit: (status) => emit('update.status', status),
+    })
 
     registerAll({
       db,
@@ -129,14 +249,8 @@ void app.whenReady().then(() => {
         return chosen.canceled ? null : (chosen.filePaths[0] ?? null)
       },
       writeGrid,
-      // Every open window, rather than one remembered webContents: a window can
-      // be closed and reopened on macOS, and a stale reference sends progress
-      // into a destroyed renderer instead of the live one.
-      emit: (topic, payload) => {
-        for (const w of BrowserWindow.getAllWindows()) {
-          w.webContents.send(`event:${topic}`, payload)
-        }
-      },
+      emit,
+      update,
       instance: {
         uuid,
         label,
@@ -145,6 +259,28 @@ void app.whenReady().then(() => {
         foreignKeys: foreignKeysEnabled(),
       },
     })
+
+    /**
+     * Qualche secondo, e non zero: all'apertura il main sta già migrando il
+     * database e il renderer sta montando la prima vista, e una richiesta di
+     * rete in mezzo si paga sull'unica cosa che l'utente guarda.
+     *
+     * `unref` perché è un timer che non deve tenere vivo il processo: chiudere
+     * l'app dopo due secondi non deve aspettare il controllo.
+     *
+     * Nessun `catch`: `check()` non lancia mai — converte da sé nello stato
+     * `error`, che è la riga che il documento 2 §4.12 vuole far vedere.
+     */
+    setTimeout(() => void update.check(), 4000).unref()
+
+    /*
+      Col database chiuso non c'è nessun controllo e i canali `update.*`
+      rispondono `DB_UNAVAILABLE` come tutti gli altri, ed è una scelta: il
+      servizio ha bisogno di `db` per la guardia dell'asta, e senza database
+      nessuna lega può essere in `auction` — quindi la guardia non avrebbe
+      niente su cui decidere. Chi si trova lì ha un problema più grande di una
+      versione vecchia, e lo schermo glielo dice già.
+    */
   } catch (e) {
     // The window still opens and every channel answers DB_UNAVAILABLE, which is
     // what makes a packaging failure legible instead of a blank screen.
@@ -153,6 +289,16 @@ void app.whenReady().then(() => {
   }
 
   createWindow()
+
+  /**
+   * Il controllo all'avvio, documento 3 §8: «in ritardo di qualche secondo per
+   * non rallentare l'apertura».
+   *
+   * Dentro il `try` e non dopo, perché `update` esiste solo se il database si è
+   * aperto: nel ramo `registerUnavailable` non c'è nessun servizio da chiamare.
+   * Il timer è quindi armato là dentro — questa riga sta qui solo per dire
+   * perché non la trovi qui.
+   */
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

@@ -524,6 +524,43 @@ const snapshotImportReport = z.object({
 /** La stessa, col file del documento 1 §7 dentro, già letto. */
 const snapshotDetail = snapshotSummary.extend({ file: snapshotFile })
 
+/**
+ * I sette stati dell'aggiornamento, documento 3 §8, parola per parola.
+ *
+ * Un'unione discriminata e non una stringa più dei campi facoltativi: `version`
+ * esiste in tre stati su otto — `available`, `ready`, `manual` — e `percent` in
+ * uno solo, e con un oggetto
+ * piatto ogni lettore dovrebbe controllarli a mano — cioè dimenticarsene. È la
+ * stessa ragione per cui `Violation` in `domain.ts` è discriminata.
+ *
+ * Otto voci, e le stesse otto del §8: `idle` compreso. «I sette stati» è la
+ * riga della roadmap, non del documento che questo blocco copia, e chi conta
+ * qui contro il §8 trova pari. Il §4.12 del documento 2 ne disegna sei, e non
+ * disegna né `idle` né `checking`, che durano quanto una richiesta di rete.
+ *
+ * `notes` è **HTML**, non testo: per il provider GitHub electron-updater le
+ * prende dal feed Atom della Release. Chi le stampa lo sappia — inserirle in
+ * un `dangerouslySetInnerHTML` per farle «vedere bene» aprirebbe la porta a
+ * quello che qualcuno scrive nel corpo di una Release.
+ */
+const updateStatus = z.discriminatedUnion('state', [
+  z.object({ state: z.literal('idle') }),
+  z.object({ state: z.literal('checking') }),
+  z.object({
+    state: z.literal('available'),
+    version: z.string(),
+    notes: z.string().optional(),
+  }),
+  z.object({ state: z.literal('downloading'), percent: z.number() }),
+  z.object({ state: z.literal('ready'), version: z.string() }),
+  z.object({ state: z.literal('none') }),
+  /** Solo macOS non firmato: il bottone apre la pagina invece di scaricare. */
+  z.object({ state: z.literal('manual'), version: z.string(), url: z.string() }),
+  z.object({ state: z.literal('error'), message: z.string() }),
+])
+
+export type UpdateStatus = z.infer<typeof updateStatus>
+
 export const contracts = {
   'app.instance': {
     input: z.void(),
@@ -985,6 +1022,47 @@ export const contracts = {
       players: z.array(playerRow),
     }),
   },
+
+  /**
+   * I tre canali d'azione del documento 3 §8, più uno di sola lettura.
+   *
+   * `update.state` è la deviazione, ed è dichiarata: `emit` non conserva
+   * l'ultimo payload — trasmette e dimentica (`index.ts`) — quindi una vista
+   * montata dopo che lo stato è cambiato non lo saprebbe, e il controllo parte
+   * all'avvio, cioè quasi sempre prima che Impostazioni esista. Con il solo
+   * topic il pallino resterebbe spento proprio nel caso per cui esiste.
+   * Legge e basta: nessuna rete, nessun effetto.
+   */
+  'update.state': {
+    input: z.void(),
+    output: updateStatus,
+  },
+
+  /** Interroga il feed. Risponde con lo stato d'arrivo; i passaggi vanno sul topic. */
+  'update.check': {
+    input: z.void(),
+    output: updateStatus,
+  },
+
+  /**
+   * Scarica, e solo se qualcuno l'ha chiesto: il documento lo ripete due volte
+   * («Il download non è mai automatico»). I due interruttori che lo garantiscono
+   * stanno nel servizio, non qui.
+   */
+  'update.download': {
+    input: z.void(),
+    output: updateStatus,
+  },
+
+  /**
+   * Riavvia e installa. Rifiuta se una lega è in `auction`: installare chiude
+   * l'app, e chiuderla in mezzo a un'asta dal vivo è il danno che questo task
+   * ha il dovere di non fare.
+   */
+  'update.install': {
+    input: z.void(),
+    output: z.void(),
+  },
 } as const satisfies ContractMap
 
 export type Channel = keyof typeof contracts
@@ -995,9 +1073,14 @@ export type Output<C extends Channel> = z.infer<(typeof contracts)[C]['output']>
  * Topics the main process pushes without being asked. Parallel to the channels
  * and typed the same way.
  *
- * Only one for now. `dataset.progress` is emitted by the import service of T7,
- * five times per run. `update.status` arrives with T20, from document 3 §8 —
- * inventing its shape here without reading that section would be guessing.
+ * Due. `dataset.progress` is emitted by the import service of T7, five times per
+ * run. `update.status` arrived with T20 and carries the union declared above,
+ * shared with the three channels that return it: one shape, so a state the
+ * channel can answer is a state the topic can push.
+ *
+ * Neither is replayed. `emit` broadcasts to the open windows and keeps nothing,
+ * which is why `update.state` exists next door — a subscriber that arrives late
+ * has missed everything, and for updates that is the normal case.
  */
 export type EventMap = Record<string, z.ZodType>
 
@@ -1007,6 +1090,7 @@ export const events = {
     total: z.number().int(),
     label: z.string(),
   }),
+  'update.status': updateStatus,
 } as const satisfies EventMap
 
 export type EventTopic = keyof typeof events

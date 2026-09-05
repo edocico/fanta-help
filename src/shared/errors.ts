@@ -123,6 +123,41 @@ export const errorMessages = {
   LEAGUE_FROZEN: () => 'Il resoconto è cristallizzato. Riaprilo per modificarlo.',
   RULES_LOCKED: () => 'Il regolamento si blocca quando parte l’asta.',
   DATASET_LOCKED: () => 'Non puoi aggiornare il listone durante un’asta.',
+  /**
+   * Documento 3 §8: «il servizio rifiuta l'installazione se una lega è in stato
+   * `auction`. Il messaggio lo spiega invece di limitarsi a non funzionare.»
+   *
+   * Nomina la lega, come già fanno `TEAM_NAME_TAKEN` e `INSUFFICIENT_CREDITS`:
+   * con più leghe aperte, «c'è un'asta in corso» manda a cercare quale.
+   *
+   * Nessun ramo per il conteggio: la guardia si ferma alla prima lega che
+   * trova, quindi il parametro è sempre una lega sola. Un ramo plurale qui
+   * sarebbe una riga che nessun dato può raggiungere.
+   */
+  /**
+   * L'aggiornamento non è riuscito, in italiano.
+   *
+   * `electron-updater` dà i suoi errori in inglese e tecnici — «Cannot check
+   * for updates», `net::ERR_INTERNET_DISCONNECTED`, un `HttpError: 404` con
+   * dentro un URL e degli a capo — e per un giro quel testo è finito grezzo
+   * sullo schermo, unico testo dell'app in un'altra lingua. Non si era visto
+   * perché l'updater finito con cui si esercitano gli stati parla italiano: il
+   * fissato era più educato del dato vero, che è la trappola del caso che non
+   * esiste nei dati applicata al copy.
+   *
+   * Due frasi e non una perché l'evento `error` è lo stesso per tutt'e due le
+   * operazioni, ma dire «non riesco a controllare» a chi ha appena premuto
+   * Scarica nomina la cosa sbagliata — e per giunta una che era riuscita, dato
+   * che si scarica solo da `available`. Il servizio sceglie guardando cosa
+   * stava facendo.
+   *
+   * Il testo tecnico non sparisce: va nel log del main, che è quello che
+   * `AppError.details` dichiara di essere — «Diagnostics, never shown».
+   */
+  UPDATE_CHECK_FAILED: () => 'Non riesco a controllare se c’è una versione nuova. Riprova.',
+  UPDATE_DOWNLOAD_FAILED: () => 'Il download non è riuscito. Riprova.',
+  UPDATE_DURING_AUCTION: (p: { name: string }) =>
+    `${p.name} ha un’asta in corso e installare riavvia l’app. Riprova quando l’asta è finita.`,
 
   /* la lega e le squadre — T11, invarianti 8, 9 e 13 */
   // Invariante 9. Il documento 3 §3 non la elenca perché la sua tabella traduce

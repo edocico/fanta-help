@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useUpdateStatus } from '@/features/settings/useUpdateStatus'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { call } from '@/lib/ipc'
 import { useDense, useOpenLeagueId } from '@/lib/league'
@@ -79,6 +80,7 @@ export default function AppShell(): JSX.Element {
           <LeagueSections />
           <hr className="my-2 border-line" />
           <Entry to="/giocatori" label="Giocatori" />
+          <SettingsEntry />
         </nav>
       )}
 
@@ -167,6 +169,54 @@ function LeagueSections(): JSX.Element {
         ),
       )}
     </>
+  )
+}
+
+/**
+ * Impostazioni, e il pallino del documento 2 §4.12.
+ *
+ * «Quando c'è un aggiornamento pronto, nella barra laterale compare un pallino
+ * accanto a Impostazioni. Nient'altro: niente banner in cima, niente finestra
+ * che si apre da sola, niente puntino rosso lampeggiante.» Quindi il pallino
+ * compare al solo stato `ready` — non a `available`, che è una notizia e non
+ * una cosa da fare: scaricare lo decide chi legge, e un segnale che si accende
+ * appena esiste una versione nuova interrompe per una cosa su cui non c'è
+ * niente da premere.
+ *
+ * Il colore è `bg-fg`, cioè nessun colore. Il §2 del documento 7 chiude i
+ * significati cromatici a due e il §15 riserva l'ambra al denaro; il verde-acqua
+ * di `TargetedDot` significa già «è un tuo obiettivo» e prestarlo qui gli darebbe
+ * due sensi; e il rosso lampeggiante lo vieta il §4.12 parola per parola.
+ *
+ * Lo spazio in testa allo `sr-only` non è una svista rimasta: senza, il nome
+ * accessibile esce «Impostazioni— un aggiornamento è pronto», perché il calcolo
+ * concatena i nodi di testo dei discendenti in linea senza separatori e il
+ * pallino in mezzo è vuoto. I tre `sr-only` che si appendono a un testo in
+ * questa repo cominciano tutti con uno spazio, e uno sta in questo file.
+ *
+ * Non `aria-hidden`, al contrario di `TargetedDot`: là il pallino ripete una
+ * colonna che la riga porta già scritta, qui è l'unico segnale che esista.
+ */
+function SettingsEntry(): JSX.Element {
+  const status = useUpdateStatus()
+
+  return (
+    <NavLink
+      to="/impostazioni"
+      className={({ isActive }) =>
+        `flex items-center gap-1.5 rounded-md px-2 py-1.5 text-base ${
+          isActive ? 'bg-surface-raised text-fg' : 'text-fg-muted hover:text-fg'
+        }`
+      }
+    >
+      Impostazioni
+      {status.state === 'ready' && (
+        <>
+          <span className="inline-block size-1.5 shrink-0 rounded-full bg-fg" />
+          <span className="sr-only"> — un aggiornamento è pronto</span>
+        </>
+      )}
+    </NavLink>
   )
 }
 

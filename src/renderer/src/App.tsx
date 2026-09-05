@@ -11,6 +11,7 @@ import LeagueView from './features/leagues/LeagueView'
 import Wizard from './features/leagues/Wizard'
 import PlansView from './features/plans/PlansView'
 import PlayersView from './features/players/PlayersView'
+import SettingsView from './features/settings/SettingsView'
 import TargetsView from './features/targets/TargetsView'
 import { call } from './lib/ipc'
 import { TooltipProvider } from './components/ui/tooltip'
@@ -50,6 +51,7 @@ export default function App(): JSX.Element {
               <Route path="/lega/:id/revisione" element={<ReviewView />} />
               <Route path="/lega/:id/resoconto" element={<ReportView />} />
               <Route path="/giocatori" element={<PlayersView />} />
+              <Route path="/impostazioni" element={<SettingsView />} />
             </Route>
           </Routes>
         </HashRouter>

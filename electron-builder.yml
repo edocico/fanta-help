@@ -23,6 +23,19 @@ asarUnpack:
 
 npmRebuild: true
 
+# Documento 3 §8. Le Release di una repo pubblica si leggono senza token: nessun
+# server, nessun costo, nessuna autenticazione. Da qui electron-builder genera
+# anche i `latest*.yml` che l'updater interroga — sono loro il feed, non gli
+# artefatti, e una Release che li dimentica non aggiorna nessuno.
+#
+# Pubblicare diventa: alzare `version` in package.json, costruire, caricare gli
+# artefatti come Release. `version` è il numero con cui l'app installata si
+# confronta, quindi lasciarlo indietro fa credere vecchia una build nuova.
+publish:
+  provider: github
+  owner: edocico
+  repo: fanta-help
+
 # Every target pins its architectures explicitly. Without `arch`, electron-builder
 # builds only for the architecture of the machine that runs it, so a build on an
 # Apple Silicon Mac would silently produce arm64-only Windows and Linux installers.

@@ -288,7 +288,7 @@ review.issues         review.updatePurchase review.deletePurchase  review.addPur
 snapshot.list         snapshot.get          snapshot.freeze        snapshot.reopen
 availability.list     availability.refresh  availability.status
 export.xlsx           export.json           export.importJson
-update.check          update.download       update.install
+update.check          update.download       update.install        update.state
 ```
 
 **Due correzioni da T12.** `plan.get` non esiste: `plan.list` torna i piani interi con le loro caselle, perché il confronto affiancato del documento 2 §4.7 ne vuole due insieme e un piano è al massimo una rosa. `plan.updateItem` invece è stato aggiunto: ri-prezzare una casella è il gesto per cui un piano esiste — «e se va a sessanta?» — e senza quel canale l'unico modo sarebbe svuotarla e rifarla.
@@ -596,7 +596,7 @@ Pubblicare una versione diventa: alzare il numero in `package.json`, eseguire la
 
 ### Il flusso nell'app
 
-Il main incapsula `electron-updater` in un servizio che espone tre canali e trasmette il proprio stato sul topic `update.status`:
+Il main incapsula `electron-updater` in un servizio che espone tre canali d'azione — `update.check`, `update.download`, `update.install` — e trasmette il proprio stato sul topic `update.status`:
 
 ```ts
 type UpdateStatus =
@@ -609,6 +609,8 @@ type UpdateStatus =
   | { state: 'manual';      version: string; url: string }   // solo macOS non firmato
   | { state: 'error';       message: string }
 ```
+
+**Una correzione da T20: c'è un quarto canale, `update.state`, di sola lettura.** Il topic trasmette e non conserva — `emit` manda alle finestre aperte e dimentica — e il controllo parte all'avvio, cioè quasi sempre prima che la vista Impostazioni esista. Con il solo topic, chi apre quella vista non saprebbe lo stato corrente e il pallino resterebbe spento proprio nel caso per cui esiste. `update.state` risponde con l'ultimo stato che il servizio ha in memoria, senza toccare la rete.
 
 Il controllo parte all'avvio, in ritardo di qualche secondo per non rallentare l'apertura, e si può ripetere a mano dalle impostazioni. **Il download non è mai automatico**: l'app dice che c'è una versione nuova e aspetta. Scaricare centoventi megabyte senza chiedere, magari mentre qualcuno sta preparando l'asta in tethering, è un'invasione.
 
