@@ -1,0 +1,313 @@
+# Release di Fanta Help.
+#
+# Un tag `vX.Y.Z` spinto sul remoto costruisce i tre sistemi e pubblica una
+# Release che contiene gli artefatti **e** i `latest*.yml`. Sono loro il feed
+# che `electron-updater` interroga: una Release che li dimentica non aggiorna
+# nessuno, ed è la ragione per cui l'ultimo passo di questo workflow controlla
+# che ci siano tutti prima di togliere la bozza.
+#
+# La Release nasce **bozza** e viene pubblicata alla fine. Non è cosmetica:
+# `electron-publish/out/gitHubPublisher.js:66-68` restituisce senza altre
+# domande una Release in bozza, mentre per una già pubblicata applica la regola
+# delle due ore delle righe 83-95 e si rifiuta di caricare. Con la bozza il
+# rilancio di un job fallito funziona anche il giorno dopo.
+
+name: Release
+
+on:
+  push:
+    tags:
+      # `v` + la versione, perché è la forma che `gitHubPublisher.js:35`
+      # costruisce da sé (`v${version}`) e quella che `src/main/index.ts:146`
+      # scrive nel link della pagina di download.
+      - 'v*'
+  # Serve a provare il giro senza pubblicare niente: da un ramo qualsiasi
+  # costruisce tutti e tre i sistemi e lascia i pacchetti come artefatti di
+  # workflow. Il ramo `pubblica` resta spento perché guarda `github.ref_type`.
+  workflow_dispatch:
+
+# Due esecuzioni sullo stesso tag si contenderebbero la stessa Release.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+# Il `GITHUB_TOKEN` predefinito è di sola lettura: senza questa riga
+# `gh release create` risponde 403.
+permissions:
+  contents: write
+
+env:
+  # In locale è Node 24 / npm 11: la CI usa la stessa maggiore.
+  NODE_VERSION: '24'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. La guardia. Se questa cade non si costruisce niente.
+  # ---------------------------------------------------------------------------
+  verifica:
+    name: Test e coerenza della versione
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          # Mette in cache `~/.npm`, che contiene anche `_prebuilds/`, dove
+          # `prebuild-install` conserva i binari di better-sqlite3.
+          cache: npm
+
+      # `--ignore-scripts` salta il `postinstall` del progetto
+      # (`electron-builder install-app-deps`) e quello di `electron`: qui non
+      # servono, e non averli **è** il guardrail del CLAUDE.md. Se un giorno un
+      # test importasse `better-sqlite3` o `electron`, questo job fallirebbe —
+      # che è esattamente quello che deve succedere.
+      - name: Installa le dipendenze senza gli install script
+        run: npm ci --ignore-scripts
+
+      # Il passo che rende impossibile far divergere tag e package.json.
+      # Serve perché sono due numeri diversi che devono coincidere:
+      # `gitHubPublisher.js:35` costruisce il tag della Release da
+      # `package.json`, mentre il tag spinto qui lo sceglie una persona.
+      - name: Il tag deve dire la versione di package.json
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: |
+          set -euo pipefail
+          versione="$(node -p "require('./package.json').version")"
+          atteso="v${versione}"
+          if [ "${atteso}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::Il tag è ${GITHUB_REF_NAME}, ma package.json dice ${versione}. Atteso: ${atteso}."
+            exit 1
+          fi
+          echo "Tag ${GITHUB_REF_NAME} e package.json ${versione} coincidono."
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # 311 test, 14 file, sotto il secondo. Girano su Node e non toccano il
+      # database: nessuno di loro può importare `better-sqlite3` o `electron`.
+      - name: Test
+        run: npm test
+
+  # ---------------------------------------------------------------------------
+  # 2. La Release in bozza, creata una volta sola, prima della matrice.
+  #
+  # Senza questo job i tre job della matrice chiamerebbero `getOrCreateRelease`
+  # in parallelo e due di loro farebbero `POST /releases` con lo stesso tag: il
+  # perdente riceve un 422 `already_exists` che `gitHubPublisher.js` intercetta
+  # **solo** per il caricamento di un file (`doesErrorMeanAlreadyExists`, usata
+  # in `doUploadFile`) e non per la creazione della Release. Il job muore.
+  # ---------------------------------------------------------------------------
+  bozza:
+    name: Apri la Release in bozza
+    needs: verifica
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Crea la bozza, o riusa quella che c'è
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "La Release ${GITHUB_REF_NAME} esiste già: la riuso."
+            exit 0
+          fi
+          # `--verify-tag` fa fallire il comando se il tag non esiste sul
+          # remoto, invece di crearne uno nuovo puntato al ramo predefinito.
+          gh release create "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --draft \
+            --verify-tag \
+            --title "Fanta Help ${GITHUB_REF_NAME#v}" \
+            --generate-notes
+
+  # ---------------------------------------------------------------------------
+  # 3. I pacchetti, un job per sistema.
+  #
+  # Un job per **sistema**, non per architettura, ed è una regola del formato
+  # del feed, non una preferenza: `updateInfoBuilder.js:49-59` mette il
+  # suffisso di architettura solo su Linux e solo fuori da x64, quindi le due
+  # architetture di Windows scrivono lo stesso `latest.yml` e le due di macOS
+  # lo stesso `latest-mac.yml`. Nella stessa invocazione vengono fuse
+  # (`updateInfoBuilder.js:154-167`); in due invocazioni separate la seconda
+  # riscriverebbe il file della prima.
+  #
+  # Le architetture le decide `electron-builder.yml`, che le fissa a
+  # [x64, arm64] per ogni bersaglio: qui basta la piattaforma.
+  # ---------------------------------------------------------------------------
+  pacchetti:
+    name: Pacchetti ${{ matrix.sistema }}
+    needs: [verifica, bozza]
+    # `bozza` è saltato quando non c'è un tag, e un `needs` su un job saltato
+    # salterebbe anche questo. Questa condizione lo lascia passare.
+    if: >-
+      ${{ !cancelled()
+          && needs.verifica.result == 'success'
+          && (needs.bozza.result == 'success' || needs.bozza.result == 'skipped') }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      # Un sistema che cade non deve cancellare gli altri due: la Release resta
+      # bozza, e si rilancia il solo job caduto.
+      fail-fast: false
+      matrix:
+        include:
+          - sistema: linux
+            runner: ubuntu-latest
+            flag: --linux
+            # Percorsi di `env-paths`, che è quello che usano sia @electron/get
+            # sia app-builder: cache = $XDG_CACHE_HOME/<nome> su Linux.
+            cache_electron: ~/.cache/electron
+            cache_builder: ~/.cache/electron-builder
+          - sistema: mac
+            # `macos-latest` è arm64 (macOS 26). Non serve un runner Intel: il
+            # dmg x64 si costruisce da qui, perché electron-builder scarica la
+            # dist Electron x64 e per better-sqlite3 chiama `prebuild-install
+            # --platform=darwin --arch=x64 --target=30.5.1 --runtime=electron`,
+            # e quel prebuild esiste.
+            runner: macos-latest
+            flag: --mac
+            cache_electron: ~/Library/Caches/electron
+            cache_builder: ~/Library/Caches/electron-builder
+          - sistema: win
+            runner: windows-latest
+            flag: --win
+            cache_electron: ~\AppData\Local\electron\Cache
+            cache_builder: ~\AppData\Local\electron-builder\Cache
+    # A livello di JOB e non di passo, ed è una correzione a un difetto vero.
+    #
+    # `__MAC_SIGNED__` viene deciso da `electron-vite build` leggendo
+    # `process.env.CSC_LINK`/`CSC_NAME` (electron.vite.config.ts), mentre a
+    # firmare è electron-builder nel passo dopo. Sono due `run:` diversi: con le
+    # variabili sul solo passo di pacchetto, il giorno che arriva un certificato
+    # nascerebbe un dmg **firmato** da un bundle che si dichiara **non firmato**
+    # — firma valida, aggiornamento funzionante, e l'interfaccia che dice «Apri
+    # la pagina di download». In locale non succede perché `npm run package`
+    # tiene i due passi nella stessa shell: è la stessa asimmetria che rese
+    # invisibile da Fedora il difetto di `__CAN_SELF_UPDATE__`.
+    #
+    # Qui le eredita ogni passo, quindi chi aggiunge `CSC_LINK` lo aggiunge una
+    # volta sola e non può metterlo nel posto sbagliato.
+    env:
+      # Nessun certificato Apple: decisione del documento 3 §8. Senza questa
+      # riga electron-builder cerca un'identità di firma nel portachiavi del
+      # runner e fallisce, invece di produrre un dmg non firmato.
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      # ~120 MB di dist Electron per architettura, più gli attrezzi che
+      # electron-builder scarica al primo giro (appimage, fpm, nsis,
+      # winCodeSign). La chiave dipende dal lockfile perché è lì che è scritta
+      # la versione di Electron.
+      - name: Cache di Electron e di electron-builder
+        uses: actions/cache@v6
+        with:
+          path: |
+            ${{ matrix.cache_electron }}
+            ${{ matrix.cache_builder }}
+          key: ${{ runner.os }}-electron-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+
+      # Qui gli install script servono: il `postinstall` del progetto è
+      # `electron-builder install-app-deps`, che rimette better-sqlite3
+      # sull'ABI di Electron. `allowScripts` in package.json copre già
+      # better-sqlite3@11.10.0 ed electron@30.5.1, e `npm ci` lo legge dalla
+      # radice (`npm/lib/commands/ci.js:51`), quindi non serve nessun passo in
+      # più: nessun `--foreground-scripts`, nessun `approve`.
+      - name: Installa le dipendenze
+        run: npm ci
+
+      # `npm run build` = typecheck + electron-vite build. Va rifatto su ogni
+      # sistema e non riusato come artefatto: `electron.vite.config.ts:41-43`
+      # inchioda `__MAC_SIGNED__` nel bundle del main.
+      - name: Costruisci il bundle
+        run: npm run build
+
+      - name: Costruisci i pacchetti e pubblicali
+        if: github.ref_type == 'tag'
+        env:
+          # `gitHubPublisher.js:22` legge `GH_TOKEN`, poi `GITHUB_TOKEN`.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Spegne la regola delle due ore di `gitHubPublisher.js:83-95`, che
+          # altrimenti rifiuta in silenzio il caricamento quando si rilancia un
+          # job su una Release già pubblicata.
+          EP_GH_IGNORE_TIME: true
+        # `npx --no-install` invece di `npx`: senza il binario locale, `npx`
+        # scarica un pacchetto da internet e lo esegue.
+        run: npx --no-install electron-builder ${{ matrix.flag }} --publish always
+
+      - name: Costruisci i pacchetti senza pubblicare
+        if: github.ref_type != 'tag'
+        env:
+        # Anche con `--publish never` i `latest*.yml` vengono scritti in
+        # `release/`: la loro creazione sta fuori dal ramo `if (this.isPublish)`
+        # di `PublishManager.js:149-162`. Così il giro di prova mostra il feed
+        # senza toccare nessuna Release.
+        run: npx --no-install electron-builder ${{ matrix.flag }} --publish never
+
+      - name: Conserva i pacchetti del giro di prova
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v7
+        with:
+          name: pacchetti-${{ matrix.sistema }}
+          path: |
+            release/*.AppImage
+            release/*.deb
+            release/*.dmg
+            release/*.exe
+            release/latest*.yml
+          if-no-files-found: error
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # 4. Il feed dev'essere completo prima che la Release diventi visibile.
+  # ---------------------------------------------------------------------------
+  pubblica:
+    name: Pubblica la Release
+    needs: pacchetti
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Controlla che ci siano tutti e quattro i file del feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          allegati="$(gh release view "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets[].name')"
+          echo "Allegati alla Release:"
+          echo "${allegati}" | sed 's/^/  /'
+          mancanti=()
+          # Windows: un solo `latest.yml` per tutte le architetture.
+          # macOS: un solo `latest-mac.yml` per tutte le architetture.
+          # Linux: uno per x64 e uno per arm64, ed è l'unico sistema che ne ha due.
+          for f in latest.yml latest-mac.yml latest-linux.yml latest-linux-arm64.yml; do
+            if ! printf '%s\n' "${allegati}" | grep -qx "${f}"; then
+              mancanti+=("${f}")
+            fi
+          done
+          if [ "${#mancanti[@]}" -gt 0 ]; then
+            echo "::error::Feed incompleto, mancano: ${mancanti[*]}. La Release resta in bozza."
+            exit 1
+          fi
+
+      - name: Togli la bozza
+        run: |
+          set -euo pipefail
+          gh release edit "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --draft=false \
+            --latest
