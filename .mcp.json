@@ -7,6 +7,10 @@
         "chrome-devtools-mcp@1.7.0",
         "--browser-url=http://127.0.0.1:9222"
       ]
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
     }
   }
 }
