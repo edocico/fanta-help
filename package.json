@@ -1,7 +1,7 @@
 {
   "name": "fanta-help",
   "productName": "Fanta Help",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Supporto all'asta del fantacalcio di Serie A",
   "private": true,
   "author": {
