@@ -226,8 +226,20 @@ jobs:
       # better-sqlite3@11.10.0 ed electron@30.5.1, e `npm ci` lo legge dalla
       # radice (`npm/lib/commands/ci.js:51`), quindi non serve nessun passo in
       # più: nessun `--foreground-scripts`, nessun `approve`.
+      # `--ignore-scripts`, come nel job di verifica e per la stessa ragione.
+      # Il `postinstall` è `electron-builder install-app-deps`, che cerca un
+      # `better-sqlite3` per l'ABI di **Node**: su Windows quel prebuild non
+      # esiste, quindi ripiega sulla compilazione e il node-gyp incluso non
+      # riconosce la Visual Studio 18 del runner («unknown version undefined
+      # found at C:\Program Files\Microsoft Visual Studio\18\Enterprise»).
+      #
+      # Ma quel binario non serve a nessuno: l'app gira sotto Electron, e il
+      # modulo per l'ABI giusta lo costruisce electron-builder quando
+      # impacchetta (`npmRebuild: true` nell'yml). Su Linux e macOS il passo
+      # filava solo perché lì il prebuild per Node c'è: compilavano una cosa
+      # che poi buttavano via.
       - name: Installa le dipendenze
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       # `npm run build` = typecheck + electron-vite build. Va rifatto su ogni
       # sistema e non riusato come artefatto: `electron.vite.config.ts:41-43`
